@@ -1,0 +1,26 @@
+LCL_PIPELINES
+-- RIBOSEQ data alignment submitted from
+submit_lcl_riboseq_alignment.sh
+which calls 
+alignment_strategy_qsub.sh
+
+LCL_RNASEQ
+GEUVADIS AND SNYDER ARE PAIRED_END
+submitted from 
+submit_lcl_paired_rnaseq_alignment.sh
+which calls
+alignment_strategy_paired.sh
+
+PICKRELL_RNASEQ IS SINGLE END
+submitted from 
+submit_pickrell_rnaseq.sh
+which calls
+alignment_strategy_pickrell_qsub.sh
+
+THESE SCRIPTS COUNT TOTAL NUMBER OF READS
+FOR RIBOSEQ SPECIES COUNTING WAS DONE USING
+submit_species_counts_from_sam.sh
+which used
+~/SCRIPTS/samtranscriptaln_tocounts_qsub.pl
+this has some additional utilities but counts using the entire transcript
+updated version uses linux sort -u to get species and bedtools for counting 

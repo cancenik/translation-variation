@@ -1,0 +1,174 @@
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12892_Rep1
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L2_ATCACG_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L2_ATCACG_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667780 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12892_Rep2
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L1_ACTTGA_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L1_ACTTGA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667781 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12892_Rep3
+qsub -v first=120228_MONK_0223_AD0LE7ACXX_L6_ACTTGA_1_pf.fastq.gz,second=120228_MONK_0223_AD0LE7ACXX_L6_ACTTGA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667782 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12878_Rep1
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L2_ACTTGA_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L2_ACTTGA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667783 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12878_Rep2
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L1_TTAGGC_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L1_TTAGGC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667784 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12878_Rep3
+qsub -v first=120228_MONK_0223_AD0LE7ACXX_L6_ATCACG_1_pf.fastq.gz,second=120228_MONK_0223_AD0LE7ACXX_L6_ATCACG_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667785 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12891_Rep1
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L2_TTAGGC_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L2_TTAGGC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667786 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12891_Rep2
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L1_ATCACG_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L1_ATCACG_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667787 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM12891_Rep3
+qsub -v first=120228_MONK_0223_AD0LE7ACXX_L6_ACTTGA_1_pf.fastq.gz,second=120228_MONK_0223_AD0LE7ACXX_L6_ACTTGA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667788 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19240_Rep1
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L2_GATCAG_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L2_GATCAG_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667789 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19240_Rep2
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L1_GGCTAC_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L1_GGCTAC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667790 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19240_Rep3
+qsub -v first=120228_MONK_0223_AD0LE7ACXX_L6_TAGCTT_1_pf.fastq.gz,second=120228_MONK_0223_AD0LE7ACXX_L6_TAGCTT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667791 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19238_Rep1
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L2_GGCTAC_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L2_GGCTAC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667792 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19238_Rep2
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L1_TAGCTT_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L1_TAGCTT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667793 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19238_Rep3
+qsub -v first=120228_MONK_0223_AD0LE7ACXX_L6_GATCAG_1_pf.fastq.gz,second=120228_MONK_0223_AD0LE7ACXX_L6_GATCAG_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667794 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19239_Rep1
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L2_TAGCTT_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L2_TAGCTT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667795 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19239_Rep2
+qsub -v first=120302_PINKERTON_0169_AC0JHEACXX_L1_GATCAG_1_pf.fastq.gz,second=120302_PINKERTON_0169_AC0JHEACXX_L1_GATCAG_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667796 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/GM19239_Rep3
+qsub -v first=120228_MONK_0223_AD0LE7ACXX_L6_GGCTAC_1_pf.fastq.gz,second=120228_MONK_0223_AD0LE7ACXX_L6_GGCTAC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667797 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM12890_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L6_CGATGT_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L6_CGATGT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667798 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM18526_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L4_CAGATC_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L4_CAGATC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667799 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM18526_Rep2
+qsub -v first=120830_MONK_0252_BD1AB6ACXX_L6_CAGATC_1_pf.fastq.gz,second=120830_MONK_0252_BD1AB6ACXX_L6_CAGATC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667800 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM12878_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L3_CGATGT_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L3_CGATGT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667801 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM12878_Rep2
+qsub -v first=120824_BRISCOE_0070_AC159RACXX_L4_AGTTCC_1_pf.fastq.gz,second=120824_BRISCOE_0070_AC159RACXX_L4_AGTTCC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667802 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM12891_Rep2
+qsub -v first=120824_BRISCOE_0070_AC159RACXX_L4_ATGTCA_1_pf.fastq.gz,second=120824_BRISCOE_0070_AC159RACXX_L4_ATGTCA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667803 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM10847_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L4_GCCAAT_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L4_GCCAAT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667804 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM10847_Rep2
+qsub -v first=120830_MONK_0252_BD1AB6ACXX_L6_GCCAAT_1_pf.fastq.gz,second=120830_MONK_0252_BD1AB6ACXX_L6_GCCAAT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667805 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM12890_Rep2
+qsub -v first=120830_MONK_0252_BD1AB6ACXX_L7_AGTTCC_1_pf.fastq.gz,second=120830_MONK_0252_BD1AB6ACXX_L7_AGTTCC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667806 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM18505_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L4_ACAGTG_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L4_ACAGTG_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667807 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM18505_Rep2
+qsub -v first=120830_MONK_0252_BD1AB6ACXX_L6_CCGTCC_1_pf.fastq.gz,second=120830_MONK_0252_BD1AB6ACXX_L6_CCGTCC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667808 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19238_Rep1
+qsub -v first=GM19238_Rep1_GCCAAT_1_pf.fastq.gz,second=GM19238_Rep1_GCCAAT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667809 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19238_Rep2
+qsub -v first=120824_BRISCOE_0070_AC159RACXX_L4_GCCAAT_1_pf.fastq.gz,second=120824_BRISCOE_0070_AC159RACXX_L4_GCCAAT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667810 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19193_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L4_TGACCA_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L4_TGACCA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667811 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19193_Rep2
+qsub -v first=120830_MONK_0252_BD1AB6ACXX_L6_ATGTCA_1_pf.fastq.gz,second=120830_MONK_0252_BD1AB6ACXX_L6_ATGTCA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667812 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM12891_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L3_TGACCA_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L3_TGACCA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667813 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM12892_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L3_ACAGTG_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L3_ACAGTG_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667814 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM12892_Rep2
+qsub -v first=120824_BRISCOE_0070_AC159RACXX_L4_CCGTCC_1_pf.fastq.gz,second=120824_BRISCOE_0070_AC159RACXX_L4_CCGTCC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667815 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19239_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L3_CAGATC_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L3_CAGATC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667816 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19239_Rep2
+qsub -v first=120824_BRISCOE_0070_AC159RACXX_L4_CAGATC_1_pf.fastq.gz,second=120824_BRISCOE_0070_AC159RACXX_L4_CAGATC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667817 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19240_Rep2
+qsub -v first=120824_BRISCOE_0070_AC159RACXX_L4_CTTGTA_1_pf.fastq.gz,second=120824_BRISCOE_0070_AC159RACXX_L4_CTTGTA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667818 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19240_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L3_CTTGTA_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L3_CTTGTA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667819 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM18951_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L4_CGATGT_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L4_CGATGT_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667820 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM18951_Rep2
+qsub -v first=120830_MONK_0252_BD1AB6ACXX_L6_AGTTCC_1_pf.fastq.gz,second=120830_MONK_0252_BD1AB6ACXX_L6_AGTTCC_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667821 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19099_Rep1
+qsub -v first=120801_PINKERTON_0197_AD184HACXX_L4_CTTGTA_1_pf.fastq.gz,second=120801_PINKERTON_0197_AD184HACXX_L4_CTTGTA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667822 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/GM19099_Rep2
+qsub -v first=120830_MONK_0252_BD1AB6ACXX_L6_CTTGTA_1_pf.fastq.gz,second=120830_MONK_0252_BD1AB6ACXX_L6_CTTGTA_2_pf.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667823 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM10847
+qsub -v first=ERR188101_1.fastq.gz,second=ERR188101_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667824 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM12890
+qsub -v first=ERR188413_1.fastq.gz,second=ERR188413_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667825 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM18499
+qsub -v first=ERR188449_1.fastq.gz,second=ERR188449_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667826 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM18505
+qsub -v first=ERR188273_1.fastq.gz,second=ERR188273_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667827 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM18508
+qsub -v first=ERR188162_1.fastq.gz,second=ERR188162_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667828 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM18511
+qsub -v first=ERR188097_1.fastq.gz,second=ERR188097_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667829 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM18519
+qsub -v first=ERR188200_1.fastq.gz,second=ERR188200_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667830 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM18870
+qsub -v first=ERR188373_1.fastq.gz,second=ERR188373_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667831 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM19098
+qsub -v first=ERR188243_1.fastq.gz,second=ERR188243_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667832 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM19099
+qsub -v first=ERR188188_1.fastq.gz,second=ERR188188_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667833 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM19200
+qsub -v first=ERR188440_1.fastq.gz,second=ERR188440_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667834 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM19201
+qsub -v first=ERR188275_1.fastq.gz,second=ERR188275_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667835 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM19137
+qsub -v first=ERR188072_1.fastq.gz,second=ERR188072_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667836 ("alignment_strategy_paired.sh") has been submitted
+/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/GM19138
+qsub -v first=ERR188306_1.fastq.gz,second=ERR188306_2.fastq.gz ~/SCRIPTS/BASH_SCRIPTS/alignment_strategy_paired.sh
+Your job 5667837 ("alignment_strategy_paired.sh") has been submitted

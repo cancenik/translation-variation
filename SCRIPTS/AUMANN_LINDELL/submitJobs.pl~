@@ -1,0 +1,211 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use List::Util qw(sum);
+use File::Basename;
+use Class::Struct;
+use Cwd 'abs_path';
+use File::Path 'make_path';
+
+my $help;
+
+my ($inputFile, $outputFolder) = ("", "");
+my $minReads = 0;
+my $chunkSize = 3;
+
+GetOptions( 
+	'i=s'   => \$inputFile, #
+	'o=s'    => \$outputFolder,
+	'min=f'   => \$minReads,
+	'c=i'     => \$chunkSize,
+	'help'      => \$help 
+) or die " unrecognized option(s)!! please refer to the help documentation\n\n";
+
+if ($help) {
+	pod2usage( {
+		'-verbose' => 2,
+		'-exitval' => 1,
+	} );
+}
+
+die("Please specify the input file using the -i parameter\n") unless($inputFile);
+die("Please specify the output folder using the -o parameter\n") unless($outputFolder);
+die("Please specify the minimum number  of reads using the -min parameter.") unless($minReads);
+
+
+##################################################################################################
+
+##################################   M A I N      P A R T  #######################################
+
+my $partitionedInputFolder = $outputFolder."/partitioned_Input";
+my $windowFilteredFilesFolder = $outputFolder."/window_filtered_files";
+
+my($mainScriptName, $scriptDirectory, $suffix) = fileparse(abs_path($0));
+my $partitionScript = $scriptDirectory."/partition_specific.pl";
+my $windowFilterScript = $scriptDirectory."/windowFilter.pl";
+
+initialMessage($inputFile, $outputFolder, $partitionedInputFolder, $windowFilteredFilesFolder, $minReads);
+
+print "Creating output directories ... \n";
+createOutputDirectories($outputFolder, $partitionedInputFolder, $windowFilteredFilesFolder);
+print "DONE\n";
+
+print "Partitioning the file $inputFile ... \n";
+`$partitionScript -i $inputFile -o $partitionedInputFolder`;
+my $numberOfPartitionedFiles = `ls $partitionedInputFolder | wc -l`;
+chomp($numberOfPartitionedFiles);
+print "$numberOfPartitionedFiles files have been created in $partitionedInputFolder\n\n";
+
+
+
+print "Submitting the window filter jobs ...";
+submitJobs($windowFilterScript, $partitionedInputFolder, $windowFilteredFilesFolder, $minReads);
+print "DONE\n";
+
+exit;
+
+print "Check the directory $windowFilteredFilesFolder for output of the window algorithm\n";
+
+
+##################################################################################
+################### F U N C T I O N S ############################################
+##################################################################################
+
+sub initialMessage{
+  
+   my ($inputFile, $outputFolder,$partitionedInputFolder, $windowFilteredFilesFolder, $minReads) = @_;
+  
+  print "--------------- SubmitJobs--------------------------------------\n";
+  print "The output files will be saved in the directory    $outputFolder\n";
+  print "Partitioned input files will be saved in    $partitionedInputFolder\n";
+  print "The output of the window filter algorithm will be saved in    $windowFilteredFilesFolder\n";
+  print "Minimum number of reads to be used in the window filter algorithm is    $minReads\n";
+  print "\nChecking the first line of the input file \n";
+  my $inputCheckResult = checkInput($inputFile);
+  
+  if($inputCheckResult){
+    print "Error!\n   The first line of the input file $inputFile is\n $inputCheckResult\n";
+    print "The contents of the first column of the input file must be separated by | s and there should be at least five entries.\n";
+    print "Exit\n";
+  }
+  else{
+    print "   input file seems ok\n";
+  }
+}
+
+
+sub submitJobs{
+  my ($script, $partitionedInputFolder, $windowFilteredFilesFolder, $minReads) = @_;
+  
+  opendir(my $DH, $partitionedInputFolder) or die("Couldn't open the folder $partitionedInputFolder\n");
+  
+  SUBMITLOOP: while(my $bgFile = readdir $DH){
+    next SUBMITLOOP if( $bgFile eq ".." or $bgFile eq "." );
+    my $currentFile = $partitionedInputFolder."/".$bgFile;
+    #print $currentFile."\n";
+     my($fileName, $fileDirectory, $suffix) = fileparse(abs_path($bgFile), ".bg");
+     print $fileName, "\n";
+     my $currentDirectory = $windowFilteredFilesFolder."/".$fileName;
+#     
+     make_path($currentDirectory, {verbose => 1, error => \my $err});
+     die("There was an error in creating the directory $currentDirectory") if(@$err);
+#     mkdir($currentDirectory) or die("Error : Couldn't create the directory $currentDirectory\n");
+    my $command = "$script -i $currentFile -o $currentDirectory -min $minReads";
+    print $command."\n";
+    my $result = `$command`;
+    print $result if($result);
+      #print "$bgFile\n";
+  }
+}
+
+# Checks the input bedgraph file.
+# The restriction on the bedgraph 
+sub checkInput{
+  my ($inputFile) = @_;
+  
+  open(my $IH, $inputFile) or die ("Couldn't open the input file $inputFile\n");
+  my $firstLine = <$IH>;
+  my @contents = split(/\s+/, $firstLine);
+  my @firstColumnContents = split(/\|/, $contents[0]);
+  return( $contents[0] ) if(scalar(@firstColumnContents) < 5);
+  close($IH);
+  return(0);
+}
+
+sub createOutputDirectories{
+
+  my ($outputFolder, $partitionedInputFolder, $windowFilteredFilesFolder) = @_;
+  
+  my $err;
+  
+  make_path($outputFolder, {verbose => 1, error => \$err});
+  die("There was an error in creating the directory $outputFolder") if(@$err);
+
+  make_path($partitionedInputFolder, {verbose => 1, error => \$err});
+  die("There was an error in creating the directory $partitionedInputFolder") if(@$err);
+
+  make_path($windowFilteredFilesFolder, {verbose => 1, error => \$err});
+  die("There was an error in creating the directory $windowFilteredFilesFolder") if(@$err);
+}
+
+
+__END__
+
+
+=head1 NAME
+
+submitJobs.pl
+
+=head1 SYNOPSIS
+
+submitJobs.pl -i <input file> -o <output folder> -m <min reads> [-c chunkSize]
+
+
+
+
+=head1 DESCRIPTION
+
+
+=head1 EXAMPLE
+
+
+=head1 AUTHORS
+
+ Can Cenik
+ 
+ Hakan Ozadam
+
+ 
+=head1 FILE FORMAT
+
+A bedGraph file (both input and output) has four entries in each row separated by whitespace.
+
+Column 1: chromosome
+Column 2: start position
+Column 3: end position
+Column 4: read counts
+
+ Ex:
+
+  chr12 5678 5679 12
+  chr12 5679 5680 16
+ 
+=head1 LICENSE AND COPYING
+
+ This program is free software; you can redistribute it and / or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, a copy is available at
+ http://www.gnu.org/licenses/licenses.html
