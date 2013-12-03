@@ -11,6 +11,15 @@ library ("sva")
 # Should use total read number for the analysis
 
 ## DATA INPUT
+## HGNC_to_ENSG
+hgnc_to_ensg <- read.table('~/project/CORE_DATAFILES/HGNCtoENSG.txt', ,header=F,as.is=T,sep="|",fill=T)
+ensg_hgnc <- cbind(grep("ENSG", unlist(strsplit(hgnc_to_ensg$V2, "[.]")), value=T), hgnc_to_ensg$V5)
+colnames(ensg_hgnc) <- c("ENSG", "HGNC")
+
+## Absolute Protein Amounts
+protein_absolute_ibaq <- read.csv('~/project/CORE_DATAFILES/TableS8_Khan_etal.csv')
+protein_absolute_ibaq <- merge(protein_absolute_ibaq, ensg_hgnc)
+
 ## RNA_SEQ COUNTS 
 ## WILL CREATE FOUR DIFFERENT NORMALIZED MATRICES
 ## GEUVADIS, PICKRELL, PolyA, Ribozero
@@ -190,25 +199,29 @@ plot(log10(cds_count_sum+1), log10(m1_species_sum+1), pch=19, cex=0.4)
 dev.off()
 
 # All-by_all correlation plot becomes infeasible
-pdf("LCL_Ribo_Pairs_Log10.pdf")
-pairs(log10(CDS[keep(CDS[,-c(1,2)], 100),-c(1,2)]+1), pch=19, cex=0.25,
-diag.panel= panel.hist, upper.panel=panel.smoothScatter, lower.panel=NULL)
+pdf("LCL_Ribo_Pairs_Normalized.pdf")
+pairs(v$E[,replicate_present], diag.panel=panel.hist, upper.panel=NULL, lower.panel=NULL)
 dev.off()
 
-pdf ("LCL_Ribo_MDS.pdf")
-plotMDS(cds_counts)
+pdf ("LCL_Ribo_MDS_RepPresent.pdf")
+plotMDS(v$E[,replicate_present], labels=sample_labels[replicate_present])
 dev.off()
 
 pdf ("LCL_Ribo_Hierarchical_Clustering_Normalized_Counts.pdf", height=11, width=9)
 plot(norm_hc)
 dev.off()
 
+pdf("Distribution_of_Normalized_RiboExpression.pdf")
+hist(norm_expr,100)
+dev.ofF()
+
+
 pdf ("LCL_RiboWithReps_Hierarchical_Clustering_Normalized_Counts.pdf", height=11, width=9)
 plot(norm_hc_rep)
 dev.off()
 
-pdf ("LCL_Ribo_Hierarchical_Clustering_Normalized_Counts_Residuals_PEER.pdf")
-plot(residual_hc)
+pdf ("LCL_Ribo_Hierarchical_Clustering_Normalized_Counts_Residuals_SVA.pdf")
+plot(sva_hc)
 dev.off()
 ##
 
