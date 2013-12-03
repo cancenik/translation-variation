@@ -11,6 +11,9 @@ library ("sva")
 # Should use total read number for the analysis
 
 ## DATA INPUT
+# VOOM NORMALIZED RNA_SEQ
+rna_seq_normalized <- read.table('~/project/CORE_DATAFILES/TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression', header=T)
+
 ## HGNC_to_ENSG
 hgnc_to_ensg <- read.table('~/project/CORE_DATAFILES/HGNCtoENSG.txt', ,header=F,as.is=T,sep="|",fill=T)
 ensg_hgnc <- cbind(grep("ENSG", unlist(strsplit(hgnc_to_ensg$V2, "[.]")), value=T), hgnc_to_ensg$V5)
@@ -78,8 +81,20 @@ CDS_IDs <- CDS[,1]
 #covariates <-  read.table ("Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 
-
 ## DATA ANALYSIS 
+# Compare absolute levels of protein with rna and ribo
+grand_mean_rna <- apply (rna_seq_normalized, 1, mean)
+grand_mean_rna  <- data.frame(HGNC=rownames(rna_seq_normalized), grand_mean_rna)
+grand_mean_ribo <- apply(v$E, 1, mean)
+grand_mean_ribo <- data.frame (HGNC=CDS[isexpr,1], grand_mean_ribo)
+CDS_Lens <- data.frame(HGNC=CDS_IDs, CDS_Len[,1])
+merge_ribo_prot <- merge(grand_mean_ribo,protein_absolute_ibaq, by="HGNC" )
+merge_ribo_rna_prot <- merge (merge_ribo_prot, grand_mean_rna, by="HGNC")
+merge_ribo_rna_prot_len <- merge(merge_ribo_rna_prot, CDS_Lens, by="HGNC")
+dim(merge_ribo_rna_prot)
+rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
+ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
+
 # RNASEQ NORMALIZATION AND VOOM
 rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
 all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
@@ -193,6 +208,19 @@ sva_hc <- hclust (sva_dd)
 ##
 
 ## FIGURES
+# Absolute Protein to Grand_Mean_RNA or RIBO
+pdf ("Absolute_Protein_IBAQ_RNA_RIBO.pdf", width=4, height=8)
+par (mfrow = c(2,1))
+plot(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), 
+     pch=20, cex=0.3, xlab="Mean_Ribosome_Profiling_Expression", 
+     ylab="Log10_iBaq_ProteinExpression")
+legend(0, 8.5 , paste("Pearson Cor", round(ribo_cor$estimate, 3), sep=": "), bty="n" )
+plot(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), 
+     pch=20, cex=0.3, xlab="Mean_RNASeq_Expression", 
+     ylab="Log10_iBaq_ProteinExpression")
+legend(0, 8.5 , paste("Pearson Cor", round(rna_cor$estimate, 3), sep=": "), bty="n" )
+dev.off()
+
 # Species to Counts correlation
 pdf("Species_Counts_log10.pdf")
 plot(log10(cds_count_sum+1), log10(m1_species_sum+1), pch=19, cex=0.4)
