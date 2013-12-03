@@ -2,11 +2,8 @@ library("edgeR")
 library("hexbin")
 library("limma")
 library("qtl")
-library("peer")
 library ("sva")
 
-# Testing git commit
-# Should be in repos
 ## NOTES
 # Number of bases covered is not a very good measure
 # The number of species correlates better with length but
@@ -59,7 +56,8 @@ species <- read.table("Reformatted_Species_Counts_All_Libraries.tsv", header=T)
 CDS_species <- split (species, species$REGION)[[2]]
 
 # Total Number of Reads
-data <- read.table ("Reformatted_Transcript_Counts_All_Libraries.tsv", header=T)
+#data <- read.table ("Reformatted_Transcript_Counts_All_Libraries.tsv", header=T)
+data <- read.table ("~/project/CORE_DATAFILES/Reformatted_Transcript_Counts_All_Libraries.tsv", header=T)
 CDS <- split (data, data$REGION)[[2]]
 UTR3 <- split (data, data$REGION)[[3]]
 UTR5 <- split (data, data$REGION)[[4]]
@@ -68,7 +66,9 @@ CDS_Coverage <- CDS[, grep("CoveredBases", colnames(CDS))]
 CDS_Len <- CDS[,grep("Len", colnames(CDS))]
 CDS_IDs <- CDS[,1]
 
-covariates <-  read.table ("Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
+#covariates <-  read.table ("Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
+covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
+
 
 ## DATA ANALYSIS 
 # RNASEQ NORMALIZATION AND VOOM
@@ -90,7 +90,6 @@ batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=mod)
 write.table(batch_removed,
 file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
 sep="\t", row.names=geuvadis_CDS[rnaexpr,1])
-
 
 norm_dd_rnaseq <- dist( t( v2$E) )
 hc_rnaseq <- hclust( norm_dd_rnaseq)
@@ -136,7 +135,6 @@ length(which(ratios_dataframe$ReadCount- c1 > 0))
 # lines(ratios_dataframe$ReadCount,count_to_species$fit-3*count_to_species$s, lty=2)
 
 
-
 # VOOM- TMM Normalization 
 cds_counts <- DGEList(counts=CDS_Counts)
 isexpr <- rowSums(cpm(cds_counts) > 1) >= 36
@@ -158,36 +156,30 @@ replicate_present <- duplicated(sample_labels) |duplicated(sample_labels, fromLa
 norm_dd_rep <- dist(t (v$E[,replicate_present] ) )
 norm_hc_rep <- hclust (norm_dd_rep)
 
-
 detrended_matrix <- cbind(as.vector(CDS_IDs[isexpr]), as.data.frame (v$E) )
 colnames(detrended_matrix)[1] <- "ID"
 detrended_matrix_with_ratio <- merge (detrended_matrix,ratios_ids , by="ID")
+
 write.table(detrended_matrix_with_ratio, 
 file ="TMM_VarianceMeanDetrended_CPM_GT1_in20_RiboSeq_Expression_Read_Species_Ratio", 
 sep="\t", row.names=F) 
-
-
 write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in20_RiboSeq_Expression", 
 row.names=CDS_IDs[isexpr], sep="\t")
 
 # SVA/Batch Correction
 p1 <- paste (covariates$Date_Cells_Frozen, covariates$Date_Ribosome_Footprint, covariates$Data_Gel_Purified, sep="_")
+p1 <- covariates$Data_Gel_Purified
 p2 <- paste (covariates$Sequencing_ID, "Counts", sep="_")
 p1 <- p1[p2 %in% colnames(v$E)]
 p2 <- p2[p2 %in% colnames(v$E)]
 p1 <- p1[sort (p2, index.return=T)$ix]
 mod <- model.matrix(~as.factor(sample_labels), data=as.data.frame(v$E))
-mod0 <- model.matrix(~as.factor(p1), data=as.data.frame(v$E))
-svobj <- sva (v$E, mod, mod0, B=50)
-# Remove batch variable and surrogate variable 
-# Residuals are completely confusing
-#modSv <- cbind(mod,svobj$sv) 
-#mod0Sv <- cbind (mod0,svobj$sv)
-#fit = lmFit(v$E, mod0Sv)
-#super_normalized_expression <- residuals(fit, v$E)
-#sva_dd <- dist( t ( super_normalized_expression))
-#sva_hc <- hclust (sva_dd) 
 
+svobj <- sva (v$E, mod=mod, B=20)
+fit = lmFit(v$E, svobj$sv)
+norm_expr <- residuals (fit, v$E)
+sva_dd <- dist( t ( norm_expr[,replicate_present]))
+sva_hc <- hclust (sva_dd) 
 
 ##
 
@@ -266,21 +258,5 @@ cor.test(m1[keep(m1[,2:35], 100),39], m1_species_sum[keep(m1[,2:35], 100)], meth
 pdf ("Length_vs_TotalCDSCoverage.pdf")
 plot(log10(CDS_Len[keep(CDS_Coverage,1000),1]), log10(rowSums(CDS_Coverage[keep(CDS_Coverage,1000),])), pch=19, cex=0.4)
 dev.off()
-
-## PEER NORMALIZATION
-## This removes any correlation between replicates
-## I am not sure if it is possible to conserve that
-model = PEER()
-PEER_setPhenoMean(model,v$E)
-PEER_setNk(model,8)
-#PEER_setAdd_mean(model, TRUE)
-#PEER_setCovariates(model, as.matrix(covariates))
-PEER_update(model)
-# There are some utilities for looking at the observed confounders
-# However, these are extremely poorly documented. 
-residuals = PEER_getResiduals(model)
-colnames(residuals) <- colnames(v$E)
-residual_dist <- dist (t ( residuals) )
-residual_hc <- hclust(residual_dist)
 
 
