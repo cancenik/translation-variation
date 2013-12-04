@@ -85,8 +85,7 @@ covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profilin
 # Compare absolute levels of protein with rna and ribo
 grand_mean_rna <- apply (rna_seq_normalized, 1, median)
 grand_mean_rna  <- data.frame(HGNC=rownames(rna_seq_normalized), grand_mean_rna)
-ribo <- c()
-grand_mean_ribo <- apply(norm_expr[,a1], 1, median)
+grand_mean_ribo <- apply(norm_expr, 1, median)
 grand_mean_ribo <- data.frame (HGNC=CDS[isexpr,1], grand_mean_ribo)
 CDS_Lens <- data.frame(HGNC=CDS_IDs, CDS_Len[,1])
 merge_ribo_prot <- merge(grand_mean_ribo,protein_absolute_ibaq, by="HGNC" )
@@ -190,7 +189,7 @@ file ="TMM_VarianceMeanDetrended_CPM_GT1_in20_RiboSeq_Expression_Read_Species_Ra
 sep="\t", row.names=F) 
 write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in20_RiboSeq_Expression", 
 row.names=CDS_IDs[isexpr], sep="\t")
-
+# Added comment
 # SVA/Batch Correction
 p1 <- paste (covariates$Date_Cells_Frozen, covariates$Date_Ribosome_Footprint, covariates$Data_Gel_Purified, sep="_")
 p1 <- covariates$Data_Gel_Purified
@@ -252,6 +251,9 @@ dev.off()
 pdf ("LCL_Ribo_Hierarchical_Clustering_Normalized_Counts_Residuals_SVA.pdf")
 plot(sva_hc)
 dev.off()
+
+plot(norm_expr[,2], v$E[,2], pch=19, cex=0.3, xlab="SVA_GM12878_Rep1", ylab="GM12878_Rep1")
+plot(norm_expr[,21], v$E[,21], pch=19, cex=0.3, xlab="SVA_GM18526_MiSeq", ylab="GM18526_MiSeq")
 ##
 
 ## FUNCTIONS
