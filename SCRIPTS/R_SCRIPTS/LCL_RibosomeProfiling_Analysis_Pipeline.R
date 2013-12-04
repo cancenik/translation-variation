@@ -83,9 +83,10 @@ covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profilin
 
 ## DATA ANALYSIS 
 # Compare absolute levels of protein with rna and ribo
-grand_mean_rna <- apply (rna_seq_normalized, 1, mean)
+grand_mean_rna <- apply (rna_seq_normalized, 1, median)
 grand_mean_rna  <- data.frame(HGNC=rownames(rna_seq_normalized), grand_mean_rna)
-grand_mean_ribo <- apply(v$E, 1, mean)
+ribo <- c()
+grand_mean_ribo <- apply(norm_expr[,a1], 1, median)
 grand_mean_ribo <- data.frame (HGNC=CDS[isexpr,1], grand_mean_ribo)
 CDS_Lens <- data.frame(HGNC=CDS_IDs, CDS_Len[,1])
 merge_ribo_prot <- merge(grand_mean_ribo,protein_absolute_ibaq, by="HGNC" )
@@ -94,7 +95,7 @@ merge_ribo_rna_prot_len <- merge(merge_ribo_rna_prot, CDS_Lens, by="HGNC")
 dim(merge_ribo_rna_prot)
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
-
+}
 # RNASEQ NORMALIZATION AND VOOM
 rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
 all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
