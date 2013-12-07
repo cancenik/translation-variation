@@ -24,7 +24,6 @@ protein_absolute_ibaq <- read.csv('~/project/CORE_DATAFILES/TableS8_Khan_etal.cs
 protein_absolute_ibaq <- merge(protein_absolute_ibaq, ensg_hgnc)
 
 ## RNA_SEQ COUNTS 
-## WILL CREATE FOUR DIFFERENT NORMALIZED MATRICES
 ## GEUVADIS, PICKRELL, PolyA, Ribozero
 geuvadis <- read.table(
 "/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/Reformatted_Transcript_Counts_All_Libraries.tsv"
@@ -82,44 +81,6 @@ CDS_IDs <- CDS[,1]
 covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 
 ## DATA ANALYSIS 
-# Compare absolute levels of protein with rna and ribo
-grand_mean_rna <- apply (rna_seq_normalized, 1, median)
-grand_mean_rna  <- data.frame(HGNC=rownames(rna_seq_normalized), grand_mean_rna)
-grand_mean_ribo <- apply(norm_expr, 1, median)
-grand_mean_ribo <- data.frame (HGNC=CDS[isexpr,1], grand_mean_ribo)
-CDS_Lens <- data.frame(HGNC=CDS_IDs, CDS_Len[,1])
-merge_ribo_prot <- merge(grand_mean_ribo,protein_absolute_ibaq, by="HGNC" )
-merge_ribo_rna_prot <- merge (merge_ribo_prot, grand_mean_rna, by="HGNC")
-merge_ribo_rna_prot_len <- merge(merge_ribo_rna_prot, CDS_Lens, by="HGNC")
-dim(merge_ribo_rna_prot)
-rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
-ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
-}
-# RNASEQ NORMALIZATION AND VOOM
-rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
-all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
-all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
-all_rnaseq_counts$samples
-cor (all_rnaseq[rnaexpr,], method="spearman")
-pdf("Mean_Variance_Modelling_RNASEQ.pdf")
-v2 <- voom (all_rnaseq_counts, plot=T)
-dev.off()
-# BATCH CORRECTION IS ESSENTIAL HERE
-rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,24), rep(4, 14) ) 
-sample_id <- unlist(strsplit(colnames(v2$E), split= "_"))
-sample_id <- sample_id[grep("GM", sample_id)]
-mod <- model.matrix(~as.factor(sample_id))
-batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=mod)
-
-write.table(batch_removed,
-file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
-sep="\t", row.names=geuvadis_CDS[rnaexpr,1])
-
-norm_dd_rnaseq <- dist( t( v2$E) )
-hc_rnaseq <- hclust( norm_dd_rnaseq)
-
-batch_dd_rnaseq <- dist( t( batch_removed) )
-hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
 
 # TOTAL COUNTS
 colSums(CDS_Counts[,-c(1,2)])
@@ -159,7 +120,33 @@ length(which(ratios_dataframe$ReadCount- c1 > 0))
 # lines(ratios_dataframe$ReadCount,count_to_species$fit-3*count_to_species$s, lty=2)
 
 
-# VOOM- TMM Normalization 
+# RNASEQ NORMALIZATION AND VOOM
+rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
+all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
+all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
+all_rnaseq_counts$samples
+cor (all_rnaseq[rnaexpr,], method="spearman")
+pdf("Mean_Variance_Modelling_RNASEQ.pdf")
+v2 <- voom (all_rnaseq_counts, plot=T)
+dev.off()
+# BATCH CORRECTION IS ESSENTIAL HERE
+rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,24), rep(4, 14) ) 
+sample_id <- unlist(strsplit(colnames(v2$E), split= "_"))
+sample_id <- sample_id[grep("GM", sample_id)]
+mod <- model.matrix(~as.factor(sample_id))
+batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=mod)
+
+write.table(batch_removed,
+file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
+sep="\t", row.names=geuvadis_CDS[rnaexpr,1])
+
+norm_dd_rnaseq <- dist( t( v2$E) )
+hc_rnaseq <- hclust( norm_dd_rnaseq)
+
+batch_dd_rnaseq <- dist( t( batch_removed) )
+hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
+
+# VOOM- TMM Normalization- Ribosome Profiling
 cds_counts <- DGEList(counts=CDS_Counts)
 isexpr <- rowSums(cpm(cds_counts) > 1) >= 36
 cds_counts <- cds_counts[isexpr,]
@@ -205,8 +192,40 @@ norm_expr <- residuals (fit, v$E)
 sva_dd <- dist( t ( norm_expr[,replicate_present]))
 sva_hc <- hclust (sva_dd) 
 
-##
+#
+# Compare absolute levels of protein with rna and ribo
+grand_mean_rna <- apply (rna_seq_normalized, 1, median)
+grand_mean_rna  <- data.frame(HGNC=rownames(rna_seq_normalized), grand_mean_rna)
+grand_mean_ribo <- apply(norm_expr, 1, median)
+grand_mean_ribo <- data.frame (HGNC=CDS[isexpr,1], grand_mean_ribo)
+CDS_Lens <- data.frame(HGNC=CDS_IDs, CDS_Len[,1])
+merge_ribo_prot <- merge(grand_mean_ribo,protein_absolute_ibaq, by="HGNC" )
+merge_ribo_rna_prot <- merge (merge_ribo_prot, grand_mean_rna, by="HGNC")
+merge_ribo_rna_prot_len <- merge(merge_ribo_rna_prot, CDS_Lens, by="HGNC")
+dim(merge_ribo_rna_prot)
+rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
+ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
+}
 
+#
+
+# Differential Expression Analysis and Translation Efficiency
+# Need to merge normalized RNA-Seq with Ribo
+# Identify design matrix
+# Two predictors: Sample Label + Ribo vs RNA
+### NEED TO IMPLEMENT THIS!!! EASIEST WAY IS TO MODIFY ONE OF THE ELIST
+#### We should bring the voom-derived weights to this calculation
+norm_expr_with_ids <- data.frame(HGNC=CDS[isexpr, 1], norm_expr)
+rna_seq_normalized_with_ids <- data.frame(HGNC=rownames(rna_seq_normalized), rna_seq_normalized)
+all_rna_ribo <- merge (norm_expr_with_ids, rna_seq_normalized_with_ids, by="HGNC" )
+sample_id_all <- unlist(strsplit(colnames(all_rna_ribo), split= "_"))
+sample_id_all <- as.factor(sample_id_all[grep("GM", sample_id_all)])
+treatment <- as.factor(c(rep("Ribo", dim(norm_expr)[2]), rep("RNA", dim(rna_seq_normalized)[2] ) ) )
+# Include an interaction term
+factor_all <- as.factor(paste (treatment, sample_id_all, sep="."))
+design <- model.matrix(~0+factor_all)
+colnames(design) <- levels(factor_all)
+fit <- lmFit(all_rna_ribo[,-1], design)
 ## FIGURES
 # Absolute Protein to Grand_Mean_RNA or RIBO
 pdf ("Absolute_Protein_IBAQ_RNA_RIBO.pdf", width=4, height=8)
