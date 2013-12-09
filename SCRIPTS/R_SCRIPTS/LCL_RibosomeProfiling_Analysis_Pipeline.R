@@ -11,7 +11,8 @@ library ("sva")
 # Should use total read number for the analysis
 
 ## DATA INPUT
-# VOOM NORMALIZED RNA_SEQ
+# RData all_rnaseq DF
+load('~/project/CORE_DATAFILES/All_RNA_Seq_DF.Rdata')
 rna_seq_normalized <- read.table('~/project/CORE_DATAFILES/TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression', header=T)
 
 ## HGNC_to_ENSG
@@ -136,6 +137,9 @@ sample_id <- sample_id[grep("GM", sample_id)]
 mod <- model.matrix(~as.factor(sample_id))
 batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=mod)
 
+# Update v2$E with batch_removed; this keeps weights
+v2$E <- batch_removed
+
 write.table(batch_removed,
 file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
 sep="\t", row.names=geuvadis_CDS[rnaexpr,1])
@@ -189,6 +193,9 @@ mod <- model.matrix(~as.factor(sample_labels), data=as.data.frame(v$E))
 svobj <- sva (v$E, mod=mod, B=20)
 fit = lmFit(v$E, svobj$sv)
 norm_expr <- residuals (fit, v$E)
+v$E <- norm_expr
+# Replace v$E with norm_expr
+
 sva_dd <- dist( t ( norm_expr[,replicate_present]))
 sva_hc <- hclust (sva_dd) 
 
@@ -214,18 +221,36 @@ ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_p
 # Identify design matrix
 # Two predictors: Sample Label + Ribo vs RNA
 ### NEED TO IMPLEMENT THIS!!! EASIEST WAY IS TO MODIFY ONE OF THE ELIST
+# It is possible to cbind ELIST GIVEN THAT THEY ARE SAME ORDER
+# EXTRACT VECTOR BINDING BETWEEN THE TWO AND CBIND THE VOOM ELISTs
 #### We should bring the voom-derived weights to this calculation
 norm_expr_with_ids <- data.frame(HGNC=CDS[isexpr, 1], norm_expr)
 rna_seq_normalized_with_ids <- data.frame(HGNC=rownames(rna_seq_normalized), rna_seq_normalized)
 all_rna_ribo <- merge (norm_expr_with_ids, rna_seq_normalized_with_ids, by="HGNC" )
+
+# intersect ids
+common_ids <- intersect(rownames(rna_seq_normalized), CDS_IDs[isexpr])
+
 sample_id_all <- unlist(strsplit(colnames(all_rna_ribo), split= "_"))
 sample_id_all <- as.factor(sample_id_all[grep("GM", sample_id_all)])
 treatment <- as.factor(c(rep("Ribo", dim(norm_expr)[2]), rep("RNA", dim(rna_seq_normalized)[2] ) ) )
 # Include an interaction term
-factor_all <- as.factor(paste (treatment, sample_id_all, sep="."))
-design <- model.matrix(~0+factor_all)
-colnames(design) <- levels(factor_all)
+#factor_all <- as.factor(paste (treatment, sample_id_all, sep="."))
+#design <- model.matrix(~0+factor_all)
+#colnames(design) <- levels(factor_all)
+design <- model.matrix(~treatment+treatment:sample_id_all)
 fit <- lmFit(all_rna_ribo[,-1], design)
+
+# One approach is to have two different linear models
+# One for different RNA, one for different Ribo and one for different Ribo-RNA
+# This way the moderated F-statistic can be used as the measure of any difference
+# This might be achieved by the subset argument to lm
+# design2 <- model.matrix(~sample_id_all)
+# fit2 <- lmFit(all_rna_ribo[,-1], design2, subset= Treatment=="Ribo")
+# To achieve ribo rna contrast only, we can use another design with just treatment
+
+# EBayes also returns a moderated F-statistic, $F.p.value
+# Test for presence of any nonzero contrast 
 ## FIGURES
 # Absolute Protein to Grand_Mean_RNA or RIBO
 pdf ("Absolute_Protein_IBAQ_RNA_RIBO.pdf", width=4, height=8)
