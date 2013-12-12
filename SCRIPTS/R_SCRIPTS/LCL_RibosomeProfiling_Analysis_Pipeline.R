@@ -3,6 +3,8 @@ library("hexbin")
 library("limma")
 library("qtl")
 library ("sva")
+# Test isva
+library ("isva")
 
 ## NOTES
 # Number of bases covered is not a very good measure
