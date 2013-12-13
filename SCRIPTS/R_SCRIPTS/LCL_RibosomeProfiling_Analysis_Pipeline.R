@@ -4,7 +4,7 @@ library("limma")
 library("qtl")
 library ("sva")
 library ("isva")
-# Gun change
+
 
 ## NOTES
 # Number of bases covered is not a very good measure
