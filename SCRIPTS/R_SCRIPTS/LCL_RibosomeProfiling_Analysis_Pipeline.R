@@ -3,7 +3,6 @@ library("hexbin")
 library("limma")
 library("qtl")
 library ("sva")
-# Test isva
 library ("isva")
 
 ## NOTES
