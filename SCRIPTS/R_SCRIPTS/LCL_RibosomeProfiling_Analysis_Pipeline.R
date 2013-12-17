@@ -191,16 +191,25 @@ p1 <- p1[p2 %in% colnames(v$E)]
 p2 <- p2[p2 %in% colnames(v$E)]
 p1 <- p1[sort (p2, index.return=T)$ix]
 mod <- model.matrix(~as.factor(sample_labels), data=as.data.frame(v$E))
-
 svobj <- sva (v$E, mod=mod, B=20)
 fit = lmFit(v$E, svobj$sv)
 norm_expr <- residuals (fit, v$E)
-v$E <- norm_expr
+save (v, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalizedEList.RData')
 # Replace v$E with norm_expr
-
+sva_norm_weights <- v
+sva_norm_weights$E <- norm_expr
+save (v, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalized_SVA_EList.RData')
 sva_dd <- dist( t ( norm_expr[,replicate_present]))
 sva_hc <- hclust (sva_dd) 
+# We can look sva correlations with sequencing depth, batch, etc
 
+#ISVA seems to remove almost all variance from the data. However, the clustering is very good
+isvs <- isvaFn(v$E, sample_labels)
+fit2 = lmFit(v$E, isvs$isv)
+isva_expr <- residuals(fit2, v$E)
+hist(isva_expr)
+isva_dd <- dist(t(isva_expr[,replicate_present]))
+isva_hc <- hclust(isva_dd)
 #
 # Compare absolute levels of protein with rna and ribo
 grand_mean_rna <- apply (rna_seq_normalized, 1, median)
@@ -214,7 +223,7 @@ merge_ribo_rna_prot_len <- merge(merge_ribo_rna_prot, CDS_Lens, by="HGNC")
 dim(merge_ribo_rna_prot)
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
-}
+
 
 #
 
@@ -226,23 +235,28 @@ ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_p
 # It is possible to cbind ELIST GIVEN THAT THEY ARE SAME ORDER
 # EXTRACT VECTOR BINDING BETWEEN THE TWO AND CBIND THE VOOM ELISTs
 #### We should bring the voom-derived weights to this calculation
-norm_expr_with_ids <- data.frame(HGNC=CDS[isexpr, 1], norm_expr)
-rna_seq_normalized_with_ids <- data.frame(HGNC=rownames(rna_seq_normalized), rna_seq_normalized)
-all_rna_ribo <- merge (norm_expr_with_ids, rna_seq_normalized_with_ids, by="HGNC" )
-
-# intersect ids
-common_ids <- intersect(rownames(rna_seq_normalized), CDS_IDs[isexpr])
-
-sample_id_all <- unlist(strsplit(colnames(all_rna_ribo), split= "_"))
+rna_id_in_ribo <- rownames(rna_seq_normalized) %in% CDS[isexpr, 1]
+ribo_id_in_rna <- CDS[isexpr, 1] %in% rownames(rna_seq_normalized)
+ribo_rep_present <- unlist(strsplit(colnames(v[,replicate_present]), split= "_"))
+ribo_rep_present <- ribo_rep_present[grep("GM", ribo_rep_present)]
+rna_with_ribo_replicate <- c()
+for (i in 1:length(ribo_rep_present)) { 
+  rna_with_ribo_replicate <- c(rna_with_ribo_replicate, grep(ribo_rep_present[i], colnames(v2)))
+}
+all_expr_elist <- cbind(v[ribo_id_in_rna,replicate_present], v2[rna_id_in_ribo,unique(sort(rna_with_ribo_replicate))])
+sample_id_all <- unlist(strsplit(colnames(all_expr_elist), split= "_"))
 sample_id_all <- as.factor(sample_id_all[grep("GM", sample_id_all)])
-treatment <- as.factor(c(rep("Ribo", dim(norm_expr)[2]), rep("RNA", dim(rna_seq_normalized)[2] ) ) )
+treatment <- as.factor(c(rep("Ribo", dim(v[,replicate_present])[2]), rep("RNA", dim(v2[,unique(sort(rna_with_ribo_replicate))])[2] ) ) )
+treatment <- relevel(treatment,ref="RNA")
 # Include an interaction term
 #factor_all <- as.factor(paste (treatment, sample_id_all, sep="."))
 #design <- model.matrix(~0+factor_all)
 #colnames(design) <- levels(factor_all)
 design <- model.matrix(~treatment+treatment:sample_id_all)
-fit <- lmFit(all_rna_ribo[,-1], design)
-
+# Some coefficients are not estimable right now, subset on replicate present
+fit <- lmFit(all_expr_elist, design)
+fit2 <- eBayes(fit)
+topTable(fit2, coef=2)
 # One approach is to have two different linear models
 # One for different RNA, one for different Ribo and one for different Ribo-RNA
 # This way the moderated F-statistic can be used as the measure of any difference
