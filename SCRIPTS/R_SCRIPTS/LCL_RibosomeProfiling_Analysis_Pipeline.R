@@ -3,8 +3,12 @@ library("hexbin")
 library("limma")
 library("qtl")
 library ("sva")
+library("MASS")
 library ("isva")
-
+# In addition to differential expression analysis at various levels, RNA, Ribo, TE
+# We need to add an analysis of variance for the samples with replicates 
+# These will reveal gene specific differences in inter-individual variance vs. within individual
+# One way to do this is F-test of equality of variances
 
 ## NOTES
 # Number of bases covered is not a very good measure
@@ -14,9 +18,8 @@ library ("isva")
 
 ## DATA INPUT
 # RData all_rnaseq DF
-load('~/project/CORE_DATAFILES/All_RNA_Seq_DF.Rdata')
 rna_seq_normalized <- read.table('~/project/CORE_DATAFILES/TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression', header=T)
-
+rna_seq_normalized$ID <- rownames(rna_seq_normalized)
 ## HGNC_to_ENSG
 hgnc_to_ensg <- read.table('~/project/CORE_DATAFILES/HGNCtoENSG.txt', ,header=F,as.is=T,sep="|",fill=T)
 ensg_hgnc <- cbind(grep("ENSG", unlist(strsplit(hgnc_to_ensg$V2, "[.]")), value=T), hgnc_to_ensg$V5)
@@ -50,16 +53,18 @@ all_rnaseq <- cbind( polyA_CDS[,grep("Counts", colnames(polyA_CDS))],
 ribozero_CDS[,grep("Counts", colnames(ribozero_CDS))], pickrell_CDS[,grep("Counts", colnames(pickrell_CDS))], 
 geuvadis_CDS[,grep("Counts", colnames(geuvadis_CDS))])
 # Spearman correlation is quite high -> Add colname_suffix
-colnames(all_rnaseq)[1:18] <- paste (colnames(all_rnaseq)[1:18], "polyA", sep="_")
-colnames(all_rnaseq)[19:44] <- paste (colnames(all_rnaseq)[19:44], "RiboZero", sep="_")
-colnames(all_rnaseq)[45:68] <- paste (colnames(all_rnaseq)[45:68], "Pickrell", sep="_")
-colnames(all_rnaseq)[69:82] <- paste (colnames(all_rnaseq)[69:82], "Geuvadis", sep="_")
-all_rnaseq_counts <- DGEList(counts= all_rnaseq)
-
 pickrell_CDS_counts <- DGEList(counts=pickrell_CDS[,grep("Counts", colnames(pickrell_CDS))])
 polyA_CDS_counts <- DGEList(counts=polyA_CDS[,grep("Counts", colnames(polyA_CDS))])
 ribozero_CDS_counts <- DGEList(counts=ribozero_CDS[,grep("Counts", colnames(ribozero_CDS))])
 geuvadis_CDS_counts <- DGEList(counts=geuvadis_CDS[,grep("Counts", colnames(geuvadis_CDS))])
+
+colnames(all_rnaseq)[1:18] <- paste (colnames(all_rnaseq)[1:18], "polyA", sep="_")
+colnames(all_rnaseq)[19:44] <- paste (colnames(all_rnaseq)[19:44], "RiboZero", sep="_")
+colnames(all_rnaseq)[45:68] <- paste (colnames(all_rnaseq)[45:68], "Pickrell", sep="_")
+colnames(all_rnaseq)[69:82] <- paste (colnames(all_rnaseq)[69:82], "Geuvadis", sep="_")
+load('~/project/CORE_DATAFILES/All_RNA_Seq_DF.Rdata')
+all_rnaseq_counts <- DGEList(counts= all_rnaseq)
+
 
 ## RIBOSEQ_COUNTS
 #READ COUNTS per appris transcript
@@ -126,6 +131,17 @@ length(which(ratios_dataframe$ReadCount- c1 > 0))
 # RNASEQ NORMALIZATION AND VOOM
 rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
 all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
+# Identify differences in PolyA to RiboZero and remove
+polyA_mean <- apply(all_rnaseq_counts[,grep("polyA", colnames(all_rnaseq_counts))],1, mean)
+RZ_mean <- apply(all_rnaseq_counts[,grep("RiboZero", colnames(all_rnaseq_counts))],1, mean)
+plot(log10(polyA_mean), log10(RZ_mean), cex=0.2, pch=19)
+fit.rna <- lm(log10(RZ_mean)~log10(polyA_mean))
+# Identify outliers
+# rna_seq_normalized$ID[abs(stdres(fit.rna)) > 3]
+plot(log10(polyA_mean),stdres(fit.rna) , pch=19, cex=0.2)
+polyA_RZ_inconsistent <- (abs(stdres(fit.rna)) > 3)
+all_rnaseq_counts <- all_rnaseq_counts[!polyA_RZ_inconsistent,]
+
 all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
 all_rnaseq_counts$samples
 cor (all_rnaseq[rnaexpr,], method="spearman")
@@ -144,7 +160,7 @@ v2$E <- batch_removed
 
 write.table(batch_removed,
 file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
-sep="\t", row.names=geuvadis_CDS[rnaexpr,1])
+sep="\t", row.names=as.character(rna_seq_normalized_with_ids[,1])[!abs(stdres(fit.rna)) > 3])
 
 norm_dd_rnaseq <- dist( t( v2$E) )
 hc_rnaseq <- hclust( norm_dd_rnaseq)
@@ -231,9 +247,6 @@ ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_p
 # Need to merge normalized RNA-Seq with Ribo
 # Identify design matrix
 # Two predictors: Sample Label + Ribo vs RNA
-### NEED TO IMPLEMENT THIS!!! EASIEST WAY IS TO MODIFY ONE OF THE ELIST
-# It is possible to cbind ELIST GIVEN THAT THEY ARE SAME ORDER
-# EXTRACT VECTOR BINDING BETWEEN THE TWO AND CBIND THE VOOM ELISTs
 #### We should bring the voom-derived weights to this calculation
 rna_id_in_ribo <- rownames(rna_seq_normalized) %in% CDS[isexpr, 1]
 ribo_id_in_rna <- CDS[isexpr, 1] %in% rownames(rna_seq_normalized)
@@ -243,30 +256,54 @@ rna_with_ribo_replicate <- c()
 for (i in 1:length(ribo_rep_present)) { 
   rna_with_ribo_replicate <- c(rna_with_ribo_replicate, grep(ribo_rep_present[i], colnames(v2)))
 }
+
+
+# We can switch v with sva_norm_weights 
+## SUBSETTING MESSES UP THE DESIGN MATRIX
+#all_expr_elist <- cbind(sva_norm_weights[ribo_id_in_rna,replicate_present], v2[rna_id_in_ribo,unique(sort(rna_with_ribo_replicate))])
 all_expr_elist <- cbind(v[ribo_id_in_rna,replicate_present], v2[rna_id_in_ribo,unique(sort(rna_with_ribo_replicate))])
 sample_id_all <- unlist(strsplit(colnames(all_expr_elist), split= "_"))
 sample_id_all <- as.factor(sample_id_all[grep("GM", sample_id_all)])
+all_expr_elist$design <- model.matrix(~sample_id_all)
 treatment <- as.factor(c(rep("Ribo", dim(v[,replicate_present])[2]), rep("RNA", dim(v2[,unique(sort(rna_with_ribo_replicate))])[2] ) ) )
 treatment <- relevel(treatment,ref="RNA")
-# Include an interaction term
-#factor_all <- as.factor(paste (treatment, sample_id_all, sep="."))
-#design <- model.matrix(~0+factor_all)
-#colnames(design) <- levels(factor_all)
-design <- model.matrix(~treatment+treatment:sample_id_all)
-# Some coefficients are not estimable right now, subset on replicate present
-fit <- lmFit(all_expr_elist, design)
-fit2 <- eBayes(fit)
-topTable(fit2, coef=2)
-# One approach is to have two different linear models
-# One for different RNA, one for different Ribo and one for different Ribo-RNA
-# This way the moderated F-statistic can be used as the measure of any difference
-# This might be achieved by the subset argument to lm
-# design2 <- model.matrix(~sample_id_all)
-# fit2 <- lmFit(all_rna_ribo[,-1], design2, subset= Treatment=="Ribo")
-# To achieve ribo rna contrast only, we can use another design with just treatment
+# Questions of interest
+# What are the genes with differential RNA expression across individuals
+# What are the genes with differential Ribo expression across individuals
+# What are the genes with differential Ribo-RNA expression across individuals
+# What are the genes with differential Ribo-RNA expression in a given individual
+# Related to this is the coefficient associate with Ribo-RNA for each gene in each individual
+# The moderated F-statistic can be used as the measure of any difference
+# ## EBayes also returns a moderated F-statistic, $F.p.value
 
-# EBayes also returns a moderated F-statistic, $F.p.value
-# Test for presence of any nonzero contrast 
+
+##### SUBSETTING IS NOT WORKING -- NEED TO FIX
+ribo_rna_design <- model.matrix(~sample_id_all)
+ribo_fit <- lmFit (all_expr_elist, ribo_rna_design, subset= treatment=="Ribo")
+rna_fit <- lmFit (all_expr_elist, ribo_rna_design, subset= treatment=="RNA")
+ribo_fit2 <- eBayes(ribo_fit)
+rna_fit2 <- eBayes(rna_fit)
+topTable(ribo_fit2, coef=2,number=300)
+topTable(rna_fit2, coef=2,number=300)
+results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=1)
+results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=1)
+
+# We need pretty visualizations to show relationship between RNA, Ribo, TE across individuals
+# We need to do some GO Analysis
+
+# FOR TE CALCULATION NEED TO NORMALIZE EVERYTHING TOGETHER OR 
+# NEED UNIMODAL DISTRIBUTION OF COEFFICIENTS WHEN FITTING TREATMENT ONLY MODEL
+te_design <- model.matrix(~treatment+treatment:sample_id_all)
+te_fit <- lmFit(all_expr_elist, te_design)
+te_fit2 <- eBayes(te_fit)
+# Check that IDs are correct
+#te_fit2$genes$ID <- as.character(CDS[isexpr ,1][ribo_id_in_rna])
+# Here the significance testing for difference in TE within a given individual, ie
+# Any of the coef of te_fit2 is problematic as testing against 0 is strange. 
+# One idea might be to voom the entire table of RNA_Seq + Ribo_Seq for this
+# This nested interaction formula should allow us to calculate within individual diffs. 
+
+
 ## FIGURES
 # Absolute Protein to Grand_Mean_RNA or RIBO
 pdf ("Absolute_Protein_IBAQ_RNA_RIBO.pdf", width=4, height=8)
