@@ -4,7 +4,7 @@ library("limma")
 library("qtl")
 library ("sva")
 library("MASS")
-library ("isva")
+#library ("isva")
 # In addition to differential expression analysis at various levels, RNA, Ribo, TE
 # We need to add an analysis of variance for the samples with replicates 
 # These will reveal gene specific differences in inter-individual variance vs. within individual
@@ -16,33 +16,32 @@ library ("isva")
 # Total read number gives tighter clustering 
 # Should use total read number for the analysis
 
-## DATA INPUT
-# RData all_rnaseq DF
-rna_seq_normalized <- read.table('~/project/CORE_DATAFILES/TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression', header=T)
-rna_seq_normalized$ID <- rownames(rna_seq_normalized)
+# Data Directory
+data_dir <- '~/project/CORE_DATAFILES/'
+
 ## HGNC_to_ENSG
-hgnc_to_ensg <- read.table('~/project/CORE_DATAFILES/HGNCtoENSG.txt', ,header=F,as.is=T,sep="|",fill=T)
+hgnc_to_ensg <- read.table(paste (data_dir, 'HGNCtoENSG.txt', sep=""), ,header=F,as.is=T,sep="|",fill=T)
 ensg_hgnc <- cbind(grep("ENSG", unlist(strsplit(hgnc_to_ensg$V2, "[.]")), value=T), hgnc_to_ensg$V5)
 colnames(ensg_hgnc) <- c("ENSG", "HGNC")
 
 ## Absolute Protein Amounts
-protein_absolute_ibaq <- read.csv('~/project/CORE_DATAFILES/TableS8_Khan_etal.csv')
+protein_absolute_ibaq <- read.csv(paste (data_dir,'TableS8_Khan_etal.csv', sep=""))
 protein_absolute_ibaq <- merge(protein_absolute_ibaq, ensg_hgnc)
 
 ## RNA_SEQ COUNTS 
 ## GEUVADIS, PICKRELL, PolyA, Ribozero
 geuvadis <- read.table(
-"/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/GEUVADIS/Reformatted_Transcript_Counts_All_Libraries.tsv"
+  paste (data_dir,"Reformatted_Transcript_Counts_All_Libraries_GEUVADIS.tsv", sep="")
 , header=T)
 pickrell <- read.table(
-"/srv/gs1/projects/snyder/ccenik/PICKRELL_RNASEQ/Reformatted_Transcript_Counts_All_Libraries.tsv"
-, header=T)
+  paste (data_dir,"Reformatted_Transcript_Counts_All_Libraries_PICKRELL.tsv", sep="")
+  , header=T)
 polyA <- read.table(
-"/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/PolyA_RNA/Reformatted_Transcript_Counts_All_Libraries.tsv"
-, header=T)
+  paste (data_dir,"Reformatted_Transcript_Counts_All_Libraries_PolyA.tsv", sep="")
+  , header=T)
 ribozero <- read.table(
-"/srv/gs1/projects/snyder/ccenik/LCL_RNASEQ/RIBOZERO_RNA/Reformatted_Transcript_Counts_All_Libraries.tsv"
-, header=T)
+  paste (data_dir,"Reformatted_Transcript_Counts_All_Libraries_RZ.tsv", sep="")
+  , header=T)
 
 # For compatibility, use CDS counts only
 pickrell_CDS <- split(pickrell, pickrell$REGION)[[2]]
@@ -53,26 +52,19 @@ all_rnaseq <- cbind( polyA_CDS[,grep("Counts", colnames(polyA_CDS))],
 ribozero_CDS[,grep("Counts", colnames(ribozero_CDS))], pickrell_CDS[,grep("Counts", colnames(pickrell_CDS))], 
 geuvadis_CDS[,grep("Counts", colnames(geuvadis_CDS))])
 # Spearman correlation is quite high -> Add colname_suffix
-pickrell_CDS_counts <- DGEList(counts=pickrell_CDS[,grep("Counts", colnames(pickrell_CDS))])
-polyA_CDS_counts <- DGEList(counts=polyA_CDS[,grep("Counts", colnames(polyA_CDS))])
-ribozero_CDS_counts <- DGEList(counts=ribozero_CDS[,grep("Counts", colnames(ribozero_CDS))])
-geuvadis_CDS_counts <- DGEList(counts=geuvadis_CDS[,grep("Counts", colnames(geuvadis_CDS))])
-
 colnames(all_rnaseq)[1:18] <- paste (colnames(all_rnaseq)[1:18], "polyA", sep="_")
 colnames(all_rnaseq)[19:44] <- paste (colnames(all_rnaseq)[19:44], "RiboZero", sep="_")
-colnames(all_rnaseq)[45:68] <- paste (colnames(all_rnaseq)[45:68], "Pickrell", sep="_")
-colnames(all_rnaseq)[69:82] <- paste (colnames(all_rnaseq)[69:82], "Geuvadis", sep="_")
-load('~/project/CORE_DATAFILES/All_RNA_Seq_DF.Rdata')
+colnames(all_rnaseq)[45:70] <- paste (colnames(all_rnaseq)[45:70], "Pickrell", sep="_")
+colnames(all_rnaseq)[71:86] <- paste (colnames(all_rnaseq)[71:86], "Geuvadis", sep="_")
 all_rnaseq_counts <- DGEList(counts= all_rnaseq)
 
 
 ## RIBOSEQ_COUNTS
-#READ COUNTS per appris transcript
-# Custom Count all species
-species_all <- read.table("Reformatted_Appris_Species_Counts", header=T)
+# Species Counts -- Can this be substituted for Species_Read comparison?
+species_all <- read.table(paste (data_dir,"Reformatted_Appris_Species_Counts", sep=""), header=T)
 # CDS SPECIES
-species <- read.table("Reformatted_Species_Counts_All_Libraries.tsv", header=T)
-CDS_species <- split (species, species$REGION)[[2]]
+#species <- read.table(paste(data_dir, "Reformatted_Species_Counts_All_Libraries.tsv", sep=""),header=T)
+#CDS_species <- split (species, species$REGION)[[2]]
 
 # Total Number of Reads
 #data <- read.table ("Reformatted_Transcript_Counts_All_Libraries.tsv", header=T)
@@ -88,7 +80,7 @@ CDS_IDs <- CDS[,1]
 #covariates <-  read.table ("Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 
-## DATA ANALYSIS 
+######## DATA ANALYSIS ##################################
 
 # TOTAL COUNTS
 colSums(CDS_Counts[,-c(1,2)])
@@ -210,6 +202,7 @@ mod <- model.matrix(~as.factor(sample_labels), data=as.data.frame(v$E))
 svobj <- sva (v$E, mod=mod, B=20)
 fit = lmFit(v$E, svobj$sv)
 norm_expr <- residuals (fit, v$E)
+row.names(v) <- CDS_IDs[isexpr]
 save (v, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalizedEList.RData')
 # Replace v$E with norm_expr
 sva_norm_weights <- v
