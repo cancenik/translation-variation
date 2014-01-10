@@ -60,11 +60,10 @@ all_rnaseq_counts <- DGEList(counts= all_rnaseq)
 
 
 ## RIBOSEQ_COUNTS
-# Species Counts -- Can this be substituted for Species_Read comparison?
-species_all <- read.table(paste (data_dir,"Reformatted_Appris_Species_Counts", sep=""), header=T)
 # CDS SPECIES
-#species <- read.table(paste(data_dir, "Reformatted_Species_Counts_All_Libraries.tsv", sep=""),header=T)
-#CDS_species <- split (species, species$REGION)[[2]]
+species <- read.table(paste(data_dir, "Reformatted_Species_Counts_All_Libraries.tsv", sep=""),header=T)
+CDS_species <- split (species, species$REGION)[[2]]
+CDS_species <- CDS_species[,grep("Counts", colnames(CDS))]
 
 # Total Number of Reads
 #data <- read.table ("Reformatted_Transcript_Counts_All_Libraries.tsv", header=T)
@@ -83,30 +82,32 @@ covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profilin
 ######## DATA ANALYSIS ##################################
 
 # TOTAL COUNTS
-colSums(CDS_Counts[,-c(1,2)])
-dim (CDS_Counts[keep(CDS_Counts[,-c(1,2)], 100),])
-cm <- cor(CDS_Counts[keep(CDS_Counts[,-c(1,2)], 100),-c(1,2)])
-dd <- dist (t(log10(CDS_Counts[keep(CDS_Counts[,-c(1,2)], 100),-c(1,2)]+1)) )
+colSums(CDS_Counts)
+dim (CDS_Counts[keep(CDS_Counts, 100),])
+cm <- cor(CDS_Counts[keep(CDS_Counts, 100),])
+dd <- dist (t(log10(CDS_Counts[keep(CDS_Counts, 100),]+1)) )
 hc <- hclust (dd, "ward") 
 hc <- hclust (dd)
 
 # SPECIES
-colSums (species[, -c(1)])
-dim(species[keep(species[, -c(1)], 100), ])
-cm <- cor(species[keep(species[, -c(1)], 100), -c(1)])
-dd <- dist(t (species[keep(species[, -c(1)], 100), -c(1)] ) ) 
+colSums (CDS_species)
+dim(CDS_species[keep(CDS_species, 100), ])
+cm <- cor(CDS_species[keep(CDS_species, 100),])
+dd <- dist(t (log10(CDS_species[keep(CDS_species, 100), ]+1) ) ) 
 hc <- hclust(dd, "ward")
 hc <- hclust(dd)
 
+
+################### THIS SECTION NEEDS TO BE FIXED
 ## SPECIES TO COUNTS COMPARISON
-m1_counts <- CDS_species[,c(1,grep("Counts", colnames(CDS_species)))]
-m1 <- merge(m1_counts, CDS, by="ID")
-m1_species_sum <- rowSums(m1[,2:35])
-cds_count_sum <- rowSums(m1[,grep("Counts", colnames(m1))])
-ratios <- cds_count_sum/m1_species_sum
-ratios_ids <- data.frame(ID=as.vector(m1[,1]), ratio=ratios)
-ratios_dataframe <- data.frame(ID=as.vector(m1[,1]), ReadCount=log10(cds_count_sum+1) , SpeciesCount=log10(m1_species_sum+1) )
-# Perform loess regression between read_count to species_count
+species_sum <- rowSums(CDS_species)
+cds_count_sum <- rowSums(CDS_Counts)
+ratios <- cds_count_sum/species_sum
+plot(log10(cds_count_sum+1), log10(species_sum+1), cex=0.2)
+#ratios_ids <- data.frame(ID=as.vector(m1[,1]), ratio=ratios)
+#ratios_dataframe <- data.frame(ID=as.vector(m1[,1]), ReadCount=log10(cds_count_sum+1) , SpeciesCount=log10(m1_species_sum+1) )
+
+#### Perform loess regression between read_count to species_count
 # Call outliers as 2*SE away from the fit-- Need to think about length here. 
 # A very short gene with very high expression might be expected to have a skewed ratio
 ## This needs a lot of memory
@@ -141,7 +142,7 @@ pdf("Mean_Variance_Modelling_RNASEQ.pdf")
 v2 <- voom (all_rnaseq_counts, plot=T)
 dev.off()
 # BATCH CORRECTION IS ESSENTIAL HERE
-rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,24), rep(4, 14) ) 
+rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,26), rep(4, 16) ) 
 sample_id <- unlist(strsplit(colnames(v2$E), split= "_"))
 sample_id <- sample_id[grep("GM", sample_id)]
 mod <- model.matrix(~as.factor(sample_id))
