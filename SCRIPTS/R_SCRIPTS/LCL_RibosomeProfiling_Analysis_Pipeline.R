@@ -71,7 +71,7 @@ all_rnaseq_counts <- DGEList(counts= all_rnaseq)
 # CDS SPECIES
 species <- read.table(paste(data_dir, "Reformatted_Species_Counts_All_Libraries.tsv", sep=""),header=T)
 CDS_species <- split (species, species$REGION)[[2]]
-CDS_species <- CDS_species[,grep("Counts", colnames(CDS))]
+CDS_species <- CDS_species[,grep("Counts", colnames(CDS_species))]
 
 # Total Number of Reads
 #data <- read.table ("Reformatted_Transcript_Counts_All_Libraries.tsv", header=T)
@@ -210,7 +210,7 @@ save (v, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalizedEList.R
 # Replace v$E with norm_expr
 sva_norm_weights <- v
 sva_norm_weights$E <- norm_expr
-save (v, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalized_SVA_EList.RData')
+save (sva_norm_weights, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalized_SVA_EList.RData')
 sva_dd <- dist( t ( norm_expr[,replicate_present]))
 sva_hc <- hclust (sva_dd) 
 # We can look sva correlations with sequencing depth, batch, etc
@@ -225,9 +225,9 @@ quantile(isva_expr)
 isva_dd <- dist(t(isva_expr[,replicate_present]))
 isva_hc <- hclust(isva_dd)
 #
-# Compare absolute levels of protein with rna and ribo
-grand_mean_rna <- apply (rna_seq_normalized, 1, median)
-grand_mean_rna  <- data.frame(HGNC=rownames(rna_seq_normalized), grand_mean_rna)
+#### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
+grand_mean_rna <- apply (v2$E, 1, median)
+grand_mean_rna  <- data.frame(HGNC=rownames(v2), grand_mean_rna)
 grand_mean_ribo <- apply(norm_expr, 1, median)
 grand_mean_ribo <- data.frame (HGNC=CDS[isexpr,1], grand_mean_ribo)
 CDS_Lens <- data.frame(HGNC=CDS_IDs, CDS_Len[,1])
@@ -237,7 +237,6 @@ merge_ribo_rna_prot_len <- merge(merge_ribo_rna_prot, CDS_Lens, by="HGNC")
 dim(merge_ribo_rna_prot)
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
-
 
 #
 
@@ -306,12 +305,17 @@ te_fit2 <- eBayes(te_fit)
 kozak_scores <- read.table('~/project/CORE_DATAFILES/Kozak_Reference_Sequence_Scores.txt')
 kozak_score_variants <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores.txt',
 stringsAsFactors=FALSE, fill=T, col.names=paste ("V", seq(1:59), sep=""))
-kozak_var_ind <- kozak_score_variants[,-c(2,3)]
+kozak_score_variants_hapmap <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores_HapMap.txt', stringsAsFactors=F, fill=T, col.names=paste ("V", seq(1:9), sep=""))
+all_kozak_score_variants <- merge(kozak_score_variants, kozak_score_variants_hapmap, all=T, by=c("V1", "V2", "V3") )
+all_kozak_score_variants[is.na(all_kozak_score_variants)] <- ""
+kozak_var_ind <- all_kozak_score_variants[,-c(2,3)]
 number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
+# Note that there is a strong enrichment for single individual variants
+
 # There is a correlation between number of alleles and difference. 
 # If there are a lot of alleles than the difference is less likely to be negative
 # If number of alleles is less than 8
-kozak_score_variants<- kozak_score_variants[,c(1,3)]
+kozak_score_variants<- all_kozak_score_variants[,c(1,3)]
 kozak_merge <- merge(kozak_score_variants, kozak_scores, by="V1")
 p1 <- hist(kozak_merge$V2,50)
 p2 <- hist(kozak_merge$V3[number_alleles<10],50)
@@ -330,6 +334,7 @@ kozak_diff <- kozak_merge$V2 - kozak_merge$V3
 # grep ("10847|19240", sample_labels) gives the index of the expr value
 # Go over the individuals, grep the samples and calculate difference in mean
 ribo_diff <- c()
+list_of_pval <- c()
 for (i in 1:length(kozak_var_ind[!multi,1])) { 
   ind_unique <- unique(grep("NA",(kozak_var_ind[!multi,-1])[i,], value=T))
   ind_unique <- sub("NA", "GM", ind_unique)
@@ -337,16 +342,34 @@ for (i in 1:length(kozak_var_ind[!multi,1])) {
   # CHECK ENST EQUIVALENT IS PRESENT IN V$E, IF NOT ADD NA
   # HERE WE CAN DO MORE WITH THE STATS --WEIGHTED MEAN, ETC
   my_index <- which ( CDS_IDs[isexpr] == enst_hgnc[grep ((kozak_var_ind[!multi,1])[i], enst_hgnc),2] )
-  if (length(my_index)) {
-    ribo_diff <- c(ribo_diff, mean(v$E[my_index,ribo_index]) - mean(v$E[my_index, -ribo_index]))
+  if (length(my_index) & length(ribo_index) %% 50 != 0) {
+    ribo_diff <- c(ribo_diff, weighted.mean(v$E[my_index,ribo_index],v$weights[my_index,ribo_index] ) - weighted.mean(v$E[my_index, -ribo_index], v$weights[my_index, -ribo_index] ))
+    index_factor <- rep(0,times=50)
+    index_factor[ribo_index] <- 1
+    list_of_pval <- c(list_of_pval, summary(lm(v$E[my_index,] ~ as.factor(index_factor), weights=v$weights[my_index,]))$coefficients[2,4])
   }
   else { 
-      ribo_diff <- c(ribo_diff,NA)
+    ribo_diff <- c(ribo_diff,NA)
+    list_of_pval <- c(list_of_pval,NA)
   }
 }
 
+# If mutant has higher Kozak then more likely to have higher ribo density
+plot(ribo_diff, kozak_diff[!multi], cex=0.5, pch=19)
+abline(v=c(0,0.5,-0.5), h=c(0,0.5, -0.5))
+# fmat <- matrix(nrow=2, ncol=2)
+# fmat[1,] <- c(0,7)
+# fmat[2,] <- c(13,13)
+# fisher.test(fmat)
 
-
+# When we look at the pvalues, All the significant changes have Kozak strength changes in the upper half
+c1 <- p.adjust(list_of_pval)
+q1 <- !is.na(c1)
+q2 <- !is.na(c1) & c1 > 0 & c1 < 1
+q2 <- !is.na(c1) & c1 > 0 & c1 < 0.3
+length((kozak_diff[!multi])[q1])
+quantile((kozak_diff[!multi])[q1])
+length((kozak_diff[!multi])[q2])
 ###
 
 
