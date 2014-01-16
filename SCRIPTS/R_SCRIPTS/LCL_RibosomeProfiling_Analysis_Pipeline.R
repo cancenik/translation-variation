@@ -27,7 +27,10 @@ data_dir <- '~/project/CORE_DATAFILES/'
 ## HGNC_to_ENSG
 hgnc_to_ensg <- read.table(paste (data_dir, 'HGNCtoENSG.txt', sep=""), ,header=F,as.is=T,sep="|",fill=T)
 ensg_hgnc <- cbind(grep("ENSG", unlist(strsplit(hgnc_to_ensg$V2, "[.]")), value=T), hgnc_to_ensg$V5)
+enst_hgnc <- cbind(hgnc_to_ensg$V1, hgnc_to_ensg$V5)
 colnames(ensg_hgnc) <- c("ENSG", "HGNC")
+colnames(enst_hgnc) <- c("ENST", "HGNC")
+substr(enst_hgnc[,1],1,1) <- ""
 
 ## Absolute Protein Amounts
 protein_absolute_ibaq <- read.csv(paste (data_dir,'TableS8_Khan_etal.csv', sep=""))
@@ -317,11 +320,13 @@ plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6))
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
 wilcox.test(kozak_merge$V3, kozak_merge$V2)
 
+multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
+
 #Go over the variant containing transcripts
 # Some transcripts have multiple variants and should be treated separately
 # Then for each transcript calculate difference in ribo-expression 
 # Each transcript will contribute a delta Kozak and delta expression
-kozak_diff <- kozak_merge$V3 - kozak_merge$V2
+kozak_diff <- kozak_merge$V2 - kozak_merge$V3
 # grep ("10847|19240", sample_labels) gives the index of the expr value
 # Go over the individuals, grep the samples and calculate difference in mean
 ribo_diff <- c()
@@ -330,14 +335,17 @@ for (i in 1:length(kozak_var_ind[!multi,1])) {
   ind_unique <- sub("NA", "GM", ind_unique)
   ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels)
   # CHECK ENST EQUIVALENT IS PRESENT IN V$E, IF NOT ADD NA
-  # HERE WE CAN DO MORE WITH THE STATS
-  ribo_diff <- c(ribo_diff, v$E[ADD_ENST_EQUIVALENT,ribo_index] - v$E[ADD_ENST, -ribo_index])
-  
+  # HERE WE CAN DO MORE WITH THE STATS --WEIGHTED MEAN, ETC
+  my_index <- which ( CDS_IDs[isexpr] == enst_hgnc[grep ((kozak_var_ind[!multi,1])[i], enst_hgnc),2] )
+  if (length(my_index)) {
+    ribo_diff <- c(ribo_diff, mean(v$E[my_index,ribo_index]) - mean(v$E[my_index, -ribo_index]))
+  }
+  else { 
+      ribo_diff <- c(ribo_diff,NA)
+  }
 }
 
-multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
-multiple_variants <- kozak_merge[multi,]
-single_variants <- kozak_merge[!multi,]
+
 
 ###
 
