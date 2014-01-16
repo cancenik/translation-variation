@@ -11,6 +11,11 @@ library("MASS")
 # One way to do this is F-test of equality of variances
 
 ## NOTES
+## Test for difference in variance
+## Calculate F-value using anova on lm for each gene. Compare Ribo RNA
+## Permute the Ribo & RNA labels within each individual. If we have 4 reps of RNA 2 reps of Ribo
+## We can get 4 reps of Ribo and 2 reps of RNA
+
 # Number of bases covered is not a very good measure
 # The number of species correlates better with length but
 # Total read number gives tighter clustering 
@@ -134,6 +139,7 @@ fit.rna <- lm(log10(RZ_mean)~log10(polyA_mean))
 plot(log10(polyA_mean),stdres(fit.rna) , pch=19, cex=0.2)
 polyA_RZ_inconsistent <- (abs(stdres(fit.rna)) > 3)
 all_rnaseq_counts <- all_rnaseq_counts[!polyA_RZ_inconsistent,]
+row.names(all_rnaseq_counts) <- (geuvadis_CDS$ID[rnaexpr])[!polyA_RZ_inconsistent]
 
 all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
 all_rnaseq_counts$samples
@@ -141,6 +147,10 @@ cor (all_rnaseq[rnaexpr,], method="spearman")
 pdf("Mean_Variance_Modelling_RNASEQ.pdf")
 v2 <- voom (all_rnaseq_counts, plot=T)
 dev.off()
+
+norm_dd_rnaseq <- dist( t( v2$E) )
+hc_rnaseq <- hclust( norm_dd_rnaseq)
+
 # BATCH CORRECTION IS ESSENTIAL HERE
 rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,26), rep(4, 16) ) 
 sample_id <- unlist(strsplit(colnames(v2$E), split= "_"))
@@ -155,9 +165,6 @@ write.table(batch_removed,
 file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
 sep="\t", row.names=as.character(rna_seq_normalized_with_ids[,1])[!abs(stdres(fit.rna)) > 3])
 
-norm_dd_rnaseq <- dist( t( v2$E) )
-hc_rnaseq <- hclust( norm_dd_rnaseq)
-
 batch_dd_rnaseq <- dist( t( batch_removed) )
 hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
 
@@ -165,10 +172,9 @@ hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
 cds_counts <- DGEList(counts=CDS_Counts)
 isexpr <- rowSums(cpm(cds_counts) > 1) >= 36
 cds_counts <- cds_counts[isexpr,]
-cds_counts$samples$lib.size <- colSums(cds_counts$counts)
+dim(cds_counts)
 cds_counts <- calcNormFactors (cds_counts, method= "TMM")
 cds_counts$samples
-#apply(cds_counts$counts, 2, quantile)
 s1 <- unlist(strsplit(colnames(CDS_Counts), "_"))
 sample_labels <- s1[grep('GM', s1)]
 table(sample_labels)
@@ -182,13 +188,6 @@ replicate_present <- duplicated(sample_labels) |duplicated(sample_labels, fromLa
 norm_dd_rep <- dist(t (v$E[,replicate_present] ) )
 norm_hc_rep <- hclust (norm_dd_rep)
 
-detrended_matrix <- cbind(as.vector(CDS_IDs[isexpr]), as.data.frame (v$E) )
-colnames(detrended_matrix)[1] <- "ID"
-detrended_matrix_with_ratio <- merge (detrended_matrix,ratios_ids , by="ID")
-
-write.table(detrended_matrix_with_ratio, 
-file ="TMM_VarianceMeanDetrended_CPM_GT1_in20_RiboSeq_Expression_Read_Species_Ratio", 
-sep="\t", row.names=F) 
 write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in20_RiboSeq_Expression", 
 row.names=CDS_IDs[isexpr], sep="\t")
 # Added comment
@@ -213,11 +212,13 @@ sva_dd <- dist( t ( norm_expr[,replicate_present]))
 sva_hc <- hclust (sva_dd) 
 # We can look sva correlations with sequencing depth, batch, etc
 
-#ISVA seems to remove almost all variance from the data. However, the clustering is very good
+#ISVA finds 16 variables that seem to remove almost all variance from the data. 
+# However, the clustering is  good
 isvs <- isvaFn(v$E, sample_labels)
 fit2 = lmFit(v$E, isvs$isv)
 isva_expr <- residuals(fit2, v$E)
-hist(isva_expr)
+hist(isva_expr, 100, xlim=c(-3,3))
+quantile(isva_expr)
 isva_dd <- dist(t(isva_expr[,replicate_present]))
 isva_hc <- hclust(isva_dd)
 #
@@ -296,6 +297,49 @@ te_fit2 <- eBayes(te_fit)
 # Any of the coef of te_fit2 is problematic as testing against 0 is strange. 
 # One idea might be to voom the entire table of RNA_Seq + Ribo_Seq for this
 # This nested interaction formula should allow us to calculate within individual diffs. 
+
+
+### KOZAK SEQUENCE ANALYSIS
+kozak_scores <- read.table('~/project/CORE_DATAFILES/Kozak_Reference_Sequence_Scores.txt')
+kozak_score_variants <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores.txt',
+stringsAsFactors=FALSE, fill=T, col.names=paste ("V", seq(1:59), sep=""))
+kozak_var_ind <- kozak_score_variants[,-c(2,3)]
+number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
+# There is a correlation between number of alleles and difference. 
+# If there are a lot of alleles than the difference is less likely to be negative
+# If number of alleles is less than 8
+kozak_score_variants<- kozak_score_variants[,c(1,3)]
+kozak_merge <- merge(kozak_score_variants, kozak_scores, by="V1")
+p1 <- hist(kozak_merge$V2,50)
+p2 <- hist(kozak_merge$V3[number_alleles<10],50)
+p2 <- hist(kozak_merge$V3,50)
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6))
+plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
+wilcox.test(kozak_merge$V3, kozak_merge$V2)
+
+#Go over the variant containing transcripts
+# Some transcripts have multiple variants and should be treated separately
+# Then for each transcript calculate difference in ribo-expression 
+# Each transcript will contribute a delta Kozak and delta expression
+kozak_diff <- kozak_merge$V3 - kozak_merge$V2
+# grep ("10847|19240", sample_labels) gives the index of the expr value
+# Go over the individuals, grep the samples and calculate difference in mean
+ribo_diff <- c()
+for (i in 1:length(kozak_var_ind[!multi,1])) { 
+  ind_unique <- unique(grep("NA",(kozak_var_ind[!multi,-1])[i,], value=T))
+  ind_unique <- sub("NA", "GM", ind_unique)
+  ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels)
+  # CHECK ENST EQUIVALENT IS PRESENT IN V$E, IF NOT ADD NA
+  # HERE WE CAN DO MORE WITH THE STATS
+  ribo_diff <- c(ribo_diff, v$E[ADD_ENST_EQUIVALENT,ribo_index] - v$E[ADD_ENST, -ribo_index])
+  
+}
+
+multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
+multiple_variants <- kozak_merge[multi,]
+single_variants <- kozak_merge[!multi,]
+
+###
 
 
 ## FIGURES
