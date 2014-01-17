@@ -330,19 +330,20 @@ multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
 # Some transcripts have multiple variants and should be treated separately
 # Then for each transcript calculate difference in ribo-expression 
 # Each transcript will contribute a delta Kozak and delta expression
-kozak_diff <- kozak_merge$V2 - kozak_merge$V3
+kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V3[!multi]
+kozak_var_ind <- kozak_var_ind[!multi,]
 # grep ("10847|19240", sample_labels) gives the index of the expr value
 # Go over the individuals, grep the samples and calculate difference in mean
 ribo_diff <- c()
 list_of_pval <- c()
-for (i in 1:length(kozak_var_ind[!multi,1])) { 
-  ind_unique <- unique(grep("NA",(kozak_var_ind[!multi,-1])[i,], value=T))
+for (i in 1:length(kozak_var_ind[,1])) { 
+  ind_unique <- unique(grep("NA",kozak_var_ind[i,-1], value=T))
   ind_unique <- sub("NA", "GM", ind_unique)
   ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels)
   # CHECK ENST EQUIVALENT IS PRESENT IN V$E, IF NOT ADD NA
   # HERE WE CAN DO MORE WITH THE STATS --WEIGHTED MEAN, ETC
-  my_index <- which ( CDS_IDs[isexpr] == enst_hgnc[grep ((kozak_var_ind[!multi,1])[i], enst_hgnc),2] )
-  if (length(my_index) & length(ribo_index) %% 50 != 0) {
+  my_index <- which ( CDS_IDs[isexpr] == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
+  if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 1 & length(ind_unique) < 29) {
     ribo_diff <- c(ribo_diff, weighted.mean(v$E[my_index,ribo_index],v$weights[my_index,ribo_index] ) - weighted.mean(v$E[my_index, -ribo_index], v$weights[my_index, -ribo_index] ))
     index_factor <- rep(0,times=50)
     index_factor[ribo_index] <- 1
@@ -353,23 +354,43 @@ for (i in 1:length(kozak_var_ind[!multi,1])) {
     list_of_pval <- c(list_of_pval,NA)
   }
 }
-
-# If mutant has higher Kozak then more likely to have higher ribo density
-plot(ribo_diff, kozak_diff[!multi], cex=0.5, pch=19)
+plot(ribo_diff, kozak_diff, cex=0.5, pch=19)
 abline(v=c(0,0.5,-0.5), h=c(0,0.5, -0.5))
 # fmat <- matrix(nrow=2, ncol=2)
-# fmat[1,] <- c(0,7)
+fmat[1,] <- c(0,7)
 # fmat[2,] <- c(13,13)
 # fisher.test(fmat)
 
 # When we look at the pvalues, All the significant changes have Kozak strength changes in the upper half
+# The direction of the effect is inconsistent in 3/8. 2/3 are mitochondrial ribosomal proteins
+# Look at a browser shot that is an average of the individuals; Look at population frequency of the variants
 c1 <- p.adjust(list_of_pval)
 q1 <- !is.na(c1)
 q2 <- !is.na(c1) & c1 > 0 & c1 < 1
-q2 <- !is.na(c1) & c1 > 0 & c1 < 0.3
-length((kozak_diff[!multi])[q1])
-quantile((kozak_diff[!multi])[q1])
-length((kozak_diff[!multi])[q2])
+q2 <- !is.na(c1) & c1 > 0 & c1 < 0.2
+quantile((kozak_diff)[q1], na.rm=T)
+length((kozak_diff)[q1])
+length((kozak_diff)[q2])
+length(which (kozak_diff[q1] > log(2)) )
+fmat[2,] <- c(5, 78)
+fmat[1,] <- c(1, 277-83-1)
+fisher.test(fmat)
+boxplot(abs(kozak_diff[q2]), abs(kozak_diff[!q2]))
+kozak_var_ind[q2,]
+plot(ribo_diff[q2], kozak_diff[q2], cex=0.5, pch=19)
+abline(v=c(0,0.5,-0.5), h=c(0,0.5, -0.5))
+
+# Look at the effect of number of alleles in the significant ones
+# Look at the multiple ones; the analysis of multiple ones could be similar to number of alleles
+# Multiple variants always occur on different positions
+# It seems like that all the significant ones are high allele frequency. We might exclude singletons from testing
+
+# Allelic effect is interesting. For ENST00000245539.6 
+my_index <- 5010
+index_factor[c(1,2,3,4,5,6,7,8,9,15,22,23,26,27,28,30,31,32)] <- 2
+boxplot(v$E[my_index,]~index_factor)
+summary(lm(v$E[my_index,] ~ as.factor(index_factor), weights=v$weights[my_index,]))
+# Two copies is better than one
 ###
 
 
