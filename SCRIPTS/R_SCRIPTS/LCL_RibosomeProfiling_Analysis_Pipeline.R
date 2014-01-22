@@ -4,9 +4,8 @@ library("limma")
 library("qtl")
 library ("sva")
 library("MASS")
-
-#TEST
 #library ("isva")
+
 # In addition to differential expression analysis at various levels, RNA, Ribo, TE
 # We need to add an analysis of variance for the samples with replicates 
 # These will reveal gene specific differences in inter-individual variance vs. within individual
@@ -193,7 +192,7 @@ replicate_present <- duplicated(sample_labels) |duplicated(sample_labels, fromLa
 norm_dd_rep <- dist(t (v$E[,replicate_present] ) )
 norm_hc_rep <- hclust (norm_dd_rep)
 
-write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in20_RiboSeq_Expression", 
+write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in36_RiboProfiling_Expression", 
 row.names=CDS_IDs[isexpr], sep="\t")
 # Added comment
 # SVA/Batch Correction
@@ -228,6 +227,38 @@ isva_dd <- dist(t(isva_expr[,replicate_present]))
 isva_hc <- hclust(isva_dd)
 #
 #### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
+# Added comparisons to Christine Proteomics
+gm12878_prot <- read.csv('~/project/CORE_DATAFILES/GM12878_B0_FDR5_140120_shortforCan.csv', stringsAsFactors=F)
+gm12878_prot <- merge(gm12878_prot, ensg_hgnc, by.x="ID.1", by.y="ENSG")
+
+gm12878_ribo <- grep("GM12878", colnames(v))
+gm12878_ribo_mean <- apply(v$E[,gm12878_ribo], 1, mean)
+gm12878_ribo_mean <- data.frame(HGNC=CDS[isexpr,1], gm12878_ribo_mean)
+
+gm12878_rna <- grep("GM12878", colnames(v2))
+gm12878_rna_mean  <- apply(v2$E[,gm12878_rna], 1, mean)
+gm12878_rna_mean <- data.frame(HGNC=rownames(v2), gm12878_rna_mean)
+
+ribo_rna_12878 <- merge(gm12878_ribo_mean, gm12878_rna_mean, by="HGNC")
+ribo_rna_prot_12878 <- merge(ribo_rna_12878, gm12878_prot, by="HGNC")
+ribo_rna_prot_12878 <- ribo_rna_prot_12878[as.numeric(ribo_rna_prot_12878$USE) > 1000 & ribo_rna_prot_12878$gm12878_ribo_mean > 5, ] 
+
+plot(ribo_rna_prot_12878$gm12878_ribo_mean, ribo_rna_prot_12878$gm12878_rna_mean, cex=0.2, pch=19, xlim=c(5,15), ylim=c(3,15))
+plot(ribo_rna_12878$gm12878_ribo_mean, ribo_rna_12878$gm12878_rna_mean, cex=0.2, pch=19, xlim=c(5,15), ylim=c(3,15))
+plot(ribo_rna_prot_12878$gm12878_ribo_mean,  log10(as.numeric(ribo_rna_prot_12878$USE)), pch=19, cex=.2, xlim=c(4, 15))
+plot(ribo_rna_prot_12878$gm12878_rna_mean,  log10(as.numeric(ribo_rna_prot_12878$USE)), pch=19, cex=.2, xlim=c(4, 15))
+
+#Spearman - Grand Mean is BEST
+cor.test(ribo_rna_prot_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_12878$USE)+1), method="spearman")
+cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12878$USE)+1), method="spearman")
+
+cor.test(ribo_rna_prot_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_12878$USE)+1))
+cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12878$USE)+1))
+
+# Ribo -- MEAN
+# USE -> 0.485/0.35, USE.1 0.471/0.37, MAYBE.USE 0.461/0.382, MAYBE.USE2 0.485/0.35
+# RNA -> Ever so slightly lower in spearman, equal in pearson
+
 grand_mean_rna <- apply (v2$E, 1, median)
 grand_mean_rna  <- data.frame(HGNC=rownames(v2), grand_mean_rna)
 grand_mean_ribo <- apply(norm_expr, 1, median)
