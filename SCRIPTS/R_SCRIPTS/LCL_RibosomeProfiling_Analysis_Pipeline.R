@@ -148,26 +148,30 @@ row.names(all_rnaseq_counts) <- (geuvadis_CDS$ID[rnaexpr])[!polyA_RZ_inconsisten
 all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
 all_rnaseq_counts$samples
 cor (all_rnaseq[rnaexpr,], method="spearman")
-pdf("Mean_Variance_Modelling_RNASEQ.pdf")
-v2 <- voom (all_rnaseq_counts, plot=T)
-dev.off()
+sample_id <- unlist(strsplit(colnames(all_rnaseq_counts), split= "_"))
+sample_id <- sample_id[grep("GM", sample_id)]
+design_rnaseq <- model.matrix(~sample_id)
+
+#pdf("Mean_Variance_Modelling_RNASEQ.pdf")
+v2 <- voom (all_rnaseq_counts, design_rnaseq, plot=T)
+#dev.off()
+
+replicate_present_rnaseq <- duplicated(sample_id) | duplicated(sample_id, fromLast = TRUE)
 
 norm_dd_rnaseq <- dist( t( v2$E) )
 hc_rnaseq <- hclust( norm_dd_rnaseq)
 
 # BATCH CORRECTION IS ESSENTIAL HERE
 rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,26), rep(4, 16) ) 
-sample_id <- unlist(strsplit(colnames(v2$E), split= "_"))
-sample_id <- sample_id[grep("GM", sample_id)]
 mod <- model.matrix(~as.factor(sample_id))
 batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=mod)
 
 # Update v2$E with batch_removed; this keeps weights
 v2$E <- batch_removed
 
-write.table(batch_removed,
-file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
-sep="\t", row.names=as.character(rna_seq_normalized_with_ids[,1])[!abs(stdres(fit.rna)) > 3])
+#write.table(batch_removed,
+#file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
+#sep="\t", row.names=as.character(rna_seq_normalized_with_ids[,1])[!abs(stdres(fit.rna)) > 3])
 
 batch_dd_rnaseq <- dist( t( batch_removed) )
 hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
@@ -183,12 +187,13 @@ s1 <- unlist(strsplit(colnames(CDS_Counts), "_"))
 sample_labels <- s1[grep('GM', s1)]
 table(sample_labels)
 design <- model.matrix(~sample_labels)
-pdf("Mean_Variance_Modeling_voom.pdf")
+#pdf("Mean_Variance_Modeling_voom.pdf")
 v <- voom(cds_counts,design, plot=T)
-dev.off()
+#dev.off()
+row.names(v) <- CDS_IDs[isexpr]
 norm_dd <- dist(t (v$E ) ) 
 norm_hc <- hclust (norm_dd)
-replicate_present <- duplicated(sample_labels) |duplicated(sample_labels, fromLast = TRUE)
+replicate_present <- duplicated(sample_labels) | duplicated(sample_labels, fromLast = TRUE)
 norm_dd_rep <- dist(t (v$E[,replicate_present] ) )
 norm_hc_rep <- hclust (norm_dd_rep)
 
@@ -226,6 +231,77 @@ quantile(isva_expr)
 isva_dd <- dist(t(isva_expr[,replicate_present]))
 isva_hc <- hclust(isva_dd)
 #
+
+# Test for difference in variance per gene across individuals
+# Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
+# Test statistic is the difference between F values, significance is by permutation testing
+# Need to think about issues with respect to degrees of freedom associated with the calculated F-value
+joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
+joint_expression_matrix <- joint_expression_matrix[,-1]
+sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
+sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
+#sample_id_all[1:33] <- paste(sample_id_all[1:33], "Ribosome_Profiling", sep="_")
+#sample_id_all[34:84] <- paste(sample_id_all[34:84], "RNA", sep="_")
+# GO over each gene. Calculate F-value for ribo and rna separately
+# One issue is that mean diff is highly correlated with p-value.
+# The higher the mean diff, the higher the p-value
+F_diff <- c()
+F_diff_pval <- c()
+Mean_diff <- c()
+individuals <- unique(sample_id_all)
+# Even with 100 permutations, this is extremely slow
+for (i in 1:dim(joint_expression_matrix)[1]) {
+# Subtract mean 
+    joint_expression_matrix[i,1:33] <- joint_expression_matrix[i,1:33] - mean(as.numeric(joint_expression_matrix[i,1:33]))
+    joint_expression_matrix[i,34:84] <- joint_expression_matrix[i,34:84] - mean(as.numeric(joint_expression_matrix[i,34:84]))
+    ribo_F <- anova (lm(as.numeric(joint_expression_matrix[i,1:33]) ~ as.factor(sample_id_all[1:33])))$F[1]
+    rna_F <- anova (lm(as.numeric(joint_expression_matrix[i,34:84]) ~ as.factor(sample_id_all[34:84])))$F[1]
+    F_diff <- c(F_diff, ribo_F-rna_F)
+    Mean_diff <- c(Mean_diff, mean(as.numeric(joint_expression_matrix[i,1:33])) - mean(as.numeric(joint_expression_matrix[i,34:84])))
+    # Need some permutation scheme-
+    # Go over individuals and assign the ribo/rna label
+    perm_values <- c()
+    for (k in 1:100) { 
+    ribo <- c(rep(TRUE, 33), rep(FALSE, 84-33))
+    for (j in 1: length(individuals)) {
+      if (runif(1) > 0.5) { 
+        ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
+      }  
+    }
+    ribo_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,ribo]) ~ as.factor(sample_id_all[ribo])))$F[1]
+    rna_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,!ribo]) ~ as.factor(sample_id_all[!ribo])))$F[1]
+    perm_values[k] <- ribo_F_perm - rna_F_perm
+    }
+    p1 <- min (length(which( perm_values > (ribo_F-rna_F) ) ) /100 , length(which( perm_values < (ribo_F-rna_F) ) ) /100 )
+    F_diff_pval <- c(F_diff_pval, 2*p1)
+}
+hist(F_diff, 300, xlim= c(-50,50))
+hist(F_diff[F_diff_pval<0.01], 300, xlim= c(-50,50))
+hist(Mean_diff, 100)
+plot(F_diff_pval, Mean_diff)
+# RNA expression is more variable for most things consistent with previous reports that suggests buffering
+# Extract_ids and run FuncAssociate. 
+
+# # For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
+# low_pval_indices <- which(F_diff_pval < 0.01)
+# for (i in low_pval_indices) { 
+#   perm_values <- c()
+#   for (k in 1:10000) { 
+#     ribo <- c(rep(TRUE, 33), rep(FALSE, 84-33))
+#     for (j in 1: length(individuals)) {
+#       if (runif(1) > 0.5) { 
+#         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
+#       }  
+#     }
+#     ribo_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,ribo]) ~ as.factor(sample_id_all[ribo])))$F[1]
+#     rna_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,!ribo]) ~ as.factor(sample_id_all[!ribo])))$F[1]
+#     perm_values[k] <- ribo_F_perm - rna_F_perm
+#   }
+#   p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
+#   F_diff_pval[i] <-  2*p1  
+# }
+
+
 #### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
 # Added comparisons to Christine Proteomics
 gm12878_prot <- read.csv('~/project/CORE_DATAFILES/GM12878_B0_FDR5_140120_shortforCan.csv', stringsAsFactors=F)
@@ -501,6 +577,53 @@ panel.smoothScatter <- function (x, y, ...) {
 }
 
 keep <- function(x, n) {rowSums(x) > n}
+
+# This function would crash if there is only one data point in a cluster
+output_clusters <- function (k, data_original, hc, names)
+{
+  desired_clusters = k
+  dir <- paste("./Cluster" ,k, sep= "")
+  dir.create(dir)
+  cluster_membership <- cutree(hc, k=desired_clusters)
+  for (i in 1:k ) {
+    if (length(data_original[which(cluster_membership == i),]) > 3) {
+      filename_means <-
+        paste(round(colMeans(data_original[which(cluster_membership == i),])),
+              collapse= "_")
+    }
+    else {
+      filename_means <- paste(round (data_original[which(cluster_membership ==
+                                                           i),]), collapse= "_")
+    }
+    writeLines(as.character(names[which(cluster_membership == i)]),
+               paste(dir, paste("cluster", i, filename_means, sep="_"), sep ="/") )
+  }
+}
+
+### HEATMAP FIGURE 
+# ranked_data_na_omit <- apply(as.matrix(na.omit(cbind(hela_rna_mean, mass_spec_data$HeLa_prot, mass_spec_data$Guo_FP))), 2,
+#                              function(x){rank(x, na.last=F, ties.method="min")
+#                              })
+# omitted_lines <- as.vector(na.action(na.omit(cbind(
+#   hela_rna_mean, mass_spec_data$HeLa_prot, mass_spec_data$Guo_FP))))
+# names_post_omit <- mass_spec_data$REFSEQ[-omitted_lines]
+# ranked_data_na_omit_normalized <- ranked_data_na_omit - apply(ranked_data_na_omit, 1, median)
+
+#### SAMPLE HEATMAP
+#hum_heat_norm <- heatmap.2(ranked_data_na_omit_normalized[1:200,], Colv=NA,
+#labRow=NA, scale="none",
+#col = redgreen(128),labCol=
+#c("RNA", "Prot", "FP"), trace="none", key=TRUE, density.info="none",
+#keysize=1, lmat=rbind( c(3, 4), c(2,1)), lwid=c(1.25, 0.5), lhei= c(0.2,1),
+#hclustfun= hclust_ward )
+#####
+
+# # Uncomment region to output various clusters
+#hcr <- hclust(dist(ranked_data_na_omit_normalized))
+#output_clusters(4, ranked_data_na_omit_normalized, hcr, names_post_omit)
+
+
+
 ##
 
 
