@@ -238,6 +238,7 @@ isva_hc <- hclust(isva_dd)
 # Need to think about issues with respect to degrees of freedom associated with the calculated F-value
 joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
 joint_expression_matrix <- joint_expression_matrix[,-1]
+gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
 sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
 sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
 #sample_id_all[1:33] <- paste(sample_id_all[1:33], "Ribosome_Profiling", sep="_")
@@ -282,24 +283,33 @@ plot(F_diff_pval, Mean_diff)
 # RNA expression is more variable for most things consistent with previous reports that suggests buffering
 # Extract_ids and run FuncAssociate. 
 
-# # For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
-# low_pval_indices <- which(F_diff_pval < 0.01)
-# for (i in low_pval_indices) { 
-#   perm_values <- c()
-#   for (k in 1:10000) { 
-#     ribo <- c(rep(TRUE, 33), rep(FALSE, 84-33))
-#     for (j in 1: length(individuals)) {
-#       if (runif(1) > 0.5) { 
-#         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
-#       }  
-#     }
-#     ribo_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,ribo]) ~ as.factor(sample_id_all[ribo])))$F[1]
-#     rna_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,!ribo]) ~ as.factor(sample_id_all[!ribo])))$F[1]
-#     perm_values[k] <- ribo_F_perm - rna_F_perm
-#   }
-#   p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
-#   F_diff_pval[i] <-  2*p1  
-# }
+#save (F_diff, file= "~/project/CORE_DATAFILES/FValue_Differences")
+#save (F_diff_pval, file="~/project/CORE_DATAFILES/FValue_Differences_Pvals")
+#save (joint_expression_matrix, file="~/project/CORE_DATAFILES/Joint_Expression_Matrix")
+
+# For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
+low_pval_indices <- which(F_diff_pval < 0.01)
+# rna_variable <- F_diff[low_pval_indices] < 0
+# ribo_variable <- F_diff[low_pval_indices] > 0
+# write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
+# write.table(gene_names_joint_expression_matrix[low_pval_indices][ribo_variable], file="~/Desktop/Ribo_variable.txt", row.names=F)
+# write.table(gene_names_joint_expression_matrix, file="~/Desktop/All_Tested_IDs", row.names=F)
+for (i in low_pval_indices) { 
+  perm_values <- c()
+  for (k in 1:10000) { 
+    ribo <- c(rep(TRUE, 33), rep(FALSE, 84-33))
+    for (j in 1: length(individuals)) {
+      if (runif(1) > 0.5) { 
+        ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
+      }  
+    }
+    ribo_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,ribo]) ~ as.factor(sample_id_all[ribo])))$F[1]
+    rna_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,!ribo]) ~ as.factor(sample_id_all[!ribo])))$F[1]
+    perm_values[k] <- ribo_F_perm - rna_F_perm
+  }
+  p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
+  F_diff_pval[i] <-  2*p1  
+}
 
 
 #### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
