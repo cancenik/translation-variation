@@ -5,6 +5,7 @@ library("qtl")
 library ("sva")
 library("MASS")
 #library ("isva")
+# I decided not to use isva after initial tests
 
 # In addition to differential expression analysis at various levels, RNA, Ribo, TE
 # We need to add an analysis of variance for the samples with replicates 
@@ -37,7 +38,7 @@ substr(enst_hgnc[,1],1,1) <- ""
 protein_absolute_ibaq <- read.csv(paste (data_dir,'TableS8_Khan_etal.csv', sep=""))
 protein_absolute_ibaq <- merge(protein_absolute_ibaq, ensg_hgnc)
 
-## RNA_SEQ COUNTS 
+## RNA_SEQ COUNTS -- Drop 18508
 ## GEUVADIS, PICKRELL, PolyA, Ribozero
 geuvadis <- read.table(
   paste (data_dir,"Reformatted_Transcript_Counts_All_Libraries_GEUVADIS.tsv", sep="")
@@ -65,6 +66,7 @@ colnames(all_rnaseq)[1:18] <- paste (colnames(all_rnaseq)[1:18], "polyA", sep="_
 colnames(all_rnaseq)[19:44] <- paste (colnames(all_rnaseq)[19:44], "RiboZero", sep="_")
 colnames(all_rnaseq)[45:70] <- paste (colnames(all_rnaseq)[45:70], "Pickrell", sep="_")
 colnames(all_rnaseq)[71:86] <- paste (colnames(all_rnaseq)[71:86], "Geuvadis", sep="_")
+all_rnaseq <- all_rnaseq[,-c(55, 77)]
 all_rnaseq_counts <- DGEList(counts= all_rnaseq)
 
 
@@ -162,9 +164,8 @@ norm_dd_rnaseq <- dist( t( v2$E) )
 hc_rnaseq <- hclust( norm_dd_rnaseq)
 
 # BATCH CORRECTION IS ESSENTIAL HERE
-rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,26), rep(4, 16) ) 
-mod <- model.matrix(~as.factor(sample_id))
-batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=mod)
+rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,25), rep(4, 15) ) 
+batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=design_rnaseq)
 
 # Update v2$E with batch_removed; this keeps weights
 v2$E <- batch_removed
@@ -180,6 +181,7 @@ hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
 cds_counts <- DGEList(counts=CDS_Counts)
 isexpr <- rowSums(cpm(cds_counts) > 1) >= 36
 cds_counts <- cds_counts[isexpr,]
+row.names(cds_counts) <- CDS_IDs[isexpr]
 dim(cds_counts)
 cds_counts <- calcNormFactors (cds_counts, method= "TMM")
 cds_counts$samples
@@ -199,14 +201,50 @@ norm_hc_rep <- hclust (norm_dd_rep)
 
 write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in36_RiboProfiling_Expression", 
 row.names=CDS_IDs[isexpr], sep="\t")
-# Added comment
-# SVA/Batch Correction
-p1 <- paste (covariates$Date_Cells_Frozen, covariates$Date_Ribosome_Footprint, covariates$Data_Gel_Purified, sep="_")
-p1 <- covariates$Data_Gel_Purified
-p2 <- paste (covariates$Sequencing_ID, "Counts", sep="_")
-p1 <- p1[p2 %in% colnames(v$E)]
-p2 <- p2[p2 %in% colnames(v$E)]
-p1 <- p1[sort (p2, index.return=T)$ix]
+
+#
+
+### An alternative way to process RNA-Seq Ribo-Seq jointly
+# RNA - all_rnaseq_counts
+# Ribo - cds_counts
+joint_counts <- merge(all_rnaseq_counts$counts, cds_counts$counts,  by="row.names")
+s1 <- unlist(strsplit(colnames(joint_counts), "_"))
+sample_labels_joint <- s1[grep('GM', s1)]
+type <- c(rep("RNA", 84), rep("Ribo", 50) )
+table(sample_labels_joint)
+full_design <- model.matrix(~sample_labels_joint + type)
+joint_count_ids <- joint_counts[,1]
+joint_counts <- DGEList(counts= joint_counts[,-1])
+joint_counts <- calcNormFactors (joint_counts, method= "TMM")
+# Quantile normalization vs none, lowest correlation is 0.995 
+v3 <- voom(joint_counts, full_design, plot=T)
+v3 <- voom(joint_counts, full_design, plot=T, normalize.method="quantile" )
+# Joint voom vs sepearate lowest correlation .991 / .995 if no QN
+# Ribosome profiling is similar
+rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,25), rep(4, 15) ) 
+batch_removed_joint <- ComBat (v3$E[,1:84], batch=rnaseq_batch, mod=design_rnaseq)
+#Update
+v3$E[,1:84] <- batch_removed_joint
+
+reps_ribo_joint <- duplicated(sample_labels_joint[85:134]) | duplicated(sample_labels_joint[85:134], fromLast = TRUE)
+joint_dd_rep <- dist(t (v3$E[,85:134][,reps_ribo_joint] ) )
+joint_ribo_rep <- hclust (joint_dd_rep)
+plot(joint_ribo_rep)
+
+reps_rna_joint <- duplicated(sample_labels_joint[1:84]) | duplicated(sample_labels_joint[1:84], fromLast = TRUE)
+joint_dd_rna <- dist(t (v3$E[,1:84][,reps_rna_joint]))
+joint_rna_hc <- hclust(joint_dd_rna)
+plot(joint_rna_hc)
+
+#plotMDS(v3$E)
+
+# SVA/Batch Correction for Joint data
+# p1 <- paste (covariates$Date_Cells_Frozen, covariates$Date_Ribosome_Footprint, covariates$Data_Gel_Purified, sep="_")
+# p1 <- covariates$Data_Gel_Purified
+# p2 <- paste (covariates$Sequencing_ID, "Counts", sep="_")
+# p1 <- p1[p2 %in% colnames(v$E)]
+# p2 <- p2[p2 %in% colnames(v$E)]
+# p1 <- p1[sort (p2, index.return=T)$ix]
 mod <- model.matrix(~as.factor(sample_labels), data=as.data.frame(v$E))
 svobj <- sva (v$E, mod=mod, B=20)
 fit = lmFit(v$E, svobj$sv)
@@ -219,19 +257,25 @@ sva_norm_weights$E <- norm_expr
 save (sva_norm_weights, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalized_SVA_EList.RData')
 sva_dd <- dist( t ( norm_expr[,replicate_present]))
 sva_hc <- hclust (sva_dd) 
+
 # We can look sva correlations with sequencing depth, batch, etc
+#GM19139 - HAS no RNA index 124
+# GM19139 is most similar to GM19137 - For SVA purposes use GM19137
+full_design_nosingular <- model.matrix(~sample_labels_joint[-124] + type[-124])
+svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
+fit_joint <- lmFit(v3$E[,-124], svobj_joint$sv) 
+norm_expr_joint <- residuals(fit_joint, v3$E[,-124])
+for (i in 1:133) {print(cor.test(norm_expr_joint[,i], v3$E[,-124][,i]))}
 
-#ISVA finds 16 variables that seem to remove almost all variance from the data. 
-# However, the clustering is  good
-isvs <- isvaFn(v$E, sample_labels)
-fit2 = lmFit(v$E, isvs$isv)
-isva_expr <- residuals(fit2, v$E)
-hist(isva_expr, 100, xlim=c(-3,3))
-quantile(isva_expr)
-isva_dd <- dist(t(isva_expr[,replicate_present]))
-isva_hc <- hclust(isva_dd)
-#
-
+# OUTPUT SVA RNA and normal RNA
+write.table(v3$E[,1:84], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RNA_Expression", sep=""), 
+row.names=joint_count_ids, sep="\t")
+write.table(v3$E[,85:134], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RiboProfiling_Expression", sep=""), 
+            row.names=joint_count_ids, sep="\t")            
+write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top20_SVA_Removed_QN_FullModel_RNA_Expression", sep=""),             
+            row.names=joint_count_ids, sep="\t")
+write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top20_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
+            row.names=joint_count_ids, sep="\t")
 # Test for difference in variance per gene across individuals
 # Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
 # Test statistic is the difference between F values, significance is by permutation testing
@@ -307,7 +351,7 @@ for (i in low_pval_indices) {
     rna_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,!ribo]) ~ as.factor(sample_id_all[!ribo])))$F[1]
     perm_values[k] <- ribo_F_perm - rna_F_perm
   }
-  p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
+  p1 <- min (length(which( perm_values > F_diff[i] ) ) /10000 , length(which( perm_values < F_diff[i] ) ) /10000 )
   F_diff_pval[i] <-  2*p1  
 }
 
