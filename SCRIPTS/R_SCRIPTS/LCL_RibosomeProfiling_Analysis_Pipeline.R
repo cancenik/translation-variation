@@ -7,18 +7,13 @@ library("MASS")
 #library ("isva")
 # I decided not to use isva after initial tests
 
-# In addition to differential expression analysis at various levels, RNA, Ribo, TE
-# We need to add an analysis of variance for the samples with replicates 
-# These will reveal gene specific differences in inter-individual variance vs. within individual
-# One way to do this is F-test of equality of variances
-
 ## NOTES
 ## Test for difference in variance
 ## Calculate F-value using anova on lm for each gene. Compare Ribo RNA
 ## Permute the Ribo & RNA labels within each individual. If we have 4 reps of RNA 2 reps of Ribo
 ## We can get 4 reps of Ribo and 2 reps of RNA
 
-# Number of bases covered is not a very good measure
+# Number of bases covered is not a good measure
 # The number of species correlates better with length but
 # Total read number gives tighter clustering 
 # Should use total read number for the analysis
