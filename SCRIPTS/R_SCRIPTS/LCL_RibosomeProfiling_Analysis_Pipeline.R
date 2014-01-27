@@ -133,11 +133,13 @@ all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
 # Identify differences in PolyA to RiboZero and remove
 polyA_mean <- apply(all_rnaseq_counts[,grep("polyA", colnames(all_rnaseq_counts))],1, mean)
 RZ_mean <- apply(all_rnaseq_counts[,grep("RiboZero", colnames(all_rnaseq_counts))],1, mean)
-plot(log10(polyA_mean), log10(RZ_mean), cex=0.2, pch=19)
+plot(log10(polyA_mean), log10(RZ_mean), cex=0.2, pch=19, ylab="log10(RiboZero_ReadCount)", xlab="log10(PolyA_ReadCount)", main="Comparing RNASeq Methods")
 fit.rna <- lm(log10(RZ_mean)~log10(polyA_mean))
 # Identify outliers
 # rna_seq_normalized$ID[abs(stdres(fit.rna)) > 3]
-plot(log10(polyA_mean),stdres(fit.rna) , pch=19, cex=0.2)
+outlier_colors <- rep("Black", length(log10(polyA_mean)))
+outlier_colors[abs(stdres(fit.rna)) > 3] <- "Red"
+plot(log10(polyA_mean),stdres(fit.rna) , pch=19, cex=0.2, xlab="Log10(PolyA_Reads)", ylab="Standardized Residuals", col=outlier_colors)
 polyA_RZ_inconsistent <- (abs(stdres(fit.rna)) > 3)
 all_rnaseq_counts <- all_rnaseq_counts[!polyA_RZ_inconsistent,]
 row.names(all_rnaseq_counts) <- (geuvadis_CDS$ID[rnaexpr])[!polyA_RZ_inconsistent]
@@ -194,8 +196,8 @@ replicate_present <- duplicated(sample_labels) | duplicated(sample_labels, fromL
 norm_dd_rep <- dist(t (v$E[,replicate_present] ) )
 norm_hc_rep <- hclust (norm_dd_rep)
 
-write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in36_RiboProfiling_Expression", 
-row.names=CDS_IDs[isexpr], sep="\t")
+#write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in36_RiboProfiling_Expression", 
+#row.names=CDS_IDs[isexpr], sep="\t")
 
 #
 
@@ -231,7 +233,7 @@ joint_dd_rna <- dist(t (v3$E[,1:84][,reps_rna_joint]))
 joint_rna_hc <- hclust(joint_dd_rna)
 plot(joint_rna_hc)
 
-#plotMDS(v3$E)
+plotMDS(v3$E, labels=type)
 
 # SVA/Batch Correction for Joint data
 # p1 <- paste (covariates$Date_Cells_Frozen, covariates$Date_Ribosome_Footprint, covariates$Data_Gel_Purified, sep="_")
@@ -260,7 +262,30 @@ full_design_nosingular <- model.matrix(~sample_labels_joint[-124] + type[-124])
 svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
 fit_joint <- lmFit(v3$E[,-124], svobj_joint$sv) 
 norm_expr_joint <- residuals(fit_joint, v3$E[,-124])
-for (i in 1:133) {print(cor.test(norm_expr_joint[,i], v3$E[,-124][,i]))}
+cor_coefs <- c()
+for (i in 1:133) {
+  cor_coefs[i] <- (cor.test(norm_expr_joint[,i], v3$E[,-124][,i]))$estimate
+}
+hist(as.numeric(cor_coefs), 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression")
+hist(as.numeric(cor_coefs)[type[-124]=="Ribo"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-Ribo")
+hist(as.numeric(cor_coefs)[type[-124]=="RNA"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-RNA")
+max(as.numeric(cor_coefs))
+plot(norm_expr_joint[,94], v3$E[,-124][,94], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[94], cex=.2)
+plot(norm_expr_joint[,126], v3$E[,-124][,126], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[127], cex=.2)
+
+
+joint_replication_ribo <- duplicated(sample_labels_joint[type=="Ribo"]) | duplicated(sample_labels_joint[type=="Ribo"], fromLast=TRUE)
+joint_replication_rna <- duplicated(sample_labels_joint[type=="RNA"]) | duplicated(sample_labels_joint[type=="RNA"], fromLast=TRUE)
+sample_labels_joint_wreps <- sample_labels_joint[c(joint_replication_rna, joint_replication_ribo)]
+type_wreps <- type[c(joint_replication_rna, joint_replication_ribo)]
+
+common_rna_ribo <- c((sample_labels_joint_wreps[type_wreps=="RNA"] %in% sample_labels_joint_wreps[type_wreps=="Ribo"]),
+                     (sample_labels_joint_wreps[type_wreps=="Ribo"] %in% sample_labels_joint_wreps[type_wreps=="RNA"])) 
+
+sample_labels_joint_common <- sample_labels_joint_wreps[common_rna_ribo]
+type_common <- type_wreps[common_rna_ribo]
+joint_expression_common <- v3[,c(joint_replication_rna, joint_replication_ribo)][,common_rna_ribo]
+joint_expression_common$design <- model.matrix(~sample_labels_joint_common+type_common)
 
 # OUTPUT SVA RNA and normal RNA
 write.table(v3$E[,1:84], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RNA_Expression", sep=""), 
@@ -271,17 +296,23 @@ write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top20_SVA_Removed_QN
             row.names=joint_count_ids, sep="\t")
 write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top20_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
             row.names=joint_count_ids, sep="\t")
+
+
 # Test for difference in variance per gene across individuals
 # Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
 # Test statistic is the difference between F values, significance is by permutation testing
 # Need to think about issues with respect to degrees of freedom associated with the calculated F-value
-joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
-joint_expression_matrix <- joint_expression_matrix[,-1]
-gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
-sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
-sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
-#sample_id_all[1:33] <- paste(sample_id_all[1:33], "Ribosome_Profiling", sep="_")
-#sample_id_all[34:84] <- paste(sample_id_all[34:84], "RNA", sep="_")
+
+#joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
+#joint_expression_matrix <- joint_expression_matrix[,-1]
+joint_expression_matrix <- joint_expression_common$E
+#gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
+#sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
+#sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
+sample_id_all <- sample_labels_joint_common
+sample_id_all[1:33] <- paste(sample_id_all[1:33], "Ribosome_Profiling", sep="_")
+sample_id_all[34:84] <- paste(sample_id_all[34:84], "RNA", sep="_")
+
 # GO over each gene. Calculate F-value for ribo and rna separately
 # One issue is that mean diff is highly correlated with p-value.
 # The higher the mean diff, the higher the p-value
@@ -292,12 +323,12 @@ individuals <- unique(sample_id_all)
 # Even with 100 permutations, this is extremely slow
 for (i in 1:dim(joint_expression_matrix)[1]) {
 # Subtract mean 
-    joint_expression_matrix[i,1:33] <- joint_expression_matrix[i,1:33] - mean(as.numeric(joint_expression_matrix[i,1:33]))
-    joint_expression_matrix[i,34:84] <- joint_expression_matrix[i,34:84] - mean(as.numeric(joint_expression_matrix[i,34:84]))
-    ribo_F <- anova (lm(as.numeric(joint_expression_matrix[i,1:33]) ~ as.factor(sample_id_all[1:33])))$F[1]
-    rna_F <- anova (lm(as.numeric(joint_expression_matrix[i,34:84]) ~ as.factor(sample_id_all[34:84])))$F[1]
-    F_diff <- c(F_diff, ribo_F-rna_F)
-    Mean_diff <- c(Mean_diff, mean(as.numeric(joint_expression_matrix[i,1:33])) - mean(as.numeric(joint_expression_matrix[i,34:84])))
+    joint_expression_matrix[i,1:33] <- joint_expression_matrix[i,1:33] - mean(joint_expression_matrix[i,1:33])
+    joint_expression_matrix[i,34:84] <- joint_expression_matrix[i,34:84] - mean(joint_expression_matrix[i,34:84])
+    ribo_F <- anova (lm(joint_expression_matrix[i,1:33] ~ as.factor(sample_id_all[1:33])))$F[1]
+    rna_F <- anova (lm(joint_expression_matrix[i,34:84] ~ as.factor(sample_id_all[34:84])))$F[1]
+    F_diff[i] <- ribo_F-rna_F
+    Mean_diff[i] <- mean(joint_expression_matrix[i,1:33]) - mean(joint_expression_matrix[i,34:84])
     # Need some permutation scheme-
     # Go over individuals and assign the ribo/rna label
     perm_values <- c()
@@ -308,8 +339,8 @@ for (i in 1:dim(joint_expression_matrix)[1]) {
         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
       }  
     }
-    ribo_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,ribo]) ~ as.factor(sample_id_all[ribo])))$F[1]
-    rna_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,!ribo]) ~ as.factor(sample_id_all[!ribo])))$F[1]
+    ribo_F_perm <- anova (lm(joint_expression_matrix[i,ribo] ~ as.factor(sample_id_all[ribo])))$F[1]
+    rna_F_perm <- anova (lm(joint_expression_matrix[i,!ribo] ~ as.factor(sample_id_all[!ribo])))$F[1]
     perm_values[k] <- ribo_F_perm - rna_F_perm
     }
     p1 <- min (length(which( perm_values > (ribo_F-rna_F) ) ) /100 , length(which( perm_values < (ribo_F-rna_F) ) ) /100 )
@@ -327,7 +358,7 @@ plot(F_diff_pval, Mean_diff)
 #save (joint_expression_matrix, file="~/project/CORE_DATAFILES/Joint_Expression_Matrix")
 
 # For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
-low_pval_indices <- which(F_diff_pval < 0.01)
+low_pval_indices <- which(F_diff_pval < 0.05)
 # rna_variable <- F_diff[low_pval_indices] < 0
 # ribo_variable <- F_diff[low_pval_indices] > 0
 # write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
