@@ -307,7 +307,7 @@ for (i in low_pval_indices) {
     rna_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,!ribo]) ~ as.factor(sample_id_all[!ribo])))$F[1]
     perm_values[k] <- ribo_F_perm - rna_F_perm
   }
-  p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
+  p1 <- min (length(which( perm_values > F_diff[i] ) ) /10000 , length(which( perm_values < F_diff[i] ) ) /10000 )
   F_diff_pval[i] <-  2*p1  
 }
 
