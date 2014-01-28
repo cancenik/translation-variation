@@ -242,18 +242,18 @@ plotMDS(v3$E, labels=type)
 # p1 <- p1[p2 %in% colnames(v$E)]
 # p2 <- p2[p2 %in% colnames(v$E)]
 # p1 <- p1[sort (p2, index.return=T)$ix]
-mod <- model.matrix(~as.factor(sample_labels), data=as.data.frame(v$E))
-svobj <- sva (v$E, mod=mod, B=20)
-fit = lmFit(v$E, svobj$sv)
-norm_expr <- residuals (fit, v$E)
-row.names(v) <- CDS_IDs[isexpr]
-save (v, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalizedEList.RData')
-# Replace v$E with norm_expr
-sva_norm_weights <- v
-sva_norm_weights$E <- norm_expr
-save (sva_norm_weights, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalized_SVA_EList.RData')
-sva_dd <- dist( t ( norm_expr[,replicate_present]))
-sva_hc <- hclust (sva_dd) 
+# mod <- model.matrix(~as.factor(sample_labels), data=as.data.frame(v$E))
+# svobj <- sva (v$E, mod=mod, B=20)
+# fit = lmFit(v$E, svobj$sv)
+# norm_expr <- residuals (fit, v$E)
+# row.names(v) <- CDS_IDs[isexpr]
+# #save (v, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalizedEList.RData')
+# # Replace v$E with norm_expr
+# sva_norm_weights <- v
+# sva_norm_weights$E <- norm_expr
+# #save (sva_norm_weights, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalized_SVA_EList.RData')
+# sva_dd <- dist( t ( norm_expr[,replicate_present]))
+# sva_hc <- hclust (sva_dd) 
 
 # We can look sva correlations with sequencing depth, batch, etc
 #GM19139 - HAS no RNA index 124
@@ -319,20 +319,17 @@ sample_id_all[53:84] <- paste(sample_id_all[53:84], "Ribosome_Profiling", sep="_
 # GO over each gene. Calculate F-value for ribo and rna separately
 # One issue is that mean diff is highly correlated with p-value.
 # The higher the mean diff, the higher the p-value
-F_diff <- c()
+Mean_diff <- apply(joint_expression_matrix, 1, function(x) {mean(x[1:52] - mean(x[53:84]))} ) 
+joint_expression_matrix_mean_subtracted <- t(apply(joint_expression_matrix, 1, function(x) {c(x[1:52]-mean(x[1:52]), x[53:84]-mean(x[53:84])  )}))
+F_diff <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
+  (summary (aov(x[53:84] ~ as.factor(sample_id_all[53:84])))[[1]]$F[1] ) - (summary(aov(x[1:52] ~ as.factor(sample_id_all[1:52])))[[1]]$F[1])
+  })
 F_diff_pval <- c()
-Mean_diff <- c()
 individuals <- unique(sample_id_all)
 # Even with 100 permutations, this is extremely slow
 # If I have the time, I will rewrite this with apply
-for (i in 1:dim(joint_expression_matrix)[1]) {
-# Subtract mean 
-    joint_expression_matrix[i,1:52] <- joint_expression_matrix[i,1:52] - mean(joint_expression_matrix[i,1:52])
-    joint_expression_matrix[i,53:84] <- joint_expression_matrix[i,53:84] - mean(joint_expression_matrix[i,53:84])
-    ribo_F <- anova (lm(joint_expression_matrix[i,1:52] ~ as.factor(sample_id_all[1:52])))$F[1]
-    rna_F <- anova (lm(joint_expression_matrix[i,53:84] ~ as.factor(sample_id_all[53:84])))$F[1]
-    F_diff <- c(F_diff,ribo_F-rna_F)
-    Mean_diff <- c(Mean_diff, mean(joint_expression_matrix[i,1:52]) - mean(joint_expression_matrix[i,53:84]))
+# FINISH THE F_PVAL CALCULATION
+for (i in 1:length(F_diff)) {
     # Need some permutation scheme-
     # Go over individuals and assign the ribo/rna label
     perm_values <- c()
@@ -343,14 +340,15 @@ for (i in 1:dim(joint_expression_matrix)[1]) {
         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
       }  
     }
-    ribo_F_perm <- anova (lm(joint_expression_matrix[i,ribo] ~ as.factor(sample_id_all[ribo])))$F[1]
-    rna_F_perm <- anova (lm(joint_expression_matrix[i,!ribo] ~ as.factor(sample_id_all[!ribo])))$F[1]
+    ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
+    rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
     perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
     }
-    p1 <- min (length(which( perm_values > (ribo_F-rna_F) ) ) /100 , length(which( perm_values < (ribo_F-rna_F) ) ) /100 )
+    p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
     F_diff_pval <- c(F_diff_pval, 2*p1)
 }
 hist(F_diff, 300)
+hist(F_diff, 300, xlim=c(-20,20))
 hist(F_diff[F_diff_pval<0.05], 300)
 hist(Mean_diff, 100)
 plot(F_diff_pval, Mean_diff)
@@ -368,18 +366,18 @@ low_pval_indices <- which(F_diff_pval < 0.05)
 # write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
 # write.table(gene_names_joint_expression_matrix[low_pval_indices][ribo_variable], file="~/Desktop/Ribo_variable.txt", row.names=F)
 # write.table(gene_names_joint_expression_matrix, file="~/Desktop/All_Tested_IDs", row.names=F)
-for (i in low_pval_indices) { 
+for (i in low_pval_indices[519:784]) { 
   perm_values <- c()
   for (k in 1:10000) { 
-    ribo <- c(rep(TRUE, 33), rep(FALSE, 84-33))
+    ribo <- c(rep(FALSE, 52), rep(TRUE, 84-52))
     for (j in 1: length(individuals)) {
       if (runif(1) > 0.5) { 
         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
       }  
     }
-    ribo_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,ribo]) ~ as.factor(sample_id_all[ribo])))$F[1]
-    rna_F_perm <- anova (lm(as.numeric(joint_expression_matrix[i,!ribo]) ~ as.factor(sample_id_all[!ribo])))$F[1]
-    perm_values[k] <- ribo_F_perm - rna_F_perm
+    ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
+    rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
+    perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
   }
   p1 <- min (length(which( perm_values > F_diff[i] ) ) /10000 , length(which( perm_values < F_diff[i] ) ) /10000 )
   F_diff_pval[i] <-  2*p1  
@@ -387,19 +385,9 @@ for (i in low_pval_indices) {
 
 
 # Differential Expression Analysis and Translation Efficiency
-# Need to merge normalized RNA-Seq with Ribo
 # Identify design matrix
 # Two predictors: Sample Label + Ribo vs RNA
 #### We should bring the voom-derived weights to this calculation
-rna_id_in_ribo <- rownames(rna_seq_normalized) %in% CDS[isexpr, 1]
-ribo_id_in_rna <- CDS[isexpr, 1] %in% rownames(rna_seq_normalized)
-ribo_rep_present <- unlist(strsplit(colnames(v[,replicate_present]), split= "_"))
-ribo_rep_present <- ribo_rep_present[grep("GM", ribo_rep_present)]
-rna_with_ribo_replicate <- c()
-for (i in 1:length(ribo_rep_present)) { 
-  rna_with_ribo_replicate <- c(rna_with_ribo_replicate, grep(ribo_rep_present[i], colnames(v2)))
-}
-
 
 # We can switch v3 with sva_norm 
 ## SUBSETTING MESSES UP THE DESIGN MATRIX
@@ -418,9 +406,8 @@ all_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common)+tre
 # ## EBayes also returns a moderated F-statistic, $F.p.value
 
 ##### SUBSETTING IS NOT WORKING -- NEED TO FIX
-ribo_rna_design <- model.matrix(~sample_id_all)
-ribo_fit <- lmFit (all_expr_elist, ribo_rna_design, subset= treatment=="Ribo")
-rna_fit <- lmFit (all_expr_elist, ribo_rna_design, subset= treatment=="RNA")
+ribo_fit <- lmFit (all_expr_elist, design=all_expr_elist$design, weights=all_expr_elist$weights)
+rna_fit <- lmFit (all_expr_elist, design=all_expr_elist$design, subset= treatment=="RNA")
 ribo_fit2 <- eBayes(ribo_fit)
 rna_fit2 <- eBayes(rna_fit)
 topTable(ribo_fit2, coef=2,number=300)
@@ -431,8 +418,6 @@ results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=1)
 # We need pretty visualizations to show relationship between RNA, Ribo, TE across individuals
 # We need to do some GO Analysis
 
-# FOR TE CALCULATION NEED TO NORMALIZE EVERYTHING TOGETHER OR 
-# NEED UNIMODAL DISTRIBUTION OF COEFFICIENTS WHEN FITTING TREATMENT ONLY MODEL
 te_design <- model.matrix(~treatment+treatment:sample_id_all)
 te_fit <- lmFit(all_expr_elist, te_design)
 te_fit2 <- eBayes(te_fit)
@@ -488,8 +473,18 @@ merge_ribo_prot <- merge(grand_mean_ribo,protein_absolute_ibaq, by="HGNC" )
 merge_ribo_rna_prot <- merge (merge_ribo_prot, grand_mean_rna, by="HGNC")
 merge_ribo_rna_prot_len <- merge(merge_ribo_rna_prot, CDS_Lens, by="HGNC")
 dim(merge_ribo_rna_prot)
+# Length normalization increases spearman correlation but lowers Pearson correlation
+# In all possible comparisons riboseq is better correlated
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
+rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
+ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
+plot(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), xlab="RNA Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
+text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2", round(rna_cor$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
+plot(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), xlab="Ribosome Profiling Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
+text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2 ", round(ribo_cor$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
+
+paste("Area (", cm^2, ")", sep = "")
 
 #
 
@@ -515,10 +510,10 @@ kozak_merge <- merge(kozak_score_variants, kozak_scores, by="V1")
 p1 <- hist(kozak_merge$V2,50)
 p2 <- hist(kozak_merge$V3[number_alleles<10],50)
 p2 <- hist(kozak_merge$V3,50)
-plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6))
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6), xlab="Kozak Score", main="Distribution of Kozak Scores")
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
+boxplot(kozak_merge$V3, kozak_merge$V2, col=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)), notch=T, range=1, xlab=NULL)
 wilcox.test(kozak_merge$V3, kozak_merge$V2)
-
 multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
 
 #Go over the variant containing transcripts
@@ -531,18 +526,21 @@ kozak_var_ind <- kozak_var_ind[!multi,]
 # Go over the individuals, grep the samples and calculate difference in mean
 ribo_diff <- c()
 list_of_pval <- c()
+ribo_only <- v3[,type=="Ribo"]
+sample_labels_ribo <- unlist(strsplit(colnames(ribo_only), split= "_"))
+sample_labels_ribo <- sample_labels_ribo[grep("GM", sample_labels_ribo)]
 for (i in 1:length(kozak_var_ind[,1])) { 
   ind_unique <- unique(grep("NA",kozak_var_ind[i,-1], value=T))
   ind_unique <- sub("NA", "GM", ind_unique)
-  ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels)
+  ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
   # CHECK ENST EQUIVALENT IS PRESENT IN V$E, IF NOT ADD NA
   # HERE WE CAN DO MORE WITH THE STATS --WEIGHTED MEAN, ETC
-  my_index <- which ( CDS_IDs[isexpr] == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
+  my_index <- which ( joint_count_ids == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
   if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 1 & length(ind_unique) < 29) {
-    ribo_diff <- c(ribo_diff, weighted.mean(v$E[my_index,ribo_index],v$weights[my_index,ribo_index] ) - weighted.mean(v$E[my_index, -ribo_index], v$weights[my_index, -ribo_index] ))
+    ribo_diff <- c(ribo_diff, weighted.mean(ribo_only$E[my_index,ribo_index],ribo_only$weights[my_index,ribo_index] ) - weighted.mean(ribo_only$E[my_index, -ribo_index], ribo_only$weights[my_index, -ribo_index] ))
     index_factor <- rep(0,times=50)
     index_factor[ribo_index] <- 1
-    list_of_pval <- c(list_of_pval, summary(lm(v$E[my_index,] ~ as.factor(index_factor), weights=v$weights[my_index,]))$coefficients[2,4])
+    list_of_pval <- c(list_of_pval, summary(lm(ribo_only$E[my_index,] ~ as.factor(index_factor), weights=ribo_only$weights[my_index,]))$coefficients[2,4])
   }
   else { 
     ribo_diff <- c(ribo_diff,NA)
