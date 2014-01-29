@@ -313,8 +313,8 @@ joint_expression_matrix <- joint_expression_common$E
 #sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
 #sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
 sample_id_all <- sample_labels_joint_common
-sample_id_all[1:52] <- paste(sample_id_all[1:52], "RNA", sep="_")
-sample_id_all[53:84] <- paste(sample_id_all[53:84], "Ribosome_Profiling", sep="_")
+sample_id_all[1:51] <- paste(sample_id_all[1:51], "RNA", sep="_")
+sample_id_all[52:84] <- paste(sample_id_all[52:84], "Ribosome_Profiling", sep="_")
 
 # GO over each gene. Calculate F-value for ribo and rna separately
 # One issue is that mean diff is highly correlated with p-value.
@@ -322,19 +322,23 @@ sample_id_all[53:84] <- paste(sample_id_all[53:84], "Ribosome_Profiling", sep="_
 Mean_diff <- apply(joint_expression_matrix, 1, function(x) {mean(x[1:52] - mean(x[53:84]))} ) 
 joint_expression_matrix_mean_subtracted <- t(apply(joint_expression_matrix, 1, function(x) {c(x[1:52]-mean(x[1:52]), x[53:84]-mean(x[53:84])  )}))
 F_diff <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
-  (summary (aov(x[53:84] ~ as.factor(sample_id_all[53:84])))[[1]]$F[1] ) - (summary(aov(x[1:52] ~ as.factor(sample_id_all[1:52])))[[1]]$F[1])
+  (summary (aov(x[52:84] ~ as.factor(sample_id_all[52:84])))[[1]]$F[1] ) - (summary(aov(x[1:51] ~ as.factor(sample_id_all[1:51])))[[1]]$F[1])
   })
 F_diff_pval <- c()
 individuals <- unique(sample_id_all)
 # Even with 100 permutations, this is extremely slow
 # If I have the time, I will rewrite this with apply
+# Something like: 
+#perm_values <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
+#  (summary (aov(x[ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1] ) - (summary(aov(x[!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1])
+#})
 # FINISH THE F_PVAL CALCULATION
 for (i in 1:length(F_diff)) {
     # Need some permutation scheme-
     # Go over individuals and assign the ribo/rna label
     perm_values <- c()
     for (k in 1:100) { 
-    ribo <- c(rep(FALSE, 52), rep(TRUE, 84-52))
+    ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
     for (j in 1: length(individuals)) {
       if (runif(1) > 0.5) { 
         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
@@ -366,10 +370,10 @@ low_pval_indices <- which(F_diff_pval < 0.05)
 # write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
 # write.table(gene_names_joint_expression_matrix[low_pval_indices][ribo_variable], file="~/Desktop/Ribo_variable.txt", row.names=F)
 # write.table(gene_names_joint_expression_matrix, file="~/Desktop/All_Tested_IDs", row.names=F)
-for (i in low_pval_indices[519:784]) { 
+for (i in low_pval_indices) { 
   perm_values <- c()
   for (k in 1:10000) { 
-    ribo <- c(rep(FALSE, 52), rep(TRUE, 84-52))
+    ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
     for (j in 1: length(individuals)) {
       if (runif(1) > 0.5) { 
         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
