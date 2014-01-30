@@ -349,16 +349,16 @@ for (i in 1:length(F_diff)) {
 }
 hist(F_diff, 300)
 hist(F_diff, 300, xlim=c(-20,20))
-hist(F_diff[F_diff_pval<0.05], 300)
+hist(F_diff[F_diff_pval<0.05], 200, xlab="F_Diff", main="Significant Differences in Variance")
 hist(Mean_diff, 100)
-plot(F_diff_pval, Mean_diff)
+plot(F_diff_pval, Mean_diff, pch=19, cex=.2, xlab="Pvalue", ylab="Mean Expression Difference")
 # RNA expression is more variable for most things consistent with previous reports that suggests buffering
 # Extract_ids and run FuncAssociate. 
 
-#save (F_diff, file= "~/project/CORE_DATAFILES/FValue_Differences")
-#save (F_diff_pval, file="~/project/CORE_DATAFILES/FValue_Differences_Pvals")
-#save (joint_expression_matrix, file="~/project/CORE_DATAFILES/Joint_Expression_Matrix")
-
+save (F_diff, file= "~/project/CORE_DATAFILES/FValue_Differences")
+save (F_diff_pval, file="~/project/CORE_DATAFILES/FValue_Differences_Pvals")
+save (joint_expression_matrix_mean_subtracted, file="~/project/CORE_DATAFILES/Joint_Expression_Matrix")
+save(low_pval_indices, file="~/project/CORE_DATAFILES/low_pval_indices")
 # For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
 low_pval_indices <- which(F_diff_pval < 0.05)
 # rna_variable <- F_diff[low_pval_indices] < 0
@@ -366,7 +366,7 @@ low_pval_indices <- which(F_diff_pval < 0.05)
 # write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
 # write.table(gene_names_joint_expression_matrix[low_pval_indices][ribo_variable], file="~/Desktop/Ribo_variable.txt", row.names=F)
 # write.table(gene_names_joint_expression_matrix, file="~/Desktop/All_Tested_IDs", row.names=F)
-for (i in low_pval_indices[519:784]) { 
+for (i in low_pval_indices[573:784]) { 
   perm_values <- c()
   for (k in 1:10000) { 
     ribo <- c(rep(FALSE, 52), rep(TRUE, 84-52))
@@ -477,14 +477,17 @@ dim(merge_ribo_rna_prot)
 # In all possible comparisons riboseq is better correlated
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
+ribo_rna <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna)
+
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
 plot(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), xlab="RNA Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
 text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2", round(rna_cor$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
 plot(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), xlab="Ribosome Profiling Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
 text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2 ", round(ribo_cor$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
+plot(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna, xlab="Ribosome Profiling Expression", ylab="RNA Expression", pch=19, cex=.4)
+text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2 ", round(ribo_rna$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
 
-paste("Area (", cm^2, ")", sep = "")
 
 #
 
