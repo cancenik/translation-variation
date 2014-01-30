@@ -387,6 +387,41 @@ for (i in low_pval_indices) {
   F_diff_pval[i] <-  2*p1  
 }
 
+# Alternative much simpler approach is to use ratio of CVs
+# It is unclear if CV makes sense as the relationship between Var Mean is different
+# It might make more sense to multiply by the associated weights
+coeff_variation <- function (y) { 
+  return ( sd(y$x)/mean(y$x))
+}
+coeff_variation_vec <- function (y) { 
+  return ( sd(y)/mean(y))
+}
+rna_replicate_mean <- apply (joint_expression_common$E[,type_common=="RNA"], 1, function(x) {
+aggregate(x[type_common=="RNA"], by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
+} )
+ribo_replicate_mean <- apply (joint_expression_common$E[,type_common=="Ribo"], 1, function(x) {
+  aggregate(x[type_common=="Ribo"], by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
+} )
+
+rna_cv_between_individuals <- lapply(rna_replicate_mean, coeff_variation)
+ribo_cv_between_individuals <- lapply(ribo_replicate_mean, coeff_variation)
+
+# Calculate median CV of replicate CVs
+rna_replicatecvs <- apply (joint_expression_common$E[,type_common=="RNA"], 1, function(x) {
+  aggregate(x[type_common=="RNA"], by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), coeff_variation_vec)  
+} )
+ribo_replicatecvs <- apply (joint_expression_common$E[,type_common=="Ribo"], 1, function(x) {
+  aggregate(x[type_common=="Ribo"], by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), coeff_variation_vec)  
+} )
+rna_repcv_median <- lapply(rna_replicatecvs, function(z){median(z$x)})
+ribo_repcv_median <- lapply(ribo_replicatecvs, function(z){median(z$x)})
+
+
+#joint_expression_common
+#sample_labels_joint_common
+#type_common
+
+
 
 # Differential Expression Analysis and Translation Efficiency
 # Identify design matrix
@@ -400,6 +435,12 @@ all_expr_elist <- joint_expression_common
 treatment <- relevel(as.factor(type_common),ref="RNA")
 all_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common)+treatment)
 
+ribo_expr_elist <- all_expr_elist[,treatment=="Ribo"]
+ribo_expr_elist$design <- model.matrix(~0+as.factor(sample_labels_joint_common[treatment=="Ribo"]))
+
+rna_expr_elist <- all_expr_elist[,treatment=="RNA"]
+rna_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common[treatment=="RNA"]))
+
 # Questions of interest
 # What are the genes with differential RNA expression across individuals
 # What are the genes with differential Ribo expression across individuals
@@ -410,14 +451,16 @@ all_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common)+tre
 # ## EBayes also returns a moderated F-statistic, $F.p.value
 
 ##### SUBSETTING IS NOT WORKING -- NEED TO FIX
-ribo_fit <- lmFit (all_expr_elist, design=all_expr_elist$design, weights=all_expr_elist$weights)
-rna_fit <- lmFit (all_expr_elist, design=all_expr_elist$design, subset= treatment=="RNA")
+ribo_fit <- lmFit (ribo_expr_elist, design=ribo_expr_elist$design, weights=ribo_expr_elist$weights)
+rna_fit <- lmFit (rna_expr_elist, design=rna_expr_elist$design, weights=rna_expr_elist$weights)
 ribo_fit2 <- eBayes(ribo_fit)
 rna_fit2 <- eBayes(rna_fit)
 topTable(ribo_fit2, coef=2,number=300)
 topTable(rna_fit2, coef=2,number=300)
 results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=1)
 results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=1)
+apply(abs(results.ribo), 2, sum)
+apply(abs(results.rna), 2, sum)
 
 # We need pretty visualizations to show relationship between RNA, Ribo, TE across individuals
 # We need to do some GO Analysis
