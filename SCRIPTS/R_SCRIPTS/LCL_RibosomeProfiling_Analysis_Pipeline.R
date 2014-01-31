@@ -86,40 +86,23 @@ CDS_IDs <- CDS[,1]
 covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 
 ######## DATA ANALYSIS ##################################
-
-# TOTAL COUNTS
-colSums(CDS_Counts)
-dim (CDS_Counts[keep(CDS_Counts, 100),])
-cm <- cor(CDS_Counts[keep(CDS_Counts, 100),])
-dd <- dist (t(log10(CDS_Counts[keep(CDS_Counts, 100),]+1)) )
-hc <- hclust (dd, "ward") 
-hc <- hclust (dd)
-
-# SPECIES
-colSums (CDS_species)
-dim(CDS_species[keep(CDS_species, 100), ])
-cm <- cor(CDS_species[keep(CDS_species, 100),])
-dd <- dist(t (log10(CDS_species[keep(CDS_species, 100), ]+1) ) ) 
-hc <- hclust(dd, "ward")
-hc <- hclust(dd)
-
-
 ################### THIS SECTION NEEDS TO BE FIXED
 ## SPECIES TO COUNTS COMPARISON
 species_sum <- rowSums(CDS_species)
 cds_count_sum <- rowSums(CDS_Counts)
 ratios <- cds_count_sum/species_sum
 plot(log10(cds_count_sum+1), log10(species_sum+1), cex=0.2)
-#ratios_ids <- data.frame(ID=as.vector(m1[,1]), ratio=ratios)
-#ratios_dataframe <- data.frame(ID=as.vector(m1[,1]), ReadCount=log10(cds_count_sum+1) , SpeciesCount=log10(m1_species_sum+1) )
+ratios_dataframe <- data.frame(ID=CDS_IDs, ReadCount=log10(cds_count_sum+1) , SpeciesCount=log10(species_sum+1) )
 
 #### Perform loess regression between read_count to species_count
 # Call outliers as 2*SE away from the fit-- Need to think about length here. 
 # A very short gene with very high expression might be expected to have a skewed ratio
 ## This needs a lot of memory
-count_to_species <- predict(loess(ReadCount~SpeciesCount, data=ratios_dataframe, statistics="approximate", trace.hat="approximate"), se=T)
-c1 <- count_to_species$fit+10^2*count_to_species$s
-length(which(ratios_dataframe$ReadCount- c1 > 0))
+
+#count_to_species <- predict(loess(ReadCount~SpeciesCount, data=ratios_dataframe, statistics="approximate", trace.hat="approximate"), se=T)
+#c1 <- count_to_species$fit+10^2*count_to_species$s
+#length(which(ratios_dataframe$ReadCount- c1 > 0))
+
 # c2 <- count_to_species$fit-10^2*count_to_species$s
 # plot(ratios_dataframe$ReadCount, ratios_dataframe$SpeciesCount, pch=19, cex=0.2)
 #lines(ratios_dataframe$ReadCount,count_to_species$fit, col="red")
