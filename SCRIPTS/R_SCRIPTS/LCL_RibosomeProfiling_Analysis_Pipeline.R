@@ -214,7 +214,7 @@ joint_count_ids <- joint_counts[,1]
 joint_counts <- DGEList(counts= joint_counts[,-1])
 joint_counts <- calcNormFactors (joint_counts, method= "TMM")
 # Quantile normalization vs none, lowest correlation is 0.995 
-v3 <- voom(joint_counts, full_design, plot=T)
+#v3 <- voom(joint_counts, full_design, plot=T)
 v3 <- voom(joint_counts, full_design, plot=T, normalize.method="quantile" )
 # Joint voom vs sepearate lowest correlation .991 / .995 if no QN
 # Ribosome profiling is similar
@@ -259,8 +259,23 @@ plotMDS(v3$E, labels=type)
 #GM19139 - HAS no RNA index 124
 # GM19139 is most similar to GM19137 - For SVA purposes use GM19137
 full_design_nosingular <- model.matrix(~sample_labels_joint[-124] + type[-124])
-svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
+#svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
+svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50, n.sv=3)
 fit_joint <- lmFit(v3$E[,-124], svobj_joint$sv) 
+fit2 <- eBayes(fit_joint)
+sst <- rowSums(v3$E^2)
+ssr <- sst-fit2$df.residual*fit2$sigma^2
+hist((ssr/sst), 50)
+quantile(ssr/sst)
+
+# With 20 components
+# 0%         25%         50%         75%        100% 
+# 0.006377750 0.009714234 0.013078694 0.023458592 0.408221116 
+# With 3 components
+# 0.0002159566 0.0072133405 0.0084482581 0.0103326042 0.1358229828 
+# With 10 components
+# 0.002256528 0.008297705 0.009897312 0.014138372 0.265767843 
+
 norm_expr_joint <- residuals(fit_joint, v3$E[,-124])
 cor_coefs <- c()
 for (i in 1:133) {
@@ -400,6 +415,12 @@ rna_replicate_mean <- apply (joint_expression_common$E[,type_common=="RNA"], 1, 
 aggregate(x[type_common=="RNA"], by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
 } )
 ribo_replicate_mean <- apply (joint_expression_common$E[,type_common=="Ribo"], 1, function(x) {
+  aggregate(x[type_common=="Ribo"], by =list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)
+} )
+rna_replicate_weight_mean <- apply (joint_expression_common$weights[,type_common=="RNA"], 1, function(x) {
+  aggregate(x[type_common=="RNA"], by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
+} )
+ribo_replicate_weight_mean <- apply (joint_expression_common$weights[,type_common=="Ribo"], 1, function(x) {
   aggregate(x[type_common=="Ribo"], by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
 } )
 
@@ -512,8 +533,10 @@ cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12
 
 #### CMPARISION WITH ACROSS GENE QUANTIFICATION FROM SILAC
 grand_mean_rna <- apply (v3$E[,type=="RNA"], 1, median)
+#grand_mean_rna <- apply (norm_expr_joint[,1:84], 1, median)
 grand_mean_rna  <- data.frame(HGNC=joint_count_ids, grand_mean_rna)
 grand_mean_ribo <- apply(v3$E[,type=="Ribo"], 1, median)
+#grand_mean_ribo <- apply (norm_expr_joint[,85:133], 1, median)
 grand_mean_ribo <- data.frame (HGNC=joint_count_ids, grand_mean_ribo)
 CDS_Lens <- data.frame(HGNC=CDS_IDs, CDS_Len[,1])
 merge_ribo_prot <- merge(grand_mean_ribo,protein_absolute_ibaq, by="HGNC" )
