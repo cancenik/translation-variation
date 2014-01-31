@@ -474,16 +474,31 @@ rna_expr_elist <- all_expr_elist[,treatment=="RNA"]
 rna_expr_elist$design <- model.matrix(~0+as.factor(sample_labels_joint_common[treatment=="RNA"]))
 colnames(rna_expr_elist$design) <- sort(unique(sample_labels_joint_common))
 
+contrast_strings <- c()
 for (i in 1:length(colnames(rna_expr_elist$design))) { 
-
-}
-c1 <- paste ( 
-paste (colnames(rna_expr_elist$design)[1], 
-       paste (colnames(rna_expr_elist$design)[-1], collapse="+"), sep="- (")
+contrast_strings[i] <- 
+ paste ( 
+paste (colnames(rna_expr_elist$design)[i], 
+       paste (colnames(rna_expr_elist$design)[-i], collapse="+"), sep="- (")
 , length(colnames(rna_expr_elist$design))-1 , sep=")/" )
-
-contrast.matrix<- (makeContrasts(GM12878-(GM12890+GM12891)/2, levels=rna_expr_elist$design))
-contrast.matrix<- (makeContrasts(c1, levels=rna_expr_elist$design))
+}
+# I hate to do this but will enumerate all strings here
+contrast.matrix<- (makeContrasts(contrast_strings[1], 
+                                 contrast_strings[2], 
+                                 contrast_strings[3], 
+                                 contrast_strings[4], 
+                                 contrast_strings[5], 
+                                 contrast_strings[6], 
+                                 contrast_strings[7], 
+                                 contrast_strings[8], 
+                                 contrast_strings[9], 
+                                 contrast_strings[10], 
+                                 contrast_strings[11], 
+                                 contrast_strings[12], 
+                                 contrast_strings[13], 
+                                 contrast_strings[14], 
+                                 contrast_strings[15]
+                                 , levels=rna_expr_elist$design))
 
 # MODEL FITTING
 ribo_fit <- lmFit (ribo_expr_elist, design=ribo_expr_elist$design, weights=ribo_expr_elist$weights)
@@ -493,16 +508,17 @@ rna_fit <- lmFit (rna_expr_elist, design=rna_expr_elist$design, weights=rna_expr
 ribo_fit2 <- contrasts.fit(ribo_fit, contrast.matrix)
 ribo_fit2 <- eBayes(ribo_fit2)
 
-rna_fit2 <- eBayes(rna_fit, contrast.matrix)
-rna_fit2 <- eBayes(rna_fit)
+rna_fit2 <- contrasts.fit(rna_fit, contrast.matrix)
+rna_fit2 <- eBayes(rna_fit2)
 
 topTable(ribo_fit2)
 topTable(rna_fit2)
 
 results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=1)
 results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=1)
-apply(abs(results.ribo), 2, sum)
-apply(abs(results.rna), 2, sum)
+as.numeric(apply(abs(results.ribo), 2, sum))
+as.numeric(apply(abs(results.rna), 2, sum))
+# We can also look at B-statistic for the propensity of a gene to be differentially expressed
 
 # We need pretty visualizations to show relationship between RNA, Ribo, TE across individuals
 # We need to do some GO Analysis
