@@ -315,92 +315,95 @@ write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top20_SVA_Removed_
 
 ##### ANALYSIS REQUIRING JOINT RNA-RIBOSEQ WITH REPLICATES
 ### DIFFERENCE IN VARIATION
-
-# Test for difference in variance per gene across individuals
-# Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
-# Test statistic is the difference between F values, significance is by permutation testing
-# Need to think about issues with respect to degrees of freedom associated with the calculated F-value
-
-#joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
-#joint_expression_matrix <- joint_expression_matrix[,-1]
-joint_expression_matrix <- joint_expression_common$E
-#gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
-#sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
-#sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
-sample_id_all <- sample_labels_joint_common
-sample_id_all[1:51] <- paste(sample_id_all[1:51], "RNA", sep="_")
-sample_id_all[52:84] <- paste(sample_id_all[52:84], "Ribosome_Profiling", sep="_")
-
-# GO over each gene. Calculate F-value for ribo and rna separately
-# One issue is that mean diff is highly correlated with p-value.
-# The higher the mean diff, the higher the p-value
-Mean_diff <- apply(joint_expression_matrix, 1, function(x) {mean(x[1:52] - mean(x[53:84]))} ) 
-joint_expression_matrix_mean_subtracted <- t(apply(joint_expression_matrix, 1, function(x) {c(x[1:52]-mean(x[1:52]), x[53:84]-mean(x[53:84])  )}))
-F_diff <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
-  (summary (aov(x[52:84] ~ as.factor(sample_id_all[52:84])))[[1]]$F[1] ) - (summary(aov(x[1:51] ~ as.factor(sample_id_all[1:51])))[[1]]$F[1])
-  })
-F_diff_pval <- c()
-individuals <- unique(sample_id_all)
-# Even with 100 permutations, this is extremely slow
-# If I have the time, I will rewrite this with apply
-# Something like: 
-#perm_values <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
-#  (summary (aov(x[ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1] ) - (summary(aov(x[!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1])
-#})
-# FINISH THE F_PVAL CALCULATION
-for (i in 1:length(F_diff)) {
-    # Need some permutation scheme-
-    # Go over individuals and assign the ribo/rna label
-    perm_values <- c()
-    for (k in 1:100) { 
-    ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
-    for (j in 1: length(individuals)) {
-      if (runif(1) > 0.5) { 
-        ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
-      }  
-    }
-    ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
-    rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
-    perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
-    }
-    p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
-    F_diff_pval <- c(F_diff_pval, 2*p1)
-}
-hist(F_diff, 300)
-hist(F_diff, 300, xlim=c(-20,20))
-hist(F_diff[F_diff_pval<0.05], 200, xlab="F_Diff", main="Significant Differences in Variance")
-hist(Mean_diff, 100)
-plot(F_diff_pval, Mean_diff, pch=19, cex=.2, xlab="Pvalue", ylab="Mean Expression Difference")
-# RNA expression is more variable for most things consistent with previous reports that suggests buffering
-# Extract_ids and run FuncAssociate. 
-
-save (F_diff, file= "~/project/CORE_DATAFILES/FValue_Differences")
-save (F_diff_pval, file="~/project/CORE_DATAFILES/FValue_Differences_Pvals")
-save (joint_expression_matrix_mean_subtracted, file="~/project/CORE_DATAFILES/Joint_Expression_Matrix")
-save(low_pval_indices, file="~/project/CORE_DATAFILES/low_pval_indices")
-# For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
-low_pval_indices <- which(F_diff_pval < 0.05)
-# rna_variable <- F_diff[low_pval_indices] < 0
-# ribo_variable <- F_diff[low_pval_indices] > 0
-# write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
-# write.table(gene_names_joint_expression_matrix[low_pval_indices][ribo_variable], file="~/Desktop/Ribo_variable.txt", row.names=F)
-# write.table(gene_names_joint_expression_matrix, file="~/Desktop/All_Tested_IDs", row.names=F)
-for (i in low_pval_indices) { 
-  perm_values <- c()
-  for (k in 1:10000) { 
-    ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
-    for (j in 1: length(individuals)) {
-      if (runif(1) > 0.5) { 
-        ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
-      }  
-    }
-    ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
-    rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
-    perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
-  }
-  p1 <- min (length(which( perm_values > F_diff[i] ) ) /10000 , length(which( perm_values < F_diff[i] ) ) /10000 )
-  F_diff_pval[i] <-  2*p1  
-}
+### THIS APPROACH IS COMMENTED OUT
+# 
+# # Test for difference in variance per gene across individuals
+# # Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
+# # Test statistic is the difference between F values, significance is by permutation testing
+# # Need to think about issues with respect to degrees of freedom associated with the calculated F-value
+# 
+# #joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
+# #joint_expression_matrix <- joint_expression_matrix[,-1]
+# joint_expression_matrix <- joint_expression_common$E
+# #gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
+# #sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
+# #sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
+# sample_id_all <- sample_labels_joint_common
+# sample_id_all[1:51] <- paste(sample_id_all[1:51], "RNA", sep="_")
+# sample_id_all[52:84] <- paste(sample_id_all[52:84], "Ribosome_Profiling", sep="_")
+# 
+# # GO over each gene. Calculate F-value for ribo and rna separately
+# # One issue is that mean diff is highly correlated with p-value.
+# # The higher the mean diff, the higher the p-value
+# Mean_diff <- apply(joint_expression_matrix, 1, function(x) {mean(x[1:52] - mean(x[53:84]))} ) 
+# joint_expression_matrix_mean_subtracted <- t(apply(joint_expression_matrix, 1, function(x) {c(x[1:52]-mean(x[1:52]), x[53:84]-mean(x[53:84])  )}))
+# F_diff <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
+#   (summary (aov(x[52:84] ~ as.factor(sample_id_all[52:84])))[[1]]$F[1] ) - (summary(aov(x[1:51] ~ as.factor(sample_id_all[1:51])))[[1]]$F[1])
+#   })
+# F_diff_pval <- c()
+# individuals <- unique(sample_id_all)
+# # Even with 100 permutations, this is extremely slow
+# # If I have the time, I will rewrite this with apply
+# # Something like: 
+# #perm_values <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
+# #  (summary (aov(x[ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1] ) - (summary(aov(x[!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1])
+# #})
+# # FINISH THE F_PVAL CALCULATION
+# for (i in 1:length(F_diff)) {
+#     # Need some permutation scheme-
+#     # Go over individuals and assign the ribo/rna label
+#     perm_values <- c()
+#     for (k in 1:100) { 
+#     ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
+#     for (j in 1: length(individuals)) {
+#       if (runif(1) > 0.5) { 
+#         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
+#       }  
+#     }
+#     ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
+#     rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
+#     perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
+#     }
+#     p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
+#     F_diff_pval <- c(F_diff_pval, 2*p1)
+# }
+# hist(F_diff, 300)
+# hist(F_diff, 300, xlim=c(-20,20))
+# hist(F_diff[F_diff_pval<0.05], 200, xlab="F_Diff", main="Significant Differences in Variance")
+# hist(Mean_diff, 100)
+# plot(F_diff_pval, Mean_diff, pch=19, cex=.2, xlab="Pvalue", ylab="Mean Expression Difference")
+# # RNA expression is more variable for most things consistent with previous reports that suggests buffering
+# # Extract_ids and run FuncAssociate. 
+# 
+# save (F_diff, file= "~/project/CORE_DATAFILES/FValue_Differences")
+# save (F_diff_pval, file="~/project/CORE_DATAFILES/FValue_Differences_Pvals")
+# save (joint_expression_matrix_mean_subtracted, file="~/project/CORE_DATAFILES/Joint_Expression_Matrix")
+# save(low_pval_indices, file="~/project/CORE_DATAFILES/low_pval_indices")
+# # For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
+# low_pval_indices <- which(F_diff_pval < 0.05)
+# # rna_variable <- F_diff[low_pval_indices] < 0
+# # ribo_variable <- F_diff[low_pval_indices] > 0
+# # write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
+# # write.table(gene_names_joint_expression_matrix[low_pval_indices][ribo_variable], file="~/Desktop/Ribo_variable.txt", row.names=F)
+# # write.table(gene_names_joint_expression_matrix, file="~/Desktop/All_Tested_IDs", row.names=F)
+# for (i in low_pval_indices) { 
+#   perm_values <- c()
+#   for (k in 1:10000) { 
+#     ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
+#     for (j in 1: length(individuals)) {
+#       if (runif(1) > 0.5) { 
+#         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
+#       }  
+#     }
+#     ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
+#     rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
+#     perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
+#   }
+#   p1 <- min (length(which( perm_values > F_diff[i] ) ) /10000 , length(which( perm_values < F_diff[i] ) ) /10000 )
+#   F_diff_pval[i] <-  2*p1  
+# }
+#####################################
+# END OF OLD VARIATION ANALYSIS
 
 # Alternative much simpler approach is to use ratio of CVs
 # It is unclear if CV makes sense as the relationship between Var Mean is different
@@ -448,20 +451,6 @@ ribo_repcv_median <- lapply(ribo_replicatecvs, function(z){median(z$x)})
 # Identify design matrix
 # Two predictors: Sample Label + Ribo vs RNA
 #### We should bring the voom-derived weights to this calculation
-
-# We can switch v3 with sva_norm 
-## SUBSETTING MESSES UP THE DESIGN MATRIX
-#all_expr_elist <- cbind(sva_norm_weights[ribo_id_in_rna,replicate_present], v2[rna_id_in_ribo,unique(sort(rna_with_ribo_replicate))])
-all_expr_elist <- joint_expression_common
-treatment <- relevel(as.factor(type_common),ref="RNA")
-all_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common)+treatment)
-
-ribo_expr_elist <- all_expr_elist[,treatment=="Ribo"]
-ribo_expr_elist$design <- model.matrix(~0+as.factor(sample_labels_joint_common[treatment=="Ribo"]))
-
-rna_expr_elist <- all_expr_elist[,treatment=="RNA"]
-rna_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common[treatment=="RNA"]))
-
 # Questions of interest
 # What are the genes with differential RNA expression across individuals
 # What are the genes with differential Ribo expression across individuals
@@ -471,13 +460,45 @@ rna_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common[trea
 # The moderated F-statistic can be used as the measure of any difference
 # ## EBayes also returns a moderated F-statistic, $F.p.value
 
-##### SUBSETTING IS NOT WORKING -- NEED TO FIX
+# We can switch joint_expression_common, v3, and SVA 
+#all_expr_elist <- cbind(sva_norm_weights[ribo_id_in_rna,replicate_present], v2[rna_id_in_ribo,unique(sort(rna_with_ribo_replicate))])
+all_expr_elist <- joint_expression_common
+treatment <- relevel(as.factor(type_common),ref="RNA")
+all_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common)+treatment)
+
+ribo_expr_elist <- all_expr_elist[,treatment=="Ribo"]
+ribo_expr_elist$design <- model.matrix(~0+as.factor(sample_labels_joint_common[treatment=="Ribo"]))
+colnames(ribo_expr_elist$design) <- sort(unique(sample_labels_joint_common))
+
+rna_expr_elist <- all_expr_elist[,treatment=="RNA"]
+rna_expr_elist$design <- model.matrix(~0+as.factor(sample_labels_joint_common[treatment=="RNA"]))
+colnames(rna_expr_elist$design) <- sort(unique(sample_labels_joint_common))
+
+for (i in 1:length(colnames(rna_expr_elist$design))) { 
+
+}
+c1 <- paste ( 
+paste (colnames(rna_expr_elist$design)[1], 
+       paste (colnames(rna_expr_elist$design)[-1], collapse="+"), sep="- (")
+, length(colnames(rna_expr_elist$design))-1 , sep=")/" )
+
+contrast.matrix<- (makeContrasts(GM12878-(GM12890+GM12891)/2, levels=rna_expr_elist$design))
+contrast.matrix<- (makeContrasts(c1, levels=rna_expr_elist$design))
+
+# MODEL FITTING
 ribo_fit <- lmFit (ribo_expr_elist, design=ribo_expr_elist$design, weights=ribo_expr_elist$weights)
 rna_fit <- lmFit (rna_expr_elist, design=rna_expr_elist$design, weights=rna_expr_elist$weights)
-ribo_fit2 <- eBayes(ribo_fit)
+# GENERATE CONTRAST MATRIX
+# We want to calculate the differentially expressed genes by comparing to all others
+ribo_fit2 <- contrasts.fit(ribo_fit, contrast.matrix)
+ribo_fit2 <- eBayes(ribo_fit2)
+
+rna_fit2 <- eBayes(rna_fit, contrast.matrix)
 rna_fit2 <- eBayes(rna_fit)
-topTable(ribo_fit2, coef=2,number=300)
-topTable(rna_fit2, coef=2,number=300)
+
+topTable(ribo_fit2)
+topTable(rna_fit2)
+
 results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=1)
 results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=1)
 apply(abs(results.ribo), 2, sum)
