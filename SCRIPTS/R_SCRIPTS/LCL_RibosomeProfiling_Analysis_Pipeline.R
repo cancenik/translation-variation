@@ -301,6 +301,7 @@ sample_labels_joint_common <- sample_labels_joint_wreps[common_rna_ribo]
 type_common <- type_wreps[common_rna_ribo]
 joint_expression_common <- v3[,c(joint_replication_rna, joint_replication_ribo)][,common_rna_ribo]
 joint_expression_common$design <- model.matrix(~sample_labels_joint_common+type_common)
+row.names(joint_expression_common) <- joint_count_ids
 
 # OUTPUT SVA RNA and normal RNA
 write.table(v3$E[,1:84], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RNA_Expression", sep=""), 
@@ -440,17 +441,9 @@ ribo_replicatecvs <- apply (joint_expression_common$E[,type_common=="Ribo"], 1, 
 rna_repcv_median <- lapply(rna_replicatecvs, function(z){median(z$x)})
 ribo_repcv_median <- lapply(ribo_replicatecvs, function(z){median(z$x)})
 
-
-#joint_expression_common
-#sample_labels_joint_common
-#type_common
-
-
-
+############################################################
 # Differential Expression Analysis and Translation Efficiency
-# Identify design matrix
 # Two predictors: Sample Label + Ribo vs RNA
-#### We should bring the voom-derived weights to this calculation
 # Questions of interest
 # What are the genes with differential RNA expression across individuals
 # What are the genes with differential Ribo expression across individuals
@@ -461,10 +454,9 @@ ribo_repcv_median <- lapply(ribo_replicatecvs, function(z){median(z$x)})
 # ## EBayes also returns a moderated F-statistic, $F.p.value
 
 # We can switch joint_expression_common, v3, and SVA 
-#all_expr_elist <- cbind(sva_norm_weights[ribo_id_in_rna,replicate_present], v2[rna_id_in_ribo,unique(sort(rna_with_ribo_replicate))])
 all_expr_elist <- joint_expression_common
 treatment <- relevel(as.factor(type_common),ref="RNA")
-all_expr_elist$design <- model.matrix(~as.factor(sample_labels_joint_common)+treatment)
+all_expr_elist$design <- model.matrix(~treatment + as.factor(sample_labels_joint_common))
 
 ribo_expr_elist <- all_expr_elist[,treatment=="Ribo"]
 ribo_expr_elist$design <- model.matrix(~0+as.factor(sample_labels_joint_common[treatment=="Ribo"]))
@@ -474,6 +466,7 @@ rna_expr_elist <- all_expr_elist[,treatment=="RNA"]
 rna_expr_elist$design <- model.matrix(~0+as.factor(sample_labels_joint_common[treatment=="RNA"]))
 colnames(rna_expr_elist$design) <- sort(unique(sample_labels_joint_common))
 
+# GENERATE CONTRAST MATRIX
 contrast_strings <- c()
 for (i in 1:length(colnames(rna_expr_elist$design))) { 
 contrast_strings[i] <- 
@@ -503,36 +496,79 @@ contrast.matrix<- (makeContrasts(contrast_strings[1],
 # MODEL FITTING
 ribo_fit <- lmFit (ribo_expr_elist, design=ribo_expr_elist$design, weights=ribo_expr_elist$weights)
 rna_fit <- lmFit (rna_expr_elist, design=rna_expr_elist$design, weights=rna_expr_elist$weights)
-# GENERATE CONTRAST MATRIX
-# We want to calculate the differentially expressed genes by comparing to all others
+
 ribo_fit2 <- contrasts.fit(ribo_fit, contrast.matrix)
 ribo_fit2 <- eBayes(ribo_fit2)
-
 rna_fit2 <- contrasts.fit(rna_fit, contrast.matrix)
 rna_fit2 <- eBayes(rna_fit2)
 
 topTable(ribo_fit2)
 topTable(rna_fit2)
-
 results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=1)
 results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=1)
 as.numeric(apply(abs(results.ribo), 2, sum))
 as.numeric(apply(abs(results.rna), 2, sum))
 # We can also look at B-statistic for the propensity of a gene to be differentially expressed
-
 # We need pretty visualizations to show relationship between RNA, Ribo, TE across individuals
 # We need to do some GO Analysis
 
-te_design <- model.matrix(~treatment+treatment:sample_id_all)
-te_fit <- lmFit(all_expr_elist, te_design)
-te_fit2 <- eBayes(te_fit)
-# Check that IDs are correct
-#te_fit2$genes$ID <- as.character(CDS[isexpr ,1][ribo_id_in_rna])
+riborna_fit <- lmFit(all_expr_elist)
+riborna_fit2 <- eBayes(riborna_fit)
+# Almost everything is significant for treatRibo if no LFC threshold
+# Using ordered FuncAssociate Pos_Ribo associates with ER, Mito, Extracellular space/organelle
+# Neg-Ribo enriched in translation, ribosome, viral transcription, etc
+apply(abs(decideTests(riborna_fit2, p.value=0.01, lfc=1)), 2, sum)
+write.table(topTable(riborna_fit2, coef=2, lfc=1, number=2326), file=paste(data_dir, 'Differential_Ribosome_Occupancy', sep=""), row.names=F ) 
 # Here the significance testing for difference in TE within a given individual, ie
 # Any of the coef of te_fit2 is problematic as testing against 0 is strange. 
 # One idea might be to voom the entire table of RNA_Seq + Ribo_Seq for this
 # This nested interaction formula should allow us to calculate within individual diffs. 
+te_factor <- paste(treatment, sample_labels_joint_common, sep=".")
+te_factor <- factor(te_factor, levels=unique(te_factor))
+tedesign <- model.matrix(~0+ te_factor)
+colnames(tedesign) <- levels(te_factor)
+te_fit <- lmFit(all_expr_elist, design=tedesign)
+# Contrast Matrix - generate matrix manually
+# Interested in individual specific TE
+# We are also interested in differential TE in given individual vs others
+# Second one is similar to the contrast matrix in ribo/rna only models.
+cont.matrix.te <- matrix(0,nrow=30, ncol=15, 
+dimnames=list(Levels=levels(te_factor), Contrasts=unique(sample_labels_joint_common)))
+sample_order <- c(unique(sample_labels_joint_common), unique(sample_labels_joint_common, fromLast=T))
+for (j in 1:15) { 
+  cont.matrix.te[which(sample_order == sample_order[j])[1],j] <- -1
+  cont.matrix.te[which(sample_order == sample_order[j])[2],j] <- 1
+}
+te_fit4 <- contrasts.fit(te_fit, cont.matrix.te)
+te_fit4 <- eBayes(te_fit4)
+te.results <- decideTests (te_fit4, p.value=0.01, lfc=1)
+as.numeric(apply(abs(te.results), 2, sum))
 
+mean_te <- apply(te_fit4$coefficients, 1, mean)
+mean_te_df <- data.frame(HGNC=row.names(te_fit4), mean_te)
+m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
+# Calculated TE correlates weakly with Protein amount but better than ratio
+# It might be again due to polysome profile shape
+# The amount of protein TE correlation is likely cell type specific
+c1 <- m1$mean_te > -2
+plot(m1$mean_te[c1], log10(as.numeric(m1$USE))[c1], pch=19, cex=.2)
+cor.test(m1$mean_te[c1], log10(as.numeric(m1$USE))[c1], method="spearman")
+
+cont.matrix.diff.te <- matrix(0,nrow=30, ncol=15, dimnames=list(Levels=levels(te_factor), Contrasts=unique(sample_labels_joint_common)))
+sample_order <- c(unique(sample_labels_joint_common), unique(sample_labels_joint_common, fromLast=T))
+for (j in 1:15) {
+  c1 <- which(sample_order == sample_order[j])
+  c2 <- seq(1,30,1)[-c1]
+  cont.matrix.diff.te[c1[1],j] <- -1
+  cont.matrix.diff.te[c1[2],j] <- 1
+  cont.matrix.diff.te[c2[which(c2<=15)],j] <- 0.07142857
+  cont.matrix.diff.te[c2[which(c2>15)],j] <- -0.07142857
+}
+te_fit3 <- contrasts.fit(te_fit, cont.matrix.diff.te)
+te_fit3 <- eBayes(te_fit3)
+te.diff.results <- decideTests (te_fit3, p.value=0.01, lfc=1)
+# Here the weird behavior of GM18504 RNA-Seq causes a large number of differences in TE
+as.numeric(apply(abs(te.diff.results), 2, sum))
 
 ## ANALYSIS ON ALL DATA INCLUDING RNA-RIBO IRRESPECTIVE OF REPLICATION
 ## COMPARISION TO CHRISTINE'S PROTEOMICS
