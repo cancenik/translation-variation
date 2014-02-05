@@ -4,6 +4,7 @@ library("limma")
 library("qtl")
 library ("sva")
 library("MASS")
+library("kohonen")
 #library ("isva")
 # I decided not to use isva after initial tests
 
@@ -288,7 +289,19 @@ max(as.numeric(cor_coefs))
 plot(norm_expr_joint[,94], v3$E[,-124][,94], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[94], cex=.2)
 plot(norm_expr_joint[,126], v3$E[,-124][,126], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[127], cex=.2)
 
+cor_coefs_rna_median <- apply(cor(v3$E[,1:84]),1, median)
+cor_coefs_ribo_median <- apply(cor(v3$E[,85:134]),1, median)
+hist(cor_coefs_ribo_median)
+hist(cor_coefs_rna_median)
+which(cor_coefs_rna_median < .9)
+# GM18504_Rep2_Counts_Pickrell is weird. It's unlike all the other datasets
+## UPDATE v3 by dropping GM18504_Rep2_Counts_Pickrell
+v3 <- v3[,-51]
+sample_labels_joint <- sample_labels_joint[-51]
+type <- type[-51]
+v3$design <- model.matrix(~sample_labels_joint + type)
 
+# EXTRACT JOINT
 joint_replication_ribo <- duplicated(sample_labels_joint[type=="Ribo"]) | duplicated(sample_labels_joint[type=="Ribo"], fromLast=TRUE)
 joint_replication_rna <- duplicated(sample_labels_joint[type=="RNA"]) | duplicated(sample_labels_joint[type=="RNA"], fromLast=TRUE)
 sample_labels_joint_wreps <- sample_labels_joint[c(joint_replication_rna, joint_replication_ribo)]
@@ -304,9 +317,10 @@ joint_expression_common$design <- model.matrix(~sample_labels_joint_common+type_
 row.names(joint_expression_common) <- joint_count_ids
 
 # OUTPUT SVA RNA and normal RNA
-write.table(v3$E[,1:84], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RNA_Expression", sep=""), 
+# UPDATE v3 to remove GM18504_Rep2
+write.table(v3$E[,type=="RNA"], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RNA_Expression", sep=""), 
 row.names=joint_count_ids, sep="\t")
-write.table(v3$E[,85:134], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RiboProfiling_Expression", sep=""), 
+write.table(v3$E[,type=="Ribo"], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RiboProfiling_Expression", sep=""), 
             row.names=joint_count_ids, sep="\t")            
 write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top20_SVA_Removed_QN_FullModel_RNA_Expression", sep=""),             
             row.names=joint_count_ids, sep="\t")
@@ -490,8 +504,7 @@ contrast.matrix<- (makeContrasts(contrast_strings[1],
                                  contrast_strings[12], 
                                  contrast_strings[13], 
                                  contrast_strings[14], 
-                                 contrast_strings[15]
-                                 , levels=rna_expr_elist$design))
+                                levels=rna_expr_elist$design))
 
 # MODEL FITTING
 ribo_fit <- lmFit (ribo_expr_elist, design=ribo_expr_elist$design, weights=ribo_expr_elist$weights)
@@ -532,10 +545,10 @@ te_fit <- lmFit(all_expr_elist, design=tedesign)
 # Interested in individual specific TE
 # We are also interested in differential TE in given individual vs others
 # Second one is similar to the contrast matrix in ribo/rna only models.
-cont.matrix.te <- matrix(0,nrow=30, ncol=15, 
+cont.matrix.te <- matrix(0,nrow=28, ncol=14, 
 dimnames=list(Levels=levels(te_factor), Contrasts=unique(sample_labels_joint_common)))
 sample_order <- c(unique(sample_labels_joint_common), unique(sample_labels_joint_common, fromLast=T))
-for (j in 1:15) { 
+for (j in 1:14) { 
   cont.matrix.te[which(sample_order == sample_order[j])[1],j] <- -1
   cont.matrix.te[which(sample_order == sample_order[j])[2],j] <- 1
 }
@@ -544,25 +557,25 @@ te_fit4 <- eBayes(te_fit4)
 te.results <- decideTests (te_fit4, p.value=0.01, lfc=1)
 as.numeric(apply(abs(te.results), 2, sum))
 
-mean_te <- apply(te_fit4$coefficients, 1, mean)
-mean_te_df <- data.frame(HGNC=row.names(te_fit4), mean_te)
-m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
 # Calculated TE correlates weakly with Protein amount but better than ratio
 # It might be again due to polysome profile shape
 # The amount of protein TE correlation is likely cell type specific
-c1 <- m1$mean_te > -2
+mean_te <- apply(te_fit4$coefficients, 1, mean)
+mean_te_df <- data.frame(HGNC=row.names(te_fit4), mean_te)
+m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
+c1 <- m1$mean_te > -1
 plot(m1$mean_te[c1], log10(as.numeric(m1$USE))[c1], pch=19, cex=.2)
-cor.test(m1$mean_te[c1], log10(as.numeric(m1$USE))[c1], method="spearman")
+cor.test(m1$mean_te[c1], log10(as.numeric(m1$USE)+1)[c1], method="spearman")
 
-cont.matrix.diff.te <- matrix(0,nrow=30, ncol=15, dimnames=list(Levels=levels(te_factor), Contrasts=unique(sample_labels_joint_common)))
+cont.matrix.diff.te <- matrix(0,nrow=28, ncol=14, dimnames=list(Levels=levels(te_factor), Contrasts=unique(sample_labels_joint_common)))
 sample_order <- c(unique(sample_labels_joint_common), unique(sample_labels_joint_common, fromLast=T))
-for (j in 1:15) {
+for (j in 1:14) {
   c1 <- which(sample_order == sample_order[j])
-  c2 <- seq(1,30,1)[-c1]
+  c2 <- seq(1,28,1)[-c1]
   cont.matrix.diff.te[c1[1],j] <- -1
   cont.matrix.diff.te[c1[2],j] <- 1
-  cont.matrix.diff.te[c2[which(c2<=15)],j] <- 0.07142857
-  cont.matrix.diff.te[c2[which(c2>15)],j] <- -0.07142857
+  cont.matrix.diff.te[c2[which(c2<=14)],j] <- 1/13
+  cont.matrix.diff.te[c2[which(c2>14)],j] <- -1/13
 }
 te_fit3 <- contrasts.fit(te_fit, cont.matrix.diff.te)
 te_fit3 <- eBayes(te_fit3)
@@ -624,6 +637,7 @@ ribo_rna <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$gr
 
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
+
 plot(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), xlab="RNA Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
 text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2", round(rna_cor$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
 plot(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), xlab="Ribosome Profiling Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
