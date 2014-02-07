@@ -271,7 +271,7 @@ max(as.numeric(cor_coefs))
 plot(norm_expr_joint[,94], v3$E[,-124][,94], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[94], cex=.2)
 plot(norm_expr_joint[,126], v3$E[,-124][,126], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[127], cex=.2)
 
-
+# Extract Joint Replicated Subset
 joint_replication_ribo <- duplicated(sample_labels_joint[type=="Ribo"]) | duplicated(sample_labels_joint[type=="Ribo"], fromLast=TRUE)
 joint_replication_rna <- duplicated(sample_labels_joint[type=="RNA"]) | duplicated(sample_labels_joint[type=="RNA"], fromLast=TRUE)
 sample_labels_joint_wreps <- sample_labels_joint[c(joint_replication_rna, joint_replication_ribo)]
@@ -290,9 +290,9 @@ write.table(v3$E[,1:84], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_Fu
 row.names=joint_count_ids, sep="\t")
 write.table(v3$E[,85:134], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RiboProfiling_Expression", sep=""), 
             row.names=joint_count_ids, sep="\t")            
-write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top20_SVA_Removed_QN_FullModel_RNA_Expression", sep=""),             
+write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RNA_Expression", sep=""),             
             row.names=joint_count_ids, sep="\t")
-write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top20_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
+write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
             row.names=joint_count_ids, sep="\t")
 
 
@@ -307,7 +307,7 @@ write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top20_SVA_Removed_
 #joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
 #joint_expression_matrix <- joint_expression_matrix[,-1]
 joint_expression_matrix <- joint_expression_common$E
-#gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
+gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
 #sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
 #sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
 sample_id_all <- sample_labels_joint_common
@@ -388,44 +388,45 @@ for (i in low_pval_indices) {
 # Alternative much simpler approach is to use ratio of CVs
 # It is unclear if CV makes sense as the relationship between Var Mean is different
 # It might make more sense to multiply by the associated weights
-coeff_variation <- function (y) { 
-  return ( sd(y$x)/mean(y$x))
+weighted_sd <- function (y) { 
+  return ( sd(y[,2]*y[,4]) )
 }
-coeff_variation_vec <- function (y) { 
-  return ( sd(y)/mean(y))
-}
+
 rna_replicate_mean <- apply (joint_expression_common$E[,type_common=="RNA"], 1, function(x) {
-aggregate(x[type_common=="RNA"], by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
+aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
 } )
 ribo_replicate_mean <- apply (joint_expression_common$E[,type_common=="Ribo"], 1, function(x) {
-  aggregate(x[type_common=="Ribo"], by =list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)
+  aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
 } )
 rna_replicate_weight_mean <- apply (joint_expression_common$weights[,type_common=="RNA"], 1, function(x) {
-  aggregate(x[type_common=="RNA"], by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
+  aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
 } )
 ribo_replicate_weight_mean <- apply (joint_expression_common$weights[,type_common=="Ribo"], 1, function(x) {
-  aggregate(x[type_common=="Ribo"], by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
+  aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
 } )
+rna_replicate_mean_weights <- mapply(cbind, rna_replicate_mean, rna_replicate_weight_mean, SIMPLIFY=F)
+ribo_replicate_mean_weights <- mapply(cbind, ribo_replicate_mean, rna_replicate_weight_mean, SIMPLIFY=F)
 
-rna_cv_between_individuals <- lapply(rna_replicate_mean, coeff_variation)
-ribo_cv_between_individuals <- lapply(ribo_replicate_mean, coeff_variation)
+rna_cv_between_individuals <- as.numeric(lapply(rna_replicate_mean_weights, weighted_sd))
+ribo_cv_between_individuals <- as.numeric(lapply(ribo_replicate_mean_weights, weighted_sd))
 
 # Calculate median CV of replicate CVs
-rna_replicatecvs <- apply (joint_expression_common$E[,type_common=="RNA"], 1, function(x) {
-  aggregate(x[type_common=="RNA"], by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), coeff_variation_vec)  
+rna_replicatecvs <- apply (joint_expression_common$E[,type_common=="RNA"]*joint_expression_common$weights[,type_common=="RNA"], 1, function(x) {
+  aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), sd)  
 } )
-ribo_replicatecvs <- apply (joint_expression_common$E[,type_common=="Ribo"], 1, function(x) {
-  aggregate(x[type_common=="Ribo"], by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), coeff_variation_vec)  
+ribo_replicatecvs <- apply (joint_expression_common$E[,type_common=="Ribo"]*joint_expression_common$weights[,type_common=="Ribo"], 1, function(x) {
+  aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), sd)  
 } )
-rna_repcv_median <- lapply(rna_replicatecvs, function(z){median(z$x)})
-ribo_repcv_median <- lapply(ribo_replicatecvs, function(z){median(z$x)})
-
-
-#joint_expression_common
-#sample_labels_joint_common
-#type_common
-
-
+rna_repcv_median <- as.numeric(lapply(rna_replicatecvs, function(z){median(z$x)}))
+ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x)}))
+hist(rna_cv_between_individuals/rna_repcv_median, 200)
+hist(ribo_cv_between_individuals/ribo_repcv_median, 200)
+hist((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median), 100 )
+abline(v=1)
+length(which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) > 2))
+length(which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) < .5))
+write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) > 2)], file="~/Desktop/RNA_variable.txt", row.names=F)
+write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) < .5)], file="~/Desktop/Ribo_variable.txt", row.names=F)
 
 # Differential Expression Analysis and Translation Efficiency
 # Identify design matrix
