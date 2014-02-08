@@ -34,6 +34,14 @@ substr(enst_hgnc[,1],1,1) <- ""
 protein_absolute_ibaq <- read.csv(paste (data_dir,'TableS8_Khan_etal.csv', sep=""))
 protein_absolute_ibaq <- merge(protein_absolute_ibaq, ensg_hgnc)
 
+## Linfenfg Proteins
+## THIS IS A NIGHTMARE. NEED TO FIX THE DATA READING!!!!
+linfeng_protein <- read.table(paste(data_dir, 'ldataMerged95x5953ENSGwithCovar.txt', sep=""))
+linfeng_protein <- t(linfeng_protein[,-c(5955:5961)])
+colnames(linfeng_protein) <- linfeng_protein[5954,]
+linfeng_protein <- linfeng_protein[-5954,]
+row.names(linfeng_protein) <- linfeng_protein[,1]
+
 ## RNA_SEQ COUNTS -- Drop 18508
 ## GEUVADIS, PICKRELL, PolyA, Ribozero
 geuvadis <- read.table(
@@ -284,6 +292,7 @@ v3 <- v3[,-51]
 sample_labels_joint <- sample_labels_joint[-51]
 type <- type[-51]
 v3$design <- model.matrix(~sample_labels_joint + type)
+row.names(v3) <- joint_count_ids
 
 # EXTRACT JOINT
 joint_replication_ribo <- duplicated(sample_labels_joint[type=="Ribo"]) | duplicated(sample_labels_joint[type=="Ribo"], fromLast=TRUE)
@@ -576,7 +585,87 @@ te.diff.results <- decideTests (te_fit3, p.value=0.01, lfc=1)
 # Here the weird behavior of GM18504 RNA-Seq causes a large number of differences in TE
 as.numeric(apply(abs(te.diff.results), 2, sum))
 
+### We can visualize the relationship with appropriate Circos plot maybe overlay the GO on top this
+
+# In general genes exhibit great variation in their translation efficiency
+# However, across individuals the translation efficiency of genes is much less variable than RNA
+# For absolute levels, the translation efficiency component captured by ribosome profiling is important to predict protein levels
+# However, across individual differences in TE have lower correlation between across individual protein measurements perhaps due to less variance
+
+## APPLY SOMs to different versions of data. 
+# One version is te, rna, ribo logFCs. This is a 3x14x9000 matrix
+# One version is te, rna, ribo logFCs with Linfeng's proteomicss
+# Another version is absolute rna, ribo, TE wtih SILAC proteomics absolute
+quantile(ribo_fit2$coefficients )
+quantile(rna_fit2$coefficients )
+quantile(te_fit3$coefficients )
+
+
 ## ANALYSIS ON ALL DATA INCLUDING RNA-RIBO IRRESPECTIVE OF REPLICATION
+# Comparing across Individual Correlation to Linfeng's proteomics
+# ensg_hgnc
+linfeng_common <- colnames(linfeng_protein) %in% unique(sample_labels_joint)
+linfeng_protein <- linfeng_protein[,linfeng_common]
+linfeng_protein <- merge(linfeng_protein, ensg_hgnc, by.x="row.names", by.y="ENSG")
+# Subset linfeng protein to only no NAs. If we want we can also include samples with missing values sqrt(#individuals)?
+# For correlation we can use use="pairwise.complete.obs"
+number_NAs <- 1
+linfeng_protein_na <- linfeng_protein[apply(is.na(linfeng_protein), 1, sum) < number_NAs, ]
+linfeng_protein_ribo_rna <- merge (v3$E, linfeng_protein_na, by.x="row.names", by.y="HGNC")
+linfeng_protein_ribo_rna <- linfeng_protein_ribo_rna[,-c(1,135)]
+type_prot <- c(type, rep("Prot", dim(linfeng_protein_ribo_rna)[2] - length(type)))
+sample_labels_joint_prot <- c(sample_labels_joint, colnames(linfeng_protein_ribo_rna)[134:161])
+
+# Calculate across individual correlation between protein-rna-ribo
+rna_replicate_mean_prot <- apply (linfeng_protein_ribo_rna[,type_prot=="RNA"], 1, function(x) {
+  aggregate(x, by= list(as.factor(sample_labels_joint_prot[type_prot=="RNA"])), mean)  
+} )
+ribo_replicate_mean_prot <- apply (linfeng_protein_ribo_rna[,type_prot=="Ribo"], 1, function(x) {
+  aggregate(x, by= list(as.factor(sample_labels_joint_prot[type_prot=="Ribo"])), mean)  
+} )
+
+rna_samples <- match(as.character(rna_replicate_mean_prot[[1]]$Group.1), sample_labels_joint_prot[type_prot=="Prot"],)
+rna_samples <- rna_samples[!is.na(rna_samples)]
+rna_in_prot <- as.character(rna_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
+across_ind_rna_correlation <- c()
+for (i in 1:length(rna_replicate_mean_prot)) { 
+# Get two numeric matching vectors
+  across_ind_rna_correlation <- c(across_ind_rna_correlation, 
+  cor(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[rna_samples], use="pairwise.complete.obs"))
+  # We can also spearman , method="spearman"
+}  
+
+ribo_samples <- match(as.character(ribo_replicate_mean_prot[[1]]$Group.1), sample_labels_joint_prot[type_prot=="Prot"],)
+ribo_samples <- ribo_samples[!is.na(ribo_samples)]
+ribo_in_prot <- as.character(ribo_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
+across_ind_ribo_correlation <- c()
+for (i in 1:length(ribo_replicate_mean_prot)) { 
+  # Get two numeric matching vectors
+  across_ind_ribo_correlation <- c(across_ind_ribo_correlation, 
+                                  cor(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs"))
+} 
+
+length(across_ind_ribo_correlation)
+median(across_ind_ribo_correlation)
+median(across_ind_rna_correlation)
+plot(across_ind_ribo_correlation, across_ind_rna_correlation, pch=19, cex=.5)
+cor.test(across_ind_ribo_correlation, across_ind_rna_correlation)
+p1 <- hist(across_ind_ribo_correlation,40)
+p2 <- hist(across_ind_rna_correlation,40)
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
+plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), add=T)
+legend(.6,200,c("RNA", "Ribosome Occupancy"), bty="n", fill=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)))
+
+# rna to ribo
+# Remove one column which is not shared
+ribo_replicate_mean_rna <- lapply(ribo_replicate_mean_prot, function(x){x <- x[-24,]})
+c2 <- mapply (cbind, rna_replicate_mean_prot, ribo_replicate_mean_rna, SIMPLIFY=F)
+across_ind_rna_ribo <- as.numeric(lapply(c2, function(x){ cor(x[,2], x[,4]) }))
+
+quantile(across_ind_rna_ribo)
+quantile(across_ind_ribo_correlation)
+quantile(across_ind_rna_correlation)
+
 ## COMPARISION TO CHRISTINE'S PROTEOMICS
 #### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
 gm12878_prot <- read.csv('~/project/CORE_DATAFILES/GM12878_B0_FDR5_140120_shortforCan.csv', stringsAsFactors=F)
