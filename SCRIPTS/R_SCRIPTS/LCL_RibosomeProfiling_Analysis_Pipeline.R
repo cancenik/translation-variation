@@ -612,6 +612,7 @@ linfeng_protein <- merge(linfeng_protein, ensg_hgnc, by.x="row.names", by.y="ENS
 number_NAs <- 1
 linfeng_protein_na <- linfeng_protein[apply(is.na(linfeng_protein), 1, sum) < number_NAs, ]
 linfeng_protein_ribo_rna <- merge (v3$E, linfeng_protein_na, by.x="row.names", by.y="HGNC")
+row.names(linfeng_protein_ribo_rna) <- linfeng_protein_ribo_rna[,1]
 linfeng_protein_ribo_rna <- linfeng_protein_ribo_rna[,-c(1,135)]
 type_prot <- c(type, rep("Prot", dim(linfeng_protein_ribo_rna)[2] - length(type)))
 sample_labels_joint_prot <- c(sample_labels_joint, colnames(linfeng_protein_ribo_rna)[134:161])
@@ -628,10 +629,13 @@ rna_samples <- match(as.character(rna_replicate_mean_prot[[1]]$Group.1), sample_
 rna_samples <- rna_samples[!is.na(rna_samples)]
 rna_in_prot <- as.character(rna_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
 across_ind_rna_correlation <- c()
+across_ind_rna_correlation_pval <- c()
+
 for (i in 1:length(rna_replicate_mean_prot)) { 
 # Get two numeric matching vectors
-  across_ind_rna_correlation <- c(across_ind_rna_correlation, 
-  cor(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[rna_samples], use="pairwise.complete.obs"))
+  cor1 <-  cor.test(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[rna_samples], use="pairwise.complete.obs")
+  across_ind_rna_correlation <- c(across_ind_rna_correlation, cor1$estimate)
+  across_ind_rna_correlation_pval <- c(across_ind_rna_correlation_pval, cor1$p.value)
   # We can also spearman , method="spearman"
 }  
 
@@ -639,23 +643,32 @@ ribo_samples <- match(as.character(ribo_replicate_mean_prot[[1]]$Group.1), sampl
 ribo_samples <- ribo_samples[!is.na(ribo_samples)]
 ribo_in_prot <- as.character(ribo_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
 across_ind_ribo_correlation <- c()
+across_ind_ribo_correlation_pval <- c()
+
 for (i in 1:length(ribo_replicate_mean_prot)) { 
   # Get two numeric matching vectors
-  across_ind_ribo_correlation <- c(across_ind_ribo_correlation, 
-                                  cor(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs"))
+  cor1 <-cor.test(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs")
+  across_ind_ribo_correlation <- c(across_ind_ribo_correlation, cor1$estimate)
+  across_ind_ribo_correlation_pval <- c(across_ind_ribo_correlation_pval, cor1$p.value)
 } 
 
 length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
 median(across_ind_rna_correlation)
-plot(across_ind_ribo_correlation, across_ind_rna_correlation, pch=19, cex=.5)
+color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
+pval_cutoff <- 0.005
+color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
+color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
+color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 3
+plot(across_ind_ribo_correlation, across_ind_rna_correlation, pch=19, cex=.65, tck=.02, col=c("Black", "Red", "Blue", "Gold")[as.factor(color_by_pval)])
 cor.test(across_ind_ribo_correlation, across_ind_rna_correlation)
 p1 <- hist(across_ind_ribo_correlation,40)
 p2 <- hist(across_ind_rna_correlation,40)
 plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), add=T)
 legend(.6,200,c("RNA", "Ribosome Occupancy"), bty="n", fill=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)))
-
+# Color points in different regions and add some labels
+# Tick mark iceri al aralarini daralt
 # rna to ribo
 # Remove one column which is not shared
 ribo_replicate_mean_rna <- lapply(ribo_replicate_mean_prot, function(x){x <- x[-24,]})
@@ -666,6 +679,11 @@ quantile(across_ind_rna_ribo)
 quantile(across_ind_ribo_correlation)
 quantile(across_ind_rna_correlation)
 
+# We can do these sorted so we can run ordered analysis
+write.table( row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'Ribo_RNA_Prot_Cor_IDs' ,sep=""), row.names=F ) 
+write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff], file=paste (data_dir,'Ribo_Prot_Cor_IDs',sep=""), row.names=F ) 
+write.table(row.names(linfeng_protein_ribo_rna), file= paste (data_dir,'Prot_RNA_Ribo_Common_IDs',sep=""), row.names=F)
+write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'RNA_Prot_Cor_IDs',sep=""), row.names=F)
 ## COMPARISION TO CHRISTINE'S PROTEOMICS
 #### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
 gm12878_prot <- read.csv('~/project/CORE_DATAFILES/GM12878_B0_FDR5_140120_shortforCan.csv', stringsAsFactors=F)
