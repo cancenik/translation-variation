@@ -35,7 +35,6 @@ protein_absolute_ibaq <- read.csv(paste (data_dir,'TableS8_Khan_etal.csv', sep="
 protein_absolute_ibaq <- merge(protein_absolute_ibaq, ensg_hgnc)
 
 ## Linfenfg Proteins
-## THIS IS A NIGHTMARE. NEED TO FIX THE DATA READING!!!!
 linfeng_protein <- read.table(paste(data_dir, 'ldataMerged95x5953ENSGwithCovar.txt', sep=""))
 linfeng_protein <- t(linfeng_protein[,-c(5955:5961)])
 colnames(linfeng_protein) <- linfeng_protein[5954,]
@@ -138,7 +137,7 @@ row.names(all_rnaseq_counts) <- (geuvadis_CDS$ID[rnaexpr])[!polyA_RZ_inconsisten
 
 all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
 all_rnaseq_counts$samples
-cor (all_rnaseq[rnaexpr,], method="spearman")
+#cor (all_rnaseq[rnaexpr,], method="spearman")
 sample_id <- unlist(strsplit(colnames(all_rnaseq_counts), split= "_"))
 sample_id <- sample_id[grep("GM", sample_id)]
 design_rnaseq <- model.matrix(~sample_id)
@@ -309,16 +308,16 @@ joint_expression_common <- v3[,c(joint_replication_rna, joint_replication_ribo)]
 joint_expression_common$design <- model.matrix(~sample_labels_joint_common+type_common)
 row.names(joint_expression_common) <- joint_count_ids
 
-# OUTPUT SVA RNA and normal RNA
-# UPDATE v3 to remove GM18504_Rep2
-write.table(v3$E[,type=="RNA"], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RNA_Expression", sep=""), 
-row.names=joint_count_ids, sep="\t")
-write.table(v3$E[,type=="Ribo"], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RiboProfiling_Expression", sep=""), 
-            row.names=joint_count_ids, sep="\t")            
-write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RNA_Expression", sep=""),             
-            row.names=joint_count_ids, sep="\t")
-write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
-            row.names=joint_count_ids, sep="\t")
+# # OUTPUT SVA RNA and normal RNA
+# # UPDATE v3 to remove GM18504_Rep2
+# write.table(v3$E[,type=="RNA"], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RNA_Expression", sep=""), 
+# row.names=joint_count_ids, sep="\t")
+# write.table(v3$E[,type=="Ribo"], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RiboProfiling_Expression", sep=""), 
+#             row.names=joint_count_ids, sep="\t")            
+# write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RNA_Expression", sep=""),             
+#             row.names=joint_count_ids, sep="\t")
+# write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
+#             row.names=joint_count_ids, sep="\t")
 
 
 ##### ANALYSIS REQUIRING JOINT RNA-RIBOSEQ WITH REPLICATES
@@ -448,12 +447,20 @@ ribo_replicatecvs <- apply (joint_expression_common$E[,type_common=="Ribo"]*join
 
 rna_repcv_median <- as.numeric(lapply(rna_replicatecvs, function(z){median(z$x)}))
 ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x)}))
-hist(rna_cv_between_individuals/rna_repcv_median, 200)
-hist(ribo_cv_between_individuals/ribo_repcv_median, 200)
-hist((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median), 100 )
+
+rnacv <- (rna_cv_between_individuals/rna_repcv_median) 
+ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
+
+hist(rnacv, 200)
+hist(ribocv, 200)
+low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
+hist(rnacv/ribocv, 100 )
+# One idea is to remove low interindividual to intraindividual genes
+
 abline(v=1)
-length(which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) > 2))
-length(which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) < .5))
+
+length(which(rnacv/ribocv > 2))
+length(which(rnacv/ribocv < .5))
 write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) > 2)], file="~/Desktop/RNA_variable.txt", row.names=F)
 write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) < .5)], file="~/Desktop/Ribo_variable.txt", row.names=F)
 
@@ -633,7 +640,8 @@ across_ind_rna_correlation_pval <- c()
 
 for (i in 1:length(rna_replicate_mean_prot)) { 
 # Get two numeric matching vectors
-  cor1 <-  cor.test(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[rna_samples], use="pairwise.complete.obs")
+#  cor1 <-  cor.test(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[rna_samples], use="pairwise.complete.obs")
+  cor1 <-  cor.test(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[rna_samples], use="pairwise.complete.obs", method="spearman")
   across_ind_rna_correlation <- c(across_ind_rna_correlation, cor1$estimate)
   across_ind_rna_correlation_pval <- c(across_ind_rna_correlation_pval, cor1$p.value)
   # We can also spearman , method="spearman"
@@ -647,7 +655,9 @@ across_ind_ribo_correlation_pval <- c()
 
 for (i in 1:length(ribo_replicate_mean_prot)) { 
   # Get two numeric matching vectors
-  cor1 <-cor.test(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs")
+#  cor1 <-cor.test(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs")
+  cor1 <-cor.test(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs", method="spearman")
+  
   across_ind_ribo_correlation <- c(across_ind_ribo_correlation, cor1$estimate)
   across_ind_ribo_correlation_pval <- c(across_ind_ribo_correlation_pval, cor1$p.value)
 } 
@@ -656,7 +666,8 @@ length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
 median(across_ind_rna_correlation)
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
-pval_cutoff <- 0.005
+# Use p.adjust for the cutoff
+pval_cutoff <- 0.001
 color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
 color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
 color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 3
