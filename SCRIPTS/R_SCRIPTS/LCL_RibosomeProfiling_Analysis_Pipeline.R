@@ -600,24 +600,61 @@ as.numeric(apply(abs(te.diff.results), 2, sum))
 # However, across individual differences in TE have lower correlation between across individual protein measurements perhaps due to less variance
 
 ## APPLY SOMs to different versions of data. 
-# One version is te, rna, ribo logFCs. This is a 3x14x9000 matrix
-# One version is te, rna, ribo logFCs with Linfeng's proteomicss
+# One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
 # Another version is absolute rna, ribo, TE wtih SILAC proteomics absolute
 quantile(ribo_fit2$coefficients )
 quantile(rna_fit2$coefficients )
 quantile(te_fit3$coefficients )
 
+# superSOM Data Structure is a list of matrices including Linfeng Proteomics with NAs -> This will use individuals in the plot.
+# We can also do a general one with just absolute ribo,rna, te, and absolute SILAC amounts (Here SILAC can be coded as a classification parameter for BDF)
+# Following Xie, Boyle, et al. The grid is hexagonal, toroid
+# Total number of cells, sqrt(DATA_TYPE/2) x sqrt (genes x individuals )
+linfeng_prot_common_with_te <-  colnames(linfeng_protein) %in% colnames(te_fit3$coefficients)
+linfeng_te_columns <- linfeng_protein[,linfeng_prot_common_with_te]
+class(linfeng_te_columns) <- "numeric"
+linfeng_te_match <- cbind ( linfeng_te_columns[,1], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,2:5], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,6:12])
+colnames(linfeng_te_match) <- sort(colnames(te_fit3$coefficients))
+linfeng_te_match <- merge(linfeng_te_match, ensg_hgnc, by.x="row.names", by.y="ENSG")
+row.names(linfeng_te_match) <- linfeng_te_match[,16]
+linfeng_te_match <- linfeng_te_match[,-c(1,16)]
+### We need tp scale the matrix before feeding it to SOM 
+# scaled_prot_matrix <- scale(as.matrix(linfeng_te_match))
+# We can use bdk with concatenation of the different measurements into one matrix
+
+colnames(ribo_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
+colnames(rna_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
+som.data = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix]))
+total_cells <- floor(sqrt(length(som.data)/2) * sqrt (dim(ribo_fit2$coefficients)[1] * dim(ribo_fit2$coefficients)[2]))
+if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
+  ydim = floor(sqrt(total_cells/1.3333))
+} else { 
+  ydim = floor(sqrt(total_cells/1.3333)) + 1
+}
+xdim = floor(total_cells/ydim + 0.5)
+som.exp = supersom(data =som.data, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T)
+plot(som.exp, type="codes")
+plot(som.exp, type="quality")
+plot(som.exp, type="mapping", pch=19, cex=.3)
+plot(som.exp, type="changes")
+plot(som.exp, type="counts")
+## Hexagonal plotting 
+# som.exp$unit.classif has the info about where each gene went
+# Create Matrix of the quantity of interest and pass this directly to plotCplane and remove componentPlaneMatrix function
+# We also need some visually appealing colors
+ribo_code_mean <- apply(som.exp$codes$ribo, 1, mean)
+plotCplane(som.exp, variable=ribo_code_mean)
 
 ## ANALYSIS ON ALL DATA INCLUDING RNA-RIBO IRRESPECTIVE OF REPLICATION
 # Comparing across Individual Correlation to Linfeng's proteomics
 # ensg_hgnc
 linfeng_common <- colnames(linfeng_protein) %in% unique(sample_labels_joint)
-linfeng_protein <- linfeng_protein[,linfeng_common]
-linfeng_protein <- merge(linfeng_protein, ensg_hgnc, by.x="row.names", by.y="ENSG")
+linfeng_protein_common <- linfeng_protein[,linfeng_common]
+linfeng_protein_common <- merge(linfeng_protein_common, ensg_hgnc, by.x="row.names", by.y="ENSG")
 # Subset linfeng protein to only no NAs. If we want we can also include samples with missing values sqrt(#individuals)?
 # For correlation we can use use="pairwise.complete.obs"
 number_NAs <- 1
-linfeng_protein_na <- linfeng_protein[apply(is.na(linfeng_protein), 1, sum) < number_NAs, ]
+linfeng_protein_na <- linfeng_protein[apply(is.na(linfeng_protein_common), 1, sum) < number_NAs, ]
 linfeng_protein_ribo_rna <- merge (v3$E, linfeng_protein_na, by.x="row.names", by.y="HGNC")
 row.names(linfeng_protein_ribo_rna) <- linfeng_protein_ribo_rna[,1]
 linfeng_protein_ribo_rna <- linfeng_protein_ribo_rna[,-c(1,135)]
