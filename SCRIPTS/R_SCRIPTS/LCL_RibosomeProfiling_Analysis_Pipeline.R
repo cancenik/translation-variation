@@ -136,7 +136,7 @@ all_rnaseq_counts <- all_rnaseq_counts[!polyA_RZ_inconsistent,]
 row.names(all_rnaseq_counts) <- (geuvadis_CDS$ID[rnaexpr])[!polyA_RZ_inconsistent]
 
 all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
-all_rnaseq_counts$samples
+#all_rnaseq_counts$samples
 #cor (all_rnaseq[rnaexpr,], method="spearman")
 sample_id <- unlist(strsplit(colnames(all_rnaseq_counts), split= "_"))
 sample_id <- sample_id[grep("GM", sample_id)]
@@ -172,7 +172,7 @@ cds_counts <- cds_counts[isexpr,]
 row.names(cds_counts) <- CDS_IDs[isexpr]
 dim(cds_counts)
 cds_counts <- calcNormFactors (cds_counts, method= "TMM")
-cds_counts$samples
+#cds_counts$samples
 s1 <- unlist(strsplit(colnames(CDS_Counts), "_"))
 sample_labels <- s1[grep('GM', s1)]
 table(sample_labels)
@@ -461,8 +461,8 @@ abline(v=1)
 
 length(which(rnacv/ribocv > 2))
 length(which(rnacv/ribocv < .5))
-write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) > 2)], file="~/Desktop/RNA_variable.txt", row.names=F)
-write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) < .5)], file="~/Desktop/Ribo_variable.txt", row.names=F)
+#write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) > 2)], file="~/Desktop/RNA_variable.txt", row.names=F)
+#write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) < .5)], file="~/Desktop/Ribo_variable.txt", row.names=F)
 
 ############################################################
 # Differential Expression Analysis and Translation Efficiency
@@ -526,8 +526,8 @@ rna_fit2 <- eBayes(rna_fit2)
 
 topTable(ribo_fit2)
 topTable(rna_fit2)
-results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=1)
-results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=1)
+results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=log2(1.5))
+results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=log2(1.5))
 as.numeric(apply(abs(results.ribo), 2, sum))
 as.numeric(apply(abs(results.rna), 2, sum))
 # We can also look at B-statistic for the propensity of a gene to be differentially expressed
@@ -588,11 +588,22 @@ for (j in 1:14) {
 }
 te_fit3 <- contrasts.fit(te_fit, cont.matrix.diff.te)
 te_fit3 <- eBayes(te_fit3)
-te.diff.results <- decideTests (te_fit3, p.value=0.01, lfc=1)
+te.diff.results <- decideTests (te_fit3, p.value=0.01, lfc=log2(1.5))
 # Here the weird behavior of GM18504 RNA-Seq causes a large number of differences in TE
 as.numeric(apply(abs(te.diff.results), 2, sum))
 
-### We can visualize the relationship with appropriate Circos plot maybe overlay the GO on top this
+#### We will visualize the results using Radial Sets
+#### We will need the following information
+#### An Attributes table
+#### GENE_ID RNA_EXP RIBO_EXP TE PROT LEVEL THIS COULD BE IND SEPARATE OR MEANS
+#### THREE TABLES OF DIFFERENTIAL EXPRESSION
+#### RIBO TABLE - EXAMPLE ONE FOR UP ONE FOR DOWN
+#### IND_ID GENE_LIST
+# Results of differentials are in te.diff.results, results.ribo, results.rna
+# This best achieved in perl so simply output these tables
+write.table(results.ribo, file =paste (data_dir, "Differential_Ribo_Occupancy", sep=""))
+write.table(results.rna, file =paste (data_dir, "Differential_RNA_Occupancy", sep=""))
+write.table(te.diff.results, file =paste (data_dir, "Differential_TE", sep=""))
 
 # In general genes exhibit great variation in their translation efficiency
 # However, across individuals the translation efficiency of genes is much less variable than RNA
