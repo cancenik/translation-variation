@@ -785,14 +785,26 @@ if (floor(sqrt(total_cells_bdk/1.3333)) %% 2 == 0) {
 }
 xdim = floor(total_cells_bdk/ydim + 0.5)
 abs.som.data.noNA <- ribo_rna_te_prot[!apply(is.na(ribo_rna_te_prot), 1, any),]
+
+# Run the SOM, 1000 times and keep track of the distances pick the one with the min 75% distance
+my_75th_distance <- 1
+for (i in 1:100) { 
+  set.seed(i*3433)
+  absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.8, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
+  if (quantile(absolute.som$distances)[4] < my_75th_distance) { 
+    my_seed <- i*3433
+    my_75th_distance <- quantile(absolute.som$distances)[4]
+  }
+}
+# best_seed is 130454
+set.seed(130454)
 absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.8, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
 plot(absolute.som)
 plot(absolute.som, type="quality")
+plot(absolute.som, type="count")
+plot(absolute.som, type="changes")
+
 # One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
-# Another version is absolute rna, ribo, TE wtih SILAC proteomics absolute
-quantile(ribo_fit2$coefficients )
-quantile(rna_fit2$coefficients )
-quantile(te_fit3$coefficients )
 
 # superSOM Data Structure is a list of matrices including Linfeng Proteomics with NAs -> This will use individuals in the plot.
 # We can also do a general one with just absolute ribo,rna, te, and absolute SILAC amounts (Here SILAC can be coded as a classification parameter for BDF)
@@ -804,14 +816,20 @@ class(linfeng_te_columns) <- "numeric"
 linfeng_te_match <- cbind ( linfeng_te_columns[,1], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,2:5], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,6:12])
 colnames(linfeng_te_match) <- sort(colnames(te_fit3$coefficients))
 linfeng_te_match <- merge(linfeng_te_match, ensg_hgnc, by.x="row.names", by.y="ENSG")
-row.names(linfeng_te_match) <- linfeng_te_match[,16]
-linfeng_te_match <- linfeng_te_match[,-c(1,16)]
+linfeng_te_match <- merge (data.frame(HGNC=joint_count_ids), linfeng_te_match, by="HGNC", all.x=T)
+row.names(linfeng_te_match) <- linfeng_te_match[,1]
+linfeng_te_match <- linfeng_te_match[,-c(1,2)]
 ### We might want to scale the matrix before feeding it to SOM 
-# We can use bdk with concatenation of the different measurements into one matrix
+quantile(ribo_fit2$coefficients )
+quantile(rna_fit2$coefficients )
+quantile(te_fit3$coefficients )
+quantile(linfeng_te_match, na.rm=T)
 
 colnames(ribo_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
 colnames(rna_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
 som.data = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix])
+som.data.prot = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix], prot=as.matrix(linfeng_te_match))
+
 total_cells <- floor(sqrt(length(som.data)/2) * sqrt (dim(ribo_fit2$coefficients)[1] * dim(ribo_fit2$coefficients)[2]))
 if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
   ydim = floor(sqrt(total_cells/1.3333))
@@ -819,7 +837,10 @@ if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) {
   ydim = floor(sqrt(total_cells/1.3333)) + 1
 }
 xdim = floor(total_cells/ydim + 0.5)
+# We can play with weights Increased weight to RNA, Ribo compared to TE - Change weights to increase quality of SOM
 som.exp = supersom(data =som.data, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T)
+som.exp.prot = supersom(data =som.data.prot, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T, maxNA.fraction=9/14, weights=c(.4,.4,.15,.05))
+
 plot(som.exp, type="codes")
 plot(som.exp, type="quality")
 plot(som.exp, type="mapping", pch=19, cex=.3)
