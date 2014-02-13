@@ -566,15 +566,6 @@ te_fit4 <- eBayes(te_fit4)
 te.results <- decideTests (te_fit4, p.value=0.01, lfc=1)
 as.numeric(apply(abs(te.results), 2, sum))
 
-# Calculated TE correlates weakly with Protein amount but better than ratio
-# It might be again due to polysome profile shape
-# The amount of protein TE correlation is likely cell type specific
-mean_te <- apply(te_fit4$coefficients, 1, mean)
-mean_te_df <- data.frame(HGNC=row.names(te_fit4), mean_te)
-m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
-c1 <- m1$mean_te > -1
-plot(m1$mean_te[c1], log10(as.numeric(m1$USE))[c1], pch=19, cex=.2)
-cor.test(m1$mean_te[c1], log10(as.numeric(m1$USE)+1)[c1], method="spearman")
 
 cont.matrix.diff.te <- matrix(0,nrow=28, ncol=14, dimnames=list(Levels=levels(te_factor), Contrasts=unique(sample_labels_joint_common)))
 sample_order <- c(unique(sample_labels_joint_common), unique(sample_labels_joint_common, fromLast=T))
@@ -610,51 +601,6 @@ write.table(te.diff.results, file =paste (data_dir, "Differential_TE", sep=""))
 # For absolute levels, the translation efficiency component captured by ribosome profiling is important to predict protein levels
 # However, across individual differences in TE have lower correlation between across individual protein measurements perhaps due to less variance
 
-## APPLY SOMs to different versions of data. 
-# One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
-# Another version is absolute rna, ribo, TE wtih SILAC proteomics absolute
-quantile(ribo_fit2$coefficients )
-quantile(rna_fit2$coefficients )
-quantile(te_fit3$coefficients )
-
-# superSOM Data Structure is a list of matrices including Linfeng Proteomics with NAs -> This will use individuals in the plot.
-# We can also do a general one with just absolute ribo,rna, te, and absolute SILAC amounts (Here SILAC can be coded as a classification parameter for BDF)
-# Following Xie, Boyle, et al. The grid is hexagonal, toroid
-# Total number of cells, sqrt(DATA_TYPE/2) x sqrt (genes x individuals )
-linfeng_prot_common_with_te <-  colnames(linfeng_protein) %in% colnames(te_fit3$coefficients)
-linfeng_te_columns <- linfeng_protein[,linfeng_prot_common_with_te]
-class(linfeng_te_columns) <- "numeric"
-linfeng_te_match <- cbind ( linfeng_te_columns[,1], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,2:5], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,6:12])
-colnames(linfeng_te_match) <- sort(colnames(te_fit3$coefficients))
-linfeng_te_match <- merge(linfeng_te_match, ensg_hgnc, by.x="row.names", by.y="ENSG")
-row.names(linfeng_te_match) <- linfeng_te_match[,16]
-linfeng_te_match <- linfeng_te_match[,-c(1,16)]
-### We need tp scale the matrix before feeding it to SOM 
-# scaled_prot_matrix <- scale(as.matrix(linfeng_te_match))
-# We can use bdk with concatenation of the different measurements into one matrix
-
-colnames(ribo_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
-colnames(rna_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
-som.data = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix]))
-total_cells <- floor(sqrt(length(som.data)/2) * sqrt (dim(ribo_fit2$coefficients)[1] * dim(ribo_fit2$coefficients)[2]))
-if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
-  ydim = floor(sqrt(total_cells/1.3333))
-} else { 
-  ydim = floor(sqrt(total_cells/1.3333)) + 1
-}
-xdim = floor(total_cells/ydim + 0.5)
-som.exp = supersom(data =som.data, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T)
-plot(som.exp, type="codes")
-plot(som.exp, type="quality")
-plot(som.exp, type="mapping", pch=19, cex=.3)
-plot(som.exp, type="changes")
-plot(som.exp, type="counts")
-## Hexagonal plotting 
-# som.exp$unit.classif has the info about where each gene went
-# Create Matrix of the quantity of interest and pass this directly to plotCplane and remove componentPlaneMatrix function
-# We also need some visually appealing colors
-ribo_code_mean <- apply(som.exp$codes$ribo, 1, mean)
-plotCplane(som.exp, variable=ribo_code_mean)
 
 ## ANALYSIS ON ALL DATA INCLUDING RNA-RIBO IRRESPECTIVE OF REPLICATION
 # Comparing across Individual Correlation to Linfeng's proteomics
@@ -783,6 +729,28 @@ grand_mean_rna  <- data.frame(HGNC=joint_count_ids, grand_mean_rna)
 grand_mean_ribo <- apply(v3$E[,type=="Ribo"], 1, median)
 #grand_mean_ribo <- apply (norm_expr_joint[,85:133], 1, median)
 grand_mean_ribo <- data.frame (HGNC=joint_count_ids, grand_mean_ribo)
+
+# Calculated TE correlates weakly with Protein amount but better than ratio
+# It might be again due to polysome profile shape
+# The amount of protein TE correlation is likely cell type specific
+grand_mean_te <- apply(te_fit4$coefficients, 1, median)
+mean_te_df <- data.frame(HGNC=row.names(te_fit4), grand_mean_te)
+m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
+c1 <- m1$mean_te > -1
+plot(m1$mean_te[c1], log10(as.numeric(m1$USE))[c1], pch=19, cex=.2)
+cor.test(m1$mean_te[c1], log10(as.numeric(m1$USE)+1)[c1], method="spearman")
+
+ribo_rna_te <- merge(merge(grand_mean_ribo, grand_mean_rna, by="HGNC"), mean_te_df, by="HGNC")
+ribo_rna_te_prot <- merge (ribo_rna_te, protein_absolute_ibaq, by="HGNC", all.x=T)
+ribo_rna_te_prot <- ribo_rna_te_prot[,-c(5,6,8,9)]
+#write.table(ribo_rna_te_prot, file=paste(data_dir, "Radial_Sets_Attribute_Table_4Levels_Gene_Expression.txt", sep=""), row.names=F)
+# We might want to standardize the measurements
+ribo_rna_te_prot$ibaq.human <- log10(ribo_rna_te_prot$ibaq.human)
+cor(ribo_rna_te_prot[,-1], use="complete.obs", method="spearman")
+ribo_rna_te_prot[,-1] <- scale(ribo_rna_te_prot[,-1], scale=F)
+row.names(ribo_rna_te_prot) <- ribo_rna_te_prot[,1]
+ribo_rna_te_prot <- as.matrix(ribo_rna_te_prot[,2:5])
+
 CDS_Lens <- data.frame(HGNC=CDS_IDs, CDS_Len[,1])
 merge_ribo_prot <- merge(grand_mean_ribo,protein_absolute_ibaq, by="HGNC" )
 merge_ribo_rna_prot <- merge (merge_ribo_prot, grand_mean_rna, by="HGNC")
@@ -804,6 +772,66 @@ text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2 ", round(ribo_cor$
 plot(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna, xlab="Ribosome Profiling Expression", ylab="RNA Expression", pch=19, cex=.4)
 text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2 ", round(ribo_rna$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
 #
+
+## APPLY SOMs to different versions of data. 
+# APPLY BDK to ribo_rna_te_prot
+# We can do a bidirectional kohonen predicting protein levels and plot the cor per cell with either or all
+# We can cluster cells by which parameter correlates best with protein levels in each cell. 
+total_cells_bdk <- floor(sqrt(dim(ribo_rna_te_prot)[2]/2) * sqrt (dim(ribo_rna_te_prot)[1]))
+if (floor(sqrt(total_cells_bdk/1.3333)) %% 2 == 0) { 
+  ydim = floor(sqrt(total_cells_bdk/1.3333))
+} else { 
+  ydim = floor(sqrt(total_cells_bdk/1.3333)) + 1
+}
+xdim = floor(total_cells_bdk/ydim + 0.5)
+abs.som.data.noNA <- ribo_rna_te_prot[!apply(is.na(ribo_rna_te_prot), 1, any),]
+absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.8, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
+plot(absolute.som)
+plot(absolute.som, type="quality")
+# One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
+# Another version is absolute rna, ribo, TE wtih SILAC proteomics absolute
+quantile(ribo_fit2$coefficients )
+quantile(rna_fit2$coefficients )
+quantile(te_fit3$coefficients )
+
+# superSOM Data Structure is a list of matrices including Linfeng Proteomics with NAs -> This will use individuals in the plot.
+# We can also do a general one with just absolute ribo,rna, te, and absolute SILAC amounts (Here SILAC can be coded as a classification parameter for BDF)
+# Following Xie, Boyle, et al. The grid is hexagonal, toroid
+# Total number of cells, sqrt(DATA_TYPE/2) x sqrt (genes x individuals )
+linfeng_prot_common_with_te <-  colnames(linfeng_protein) %in% colnames(te_fit3$coefficients)
+linfeng_te_columns <- linfeng_protein[,linfeng_prot_common_with_te]
+class(linfeng_te_columns) <- "numeric"
+linfeng_te_match <- cbind ( linfeng_te_columns[,1], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,2:5], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,6:12])
+colnames(linfeng_te_match) <- sort(colnames(te_fit3$coefficients))
+linfeng_te_match <- merge(linfeng_te_match, ensg_hgnc, by.x="row.names", by.y="ENSG")
+row.names(linfeng_te_match) <- linfeng_te_match[,16]
+linfeng_te_match <- linfeng_te_match[,-c(1,16)]
+### We might want to scale the matrix before feeding it to SOM 
+# We can use bdk with concatenation of the different measurements into one matrix
+
+colnames(ribo_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
+colnames(rna_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
+som.data = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix])
+total_cells <- floor(sqrt(length(som.data)/2) * sqrt (dim(ribo_fit2$coefficients)[1] * dim(ribo_fit2$coefficients)[2]))
+if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
+  ydim = floor(sqrt(total_cells/1.3333))
+} else { 
+  ydim = floor(sqrt(total_cells/1.3333)) + 1
+}
+xdim = floor(total_cells/ydim + 0.5)
+som.exp = supersom(data =som.data, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T)
+plot(som.exp, type="codes")
+plot(som.exp, type="quality")
+plot(som.exp, type="mapping", pch=19, cex=.3)
+plot(som.exp, type="changes")
+plot(som.exp, type="counts")
+## Hexagonal plotting 
+# som.exp$unit.classif has the info about where each gene went
+# Create Matrix of the quantity of interest and pass this directly to plotCplane and remove componentPlaneMatrix function
+# We also need some visually appealing colors
+ribo_code_mean <- apply(som.exp$codes$ribo, 1, mean)
+plotCplane(som.exp, variable=ribo_code_mean)
+
 
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
