@@ -540,7 +540,7 @@ riborna_fit2 <- eBayes(riborna_fit)
 # Using ordered FuncAssociate Pos_Ribo associates with ER, Mito, Extracellular space/organelle
 # Neg-Ribo enriched in translation, ribosome, viral transcription, etc
 apply(abs(decideTests(riborna_fit2, p.value=0.01, lfc=1)), 2, sum)
-write.table(topTable(riborna_fit2, coef=2, lfc=1, number=2326), file=paste(data_dir, 'Differential_Ribosome_Occupancy', sep=""), row.names=F ) 
+#write.table(topTable(riborna_fit2, coef=2, lfc=1, number=2326), file=paste(data_dir, 'Differential_Ribosome_Occupancy', sep=""), row.names=F ) 
 # Here the significance testing for difference in TE within a given individual, ie
 # Any of the coef of te_fit2 is problematic as testing against 0 is strange. 
 # One idea might be to voom the entire table of RNA_Seq + Ribo_Seq for this
@@ -592,9 +592,9 @@ as.numeric(apply(abs(te.diff.results), 2, sum))
 #### IND_ID GENE_LIST
 # Results of differentials are in te.diff.results, results.ribo, results.rna
 # This best achieved in perl so simply output these tables
-write.table(results.ribo, file =paste (data_dir, "Differential_Ribo_Occupancy", sep=""))
-write.table(results.rna, file =paste (data_dir, "Differential_RNA_Occupancy", sep=""))
-write.table(te.diff.results, file =paste (data_dir, "Differential_TE", sep=""))
+#write.table(results.ribo, file =paste (data_dir, "Differential_Ribo_Occupancy", sep=""))
+#write.table(results.rna, file =paste (data_dir, "Differential_RNA_Occupancy", sep=""))
+#write.table(te.diff.results, file =paste (data_dir, "Differential_TE", sep=""))
 
 # In general genes exhibit great variation in their translation efficiency
 # However, across individuals the translation efficiency of genes is much less variable than RNA
@@ -611,7 +611,7 @@ linfeng_protein_common <- merge(linfeng_protein_common, ensg_hgnc, by.x="row.nam
 # Subset linfeng protein to only no NAs. If we want we can also include samples with missing values sqrt(#individuals)?
 # For correlation we can use use="pairwise.complete.obs"
 number_NAs <- 1
-linfeng_protein_na <- linfeng_protein[apply(is.na(linfeng_protein_common), 1, sum) < number_NAs, ]
+linfeng_protein_na <- linfeng_protein_common[apply(is.na(linfeng_protein_common), 1, sum) < number_NAs, ]
 linfeng_protein_ribo_rna <- merge (v3$E, linfeng_protein_na, by.x="row.names", by.y="HGNC")
 row.names(linfeng_protein_ribo_rna) <- linfeng_protein_ribo_rna[,1]
 linfeng_protein_ribo_rna <- linfeng_protein_ribo_rna[,-c(1,135)]
@@ -685,10 +685,10 @@ quantile(across_ind_ribo_correlation)
 quantile(across_ind_rna_correlation)
 
 # We can do these sorted so we can run ordered analysis
-write.table( row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'Ribo_RNA_Prot_Cor_IDs' ,sep=""), row.names=F ) 
-write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff], file=paste (data_dir,'Ribo_Prot_Cor_IDs',sep=""), row.names=F ) 
-write.table(row.names(linfeng_protein_ribo_rna), file= paste (data_dir,'Prot_RNA_Ribo_Common_IDs',sep=""), row.names=F)
-write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'RNA_Prot_Cor_IDs',sep=""), row.names=F)
+#write.table( row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'Ribo_RNA_Prot_Cor_IDs' ,sep=""), row.names=F ) 
+#write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff], file=paste (data_dir,'Ribo_Prot_Cor_IDs',sep=""), row.names=F ) 
+#write.table(row.names(linfeng_protein_ribo_rna), file= paste (data_dir,'Prot_RNA_Ribo_Common_IDs',sep=""), row.names=F)
+#write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'RNA_Prot_Cor_IDs',sep=""), row.names=F)
 ## COMPARISION TO CHRISTINE'S PROTEOMICS
 #### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
 gm12878_prot <- read.csv('~/project/CORE_DATAFILES/GM12878_B0_FDR5_140120_shortforCan.csv', stringsAsFactors=F)
@@ -736,9 +736,9 @@ grand_mean_ribo <- data.frame (HGNC=joint_count_ids, grand_mean_ribo)
 grand_mean_te <- apply(te_fit4$coefficients, 1, median)
 mean_te_df <- data.frame(HGNC=row.names(te_fit4), grand_mean_te)
 m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
-c1 <- m1$mean_te > -1
-plot(m1$mean_te[c1], log10(as.numeric(m1$USE))[c1], pch=19, cex=.2)
-cor.test(m1$mean_te[c1], log10(as.numeric(m1$USE)+1)[c1], method="spearman")
+c1 <- m1$grand_mean_te > -1
+plot(m1$grand_mean_te[c1], log10(as.numeric(m1$USE))[c1], pch=19, cex=.2)
+cor.test(m1$grand_mean_te[c1], log10(as.numeric(m1$USE)+1)[c1], method="spearman")
 
 ribo_rna_te <- merge(merge(grand_mean_ribo, grand_mean_rna, by="HGNC"), mean_te_df, by="HGNC")
 ribo_rna_te_prot <- merge (ribo_rna_te, protein_absolute_ibaq, by="HGNC", all.x=T)
@@ -853,7 +853,20 @@ plot(som.exp, type="counts")
 ribo_code_mean <- apply(som.exp$codes$ribo, 1, mean)
 plotCplane(som.exp, variable=ribo_code_mean)
 
+## Write function to apply function to each cell of SOM.
+## We will plot these once we have the good tools for plotting
+# som.exp$unit.classif keeps track of the cell each object belongs to
+# Left bottom is 1, the row above that is 1+xdim 
+# Need vector of length xdim * ydim
 
+# Calculate cor.estimate for each level grouped by unit.classif
+# X is passed as a dataframe to function
+#problem x is dataframe need to apply cor to each row
+cor_between_ind <- function (x) { 
+ cors <- apply(x, 1, function(y){cor(y[1:14], y[15:28], use="pairwise.complete.obs", method="spearman")})
+ return (median(cors, na.rm=T))
+}
+by(data.frame(cbind(som.exp$data$ribo,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
