@@ -72,6 +72,9 @@ colnames(all_rnaseq)[71:86] <- paste (colnames(all_rnaseq)[71:86], "Geuvadis", s
 all_rnaseq <- all_rnaseq[,-c(55, 77)]
 all_rnaseq_counts <- DGEList(counts= all_rnaseq)
 
+## Cufflinks Ratios
+cuff_ratios <- read.table(paste(data_dir, "Transcript_CufflinksRatios_wIDs", sep=""), header=T)
+cuff_ratios <- merge(cuff_ratios, ensg_hgnc, by.x="gene.identifier", by.y="ENSG")
 
 ## RIBOSEQ_COUNTS
 # CDS SPECIES
@@ -869,6 +872,34 @@ cor_between_ind <- function (x) {
 by(data.frame(cbind(som.exp$data$ribo,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
+# Calculate correlation between APPRIS USAGE AND TRANSLATION
+cuff_ratios <- cuff_ratios[cuff_ratios$HGNC %in% row.names(v3) ,]
+# Batch correct APPRIS AND THE REMAINING EXPRESSIONS
+appris_expression <- as.matrix(cuff_ratios[,seq(2,ncol(cuff_ratios)-1, by=3)])
+nonappris_expression <- as.matrix(cuff_ratios[,seq(3,ncol(cuff_ratios), by=3)]  )
+cuff_ids <- cuff_ratios[, 179]
+
+cuff_batch <- c (rep(1,16), rep(2, 18), rep(3,25)) 
+s1 <- unlist(strsplit(colnames(appris_expression), "_"))
+sample_labels_cuff <- s1[grep('GM', s1)]
+cuff_design <- model.matrix(~sample_labels_cuff)
+# Need to remove genes with all zeros
+s1 <- apply(nonappris_expression, 1, function(x){sum(x==0)}) == 59
+s2 <- apply(appris_expression, 1, function(x){sum(x==0)})== 59
+nonappris_expression <- nonappris_expression[!(s1 | s2), ]
+appris_expression <- appris_expression[!(s1 | s2), ]
+cuff_ids <- cuff_ids[!(s1 | s2)]
+# Filter samples with no variation or very low/high ratio in all samples
+
+batch_removed_appris <- ComBat (appris_expression, batch=cuff_batch, mod=cuff_design)
+batch_removed_nonappris <- ComBat (nonappris_expression, batch=cuff_batch, mod=cuff_design)
+cuff_ratios_batch_corrected <- batch_removed_appris / batch_removed_nonappris
+# Even after batch correction GEUVADIS CORRELATES POORLY WITH SNYDER
+row.names(cuff_ratios_batch_corrected) <- cuff_ids
+one_frames <- read.table('~/project/CORE_DATAFILES/gencode.v15.protein_coding.one_frame_only.ids', header=F)
+one_frames <- merge (one_frames, ensg_hgnc, by.x="V1", by.y="ENSG")
+c1<- merge(one_frames, cuff_ratios_batch_corrected, by.x="HGNC", by.y="row.names")
+
 ### KOZAK SEQUENCE ANALYSIS
 kozak_scores <- read.table('~/project/CORE_DATAFILES/Kozak_Reference_Sequence_Scores.txt')
 kozak_score_variants <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores.txt',
