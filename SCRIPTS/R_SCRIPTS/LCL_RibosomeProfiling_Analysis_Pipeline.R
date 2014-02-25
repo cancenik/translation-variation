@@ -893,14 +893,38 @@ cuff_ids <- cuff_ids[!(s1 | s2)]
 
 batch_removed_appris <- ComBat (appris_expression, batch=cuff_batch, mod=cuff_design)
 batch_removed_nonappris <- ComBat (nonappris_expression, batch=cuff_batch, mod=cuff_design)
-cuff_ratios_batch_corrected <- batch_removed_appris / batch_removed_nonappris
+cuff_ratios_batch_corrected <- batch_removed_appris / (batch_removed_appris + batch_removed_nonappris)
 # Even after batch correction GEUVADIS CORRELATES POORLY WITH SNYDER
 row.names(cuff_ratios_batch_corrected) <- cuff_ids
 one_frames <- read.table('~/project/CORE_DATAFILES/gencode.v15.protein_coding.one_frame_only.ids', header=F)
 one_frames <- merge (one_frames, ensg_hgnc, by.x="V1", by.y="ENSG")
-c1<- merge(one_frames, cuff_ratios_batch_corrected, by.x="HGNC", by.y="row.names")
+# Most of the one-frame transcripts have poor expression and hence are filtered out
+cuff_ratio_one_frame_prots <- merge(one_frames, cuff_ratios_batch_corrected, by.x="HGNC", by.y="row.names")
+
+cuff_replicate_median <- apply (cuff_ratio_one_frame_prots[,-c(1,2)], 1, function(x) {
+  aggregate(x, by= list(as.factor(sample_labels_cuff)), median)  
+} )
+# We can try to use everything or we can subset to Snyder
+# Calculate per sample median ratio
+
+# redo using Hagen's ratio appris sum cor ribo nonappris to ribo
+ribo_replicate_mean <- apply(v3$E[row.names(v3)%in% cuff_ratio_one_frame_prots[,1],type=="Ribo"],1 ,function(x){
+  aggregate(x, by=list(as.factor(sample_labels_joint[type=="Ribo"])), mean)  
+})
+
+ribo_replicate_mean <- lapply(ribo_replicate_mean, function(x){x <- x[-c(8,10,12,15,16,23),]})
+cuff_replicate_median <- lapply(cuff_replicate_median, function(x){x <- x[-10,]})
+
+c2 <- mapply (cbind, cuff_replicate_median, ribo_replicate_mean, SIMPLIFY=F)
+across_ind_cuff_cor <- as.numeric(lapply(c2, function(x){ cor.test(x[,2], x[,4], method="spearman")$p.value }))
+hist(across_ind_cuff_cor, 50)
+# There are very few cases of signal at p < 0.005. The two cases with FDR < .25 are not UTR variants
+# There is a bunch RP stuff that messes this up. Better leave this as a future project
+# "ENSG00000006453"    "BAIAP2L1-001" 
+
 
 ### KOZAK SEQUENCE ANALYSIS
+# Modify to include the multi-variant cases as well as genotype dosage
 kozak_scores <- read.table('~/project/CORE_DATAFILES/Kozak_Reference_Sequence_Scores.txt')
 kozak_score_variants <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores.txt',
 stringsAsFactors=FALSE, fill=T, col.names=paste ("V", seq(1:59), sep=""))
