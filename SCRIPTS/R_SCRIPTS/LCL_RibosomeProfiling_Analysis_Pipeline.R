@@ -249,18 +249,19 @@ plotMDS(v3$E, labels=type)
 # sva_dd <- dist( t ( norm_expr[,replicate_present]))
 # sva_hc <- hclust (sva_dd) 
 
-# We can look sva correlations with sequencing depth, batch, etc
-#GM19139 - HAS no RNA index 124
-# GM19139 is most similar to GM19137 - For SVA purposes use GM19137
-full_design_nosingular <- model.matrix(~sample_labels_joint[-124] + type[-124])
-#svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
-svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50, n.sv=3)
-fit_joint <- lmFit(v3$E[,-124], svobj_joint$sv) 
-fit2 <- eBayes(fit_joint)
-sst <- rowSums(v3$E^2)
-ssr <- sst-fit2$df.residual*fit2$sigma^2
-hist((ssr/sst), 50)
-quantile(ssr/sst)
+#### COMMENTED OUT SVA NORMALIZATION
+# # We can look sva correlations with sequencing depth, batch, etc
+# #GM19139 - HAS no RNA index 124
+# # GM19139 is most similar to GM19137 - For SVA purposes use GM19137
+# full_design_nosingular <- model.matrix(~sample_labels_joint[-124] + type[-124])
+# #svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
+# svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50, n.sv=3)
+# fit_joint <- lmFit(v3$E[,-124], svobj_joint$sv) 
+# fit2 <- eBayes(fit_joint)
+# sst <- rowSums(v3$E^2)
+# ssr <- sst-fit2$df.residual*fit2$sigma^2
+# hist((ssr/sst), 50)
+# quantile(ssr/sst)
 
 # With 20 components
 # 0%         25%         50%         75%        100% 
@@ -270,17 +271,17 @@ quantile(ssr/sst)
 # With 10 components
 # 0.002256528 0.008297705 0.009897312 0.014138372 0.265767843 
 
-norm_expr_joint <- residuals(fit_joint, v3$E[,-124])
-cor_coefs <- c()
-for (i in 1:133) {
-  cor_coefs[i] <- (cor.test(norm_expr_joint[,i], v3$E[,-124][,i]))$estimate
-}
-hist(as.numeric(cor_coefs), 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression")
-hist(as.numeric(cor_coefs)[type[-124]=="Ribo"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-Ribo")
-hist(as.numeric(cor_coefs)[type[-124]=="RNA"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-RNA")
-max(as.numeric(cor_coefs))
-plot(norm_expr_joint[,94], v3$E[,-124][,94], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[94], cex=.2)
-plot(norm_expr_joint[,126], v3$E[,-124][,126], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[127], cex=.2)
+# norm_expr_joint <- residuals(fit_joint, v3$E[,-124])
+# cor_coefs <- c()
+# for (i in 1:133) {
+#   cor_coefs[i] <- (cor.test(norm_expr_joint[,i], v3$E[,-124][,i]))$estimate
+# }
+# hist(as.numeric(cor_coefs), 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression")
+# hist(as.numeric(cor_coefs)[type[-124]=="Ribo"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-Ribo")
+# hist(as.numeric(cor_coefs)[type[-124]=="RNA"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-RNA")
+# max(as.numeric(cor_coefs))
+# plot(norm_expr_joint[,94], v3$E[,-124][,94], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[94], cex=.2)
+# plot(norm_expr_joint[,126], v3$E[,-124][,126], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[127], cex=.2)
 
 # Extract Joint Replicated Subset
 cor_coefs_rna_median <- apply(cor(v3$E[,1:84]),1, median)
@@ -421,6 +422,13 @@ row.names(joint_expression_common) <- joint_count_ids
 weighted_sd <- function (y) { 
   return ( sd(y[,2]*y[,4]) )
 }
+# We can add a permutation scheme here to get p-values on these differences
+# There doesn't seem to be any significant association between expression and the cv ratios as expected
+# The easiest permutation scheme is to permute type_common to generate new RNA, Ribo Classification
+# Run through existing code and compare the actual difference in CV witht the permutation p-value
+# We might rely on nominal p-value threshold for selecting significant ones
+# type_common will be modified making sure that each individual is preserved as in sample_labels_joint_common
+# Loop over unique(sample_labels_joint_common)
 
 rna_replicate_mean <- apply (joint_expression_common$E[,type_common=="RNA"], 1, function(x) {
 aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
@@ -457,10 +465,10 @@ ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
 hist(rnacv, 200)
 hist(ribocv, 200)
 low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
-hist(rnacv/ribocv, 100 )
+p1 <- hist(rnacv/ribocv, 100 )
 # One idea is to remove low interindividual to intraindividual genes
-
-abline(v=1)
+plot(p1, col=rgb(0,0,1,1/4),  tck=.02, xlab="RNA/Ribo", main="Between/ Within Individual CV", ylim=c(0,500))
+abline(v=1, lwd=3)
 
 length(which(rnacv/ribocv > 2))
 length(which(rnacv/ribocv < .5))
@@ -925,6 +933,7 @@ hist(across_ind_cuff_cor, 50)
 
 ### KOZAK SEQUENCE ANALYSIS
 # Modify to include the multi-variant cases as well as genotype dosage
+# Do not test ones with MAF < XX 
 kozak_scores <- read.table('~/project/CORE_DATAFILES/Kozak_Reference_Sequence_Scores.txt')
 kozak_score_variants <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores.txt',
 stringsAsFactors=FALSE, fill=T, col.names=paste ("V", seq(1:59), sep=""))
@@ -932,8 +941,6 @@ kozak_score_variants_hapmap <- read.table('~/project/CORE_DATAFILES/Kozak_Varian
 all_kozak_score_variants <- merge(kozak_score_variants, kozak_score_variants_hapmap, all=T, by=c("V1", "V2", "V3") )
 all_kozak_score_variants[is.na(all_kozak_score_variants)] <- ""
 kozak_var_ind <- all_kozak_score_variants[,-c(2,3)]
-number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
-# Note that there is a strong enrichment for single individual variants
 
 # There is a correlation between number of alleles and difference. 
 # If there are a lot of alleles than the difference is less likely to be negative
@@ -953,8 +960,20 @@ multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
 # Some transcripts have multiple variants and should be treated separately
 # Then for each transcript calculate difference in ribo-expression 
 # Each transcript will contribute a delta Kozak and delta expression
+number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
+number_alleles <- number_alleles[!multi]
+MAF <- floor(0.05 * max(number_alleles))
+
+# Right now the multi ones are filtered but we should keep those somehow
+# Kozak Diff is WT - VARIANT
+# Positive score means WT kozak strength is better
+# Negative score means VARIANT kozak Strength is better
 kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V3[!multi]
 kozak_var_ind <- kozak_var_ind[!multi,]
+
+
+# Note that there is a strong enrichment for single individual variants
+
 # grep ("10847|19240", sample_labels) gives the index of the expr value
 # Go over the individuals, grep the samples and calculate difference in mean
 ribo_diff <- c()
@@ -963,60 +982,100 @@ ribo_only <- v3[,type=="Ribo"]
 sample_labels_ribo <- unlist(strsplit(colnames(ribo_only), split= "_"))
 sample_labels_ribo <- sample_labels_ribo[grep("GM", sample_labels_ribo)]
 for (i in 1:length(kozak_var_ind[,1])) { 
-  ind_unique <- unique(grep("NA",kozak_var_ind[i,-1], value=T))
+  all_ind <- grep("NA",kozak_var_ind[i,-1], value=T)
+  allele_num <- rle(all_ind)$lengths
+  ind_unique <- unique(all_ind)
   ind_unique <- sub("NA", "GM", ind_unique)
-  ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
   # CHECK ENST EQUIVALENT IS PRESENT IN V$E, IF NOT ADD NA
-  # HERE WE CAN DO MORE WITH THE STATS --WEIGHTED MEAN, ETC
   my_index <- which ( joint_count_ids == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
-  if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 1 & length(ind_unique) < 29) {
+  
+  ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
+  ribo_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo, value=T)
+  if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 1 & length(ind_unique) < 29 & number_alleles[i] > max(number_alleles)*0.1 ) {
+# Ribo_Diff is a weighted mean difference
     ribo_diff <- c(ribo_diff, weighted.mean(ribo_only$E[my_index,ribo_index],ribo_only$weights[my_index,ribo_index] ) - weighted.mean(ribo_only$E[my_index, -ribo_index], ribo_only$weights[my_index, -ribo_index] ))
-    index_factor <- rep(0,times=50)
-    index_factor[ribo_index] <- 1
-    list_of_pval <- c(list_of_pval, summary(lm(ribo_only$E[my_index,] ~ as.factor(index_factor), weights=ribo_only$weights[my_index,]))$coefficients[2,4])
+# Here we can try to include the number of alleles and do the linear regression not on a factor but numeric variable of allele number
+# Test i -> 522
+    index_factor <- rep(0,times=length(sample_labels_ribo))
+#    index_factor[ribo_index] <- 1
+   index_factor[ribo_index] <- allele_num[match(ribo_index_values, ind_unique)]
+# list_of_pval <- c(list_of_pval, summary(lm(ribo_only$E[my_index,] ~ as.factor(index_factor), weights=ribo_only$weights[my_index,]))$coefficients[2,4])
+  list_of_pval <- c(list_of_pval, summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4])
   }
   else { 
     ribo_diff <- c(ribo_diff,NA)
     list_of_pval <- c(list_of_pval,NA)
   }
 }
-plot(ribo_diff, kozak_diff, cex=0.5, pch=19)
-abline(v=c(0,0.5,-0.5), h=c(0,0.5, -0.5))
-# fmat <- matrix(nrow=2, ncol=2)
-fmat[1,] <- c(0,7)
-# fmat[2,] <- c(13,13)
-# fisher.test(fmat)
 
 # When we look at the pvalues, All the significant changes have Kozak strength changes in the upper half
-# The direction of the effect is inconsistent in 3/8. 2/3 are mitochondrial ribosomal proteins
-# Look at a browser shot that is an average of the individuals; Look at population frequency of the variants
+# The direction of the effect is inconsistent in some
+# MAF 10% 101 , c1 < 1 => 14; c1 < .5 => 10; c1 < .01 => 4  
+sum(!is.na(list_of_pval))
 c1 <- p.adjust(list_of_pval)
+length(which(c1 < .1))
+a1 <- which(c1 < .1)
+
+color_by_pval <- rep(0, length(list_of_pval))
+# FDR < .2
+pval_cutoff <- max(list_of_pval[a1])
+color_by_pval[list_of_pval <= pval_cutoff] <- 1
+plot(ribo_diff, kozak_diff, cex=0.65, pch=19, xlim=c(-1.2, 1.2), tck = .02, col=c("Black", "Red")[as.factor(color_by_pval)])
+abline(v=c(0), h=c(0,log(2), -log(2)))
+
 q1 <- !is.na(c1)
-q2 <- !is.na(c1) & c1 > 0 & c1 < 1
-q2 <- !is.na(c1) & c1 > 0 & c1 < 0.2
-quantile((kozak_diff)[q1], na.rm=T)
 length((kozak_diff)[q1])
-length((kozak_diff)[q2])
-length(which (kozak_diff[q1] > log(2)) )
-fmat[2,] <- c(5, 78)
-fmat[1,] <- c(1, 277-83-1)
+length((kozak_diff)[a1])
+length(which (abs(kozak_diff[q1]) > log(2)) )
+length(which(abs(kozak_diff[a1]) > log(2)))
+fmat <- matrix(nrow=2, ncol=2)
+fmat[2,] <- c(0, 101-5)
+fmat[1,] <- c(5, 0)
 fisher.test(fmat)
-boxplot(abs(kozak_diff[q2]), abs(kozak_diff[!q2]))
-kozak_var_ind[q2,]
-plot(ribo_diff[q2], kozak_diff[q2], cex=0.5, pch=19)
-abline(v=c(0,0.5,-0.5), h=c(0,0.5, -0.5))
+boxplot(abs(kozak_diff[a1]), abs(kozak_diff[q1]))
 
 # Look at the effect of number of alleles in the significant ones
 # Look at the multiple ones; the analysis of multiple ones could be similar to number of alleles
 # Multiple variants always occur on different positions
 # It seems like that all the significant ones are high allele frequency. We might exclude singletons from testing
 
-# Allelic effect is interesting. For ENST00000245539.6 
-my_index <- 5010
-index_factor[c(1,2,3,4,5,6,7,8,9,15,22,23,26,27,28,30,31,32)] <- 2
-boxplot(v$E[my_index,]~index_factor)
-summary(lm(v$E[my_index,] ~ as.factor(index_factor), weights=v$weights[my_index,]))
-# Two copies is better than one
+# Allelic effect boxplots
+# Add comparison to RNA
+significant_transcripts <- kozak_var_ind[a1, 1]
+significant_gene_ids <- enst_hgnc[grep(paste(significant_transcripts, collapse="|"), enst_hgnc),2]
+ribo_indicies <- grep(paste(significant_gene_ids, collapse="|"), row.names(ribo_only))
+# 316, 319 have clear boxplots with expected direction
+# 500 is also expected direction but the boxplot is less clear
+# 52, 234 are unexpected direction -> 234 boxplot is not clear with low expression
+# 52, 234, 500 have the same effect at RNA
+# 316, 319 are definitely at TE; 
+# When we get to 50% FDR, 65, 145 (no Kozak effect) is also TE
+# 65 ODC1 may be important in cancer through overexpression might relate to mycn; 
+rna_only <- v3[,type=="RNA"]
+sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
+sample_labels_rna <- sample_labels_rna[grep("GM", sample_labels_rna)]
+for ( i in a1) { 
+  all_ind <- grep("NA",kozak_var_ind[i,-1], value=T)
+  allele_num <- rle(all_ind)$lengths
+  ind_unique <- unique(all_ind)
+  ind_unique <- sub("NA", "GM", ind_unique)
+  my_index <- which ( row.names(ribo_only) == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
+  
+  ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
+  ribo_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo, value=T)
+  
+  rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
+  rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
+  rna_index_factor <- rep (0, times=length(sample_labels_rna))
+  rna_index_factor[rna_index] <- allele_num[match(rna_index_values, ind_unique)]
+  
+  index_factor <- rep(0,times=length(sample_labels_ribo))
+  index_factor[ribo_index] <- allele_num[match(ribo_index_values, ind_unique)]
+  boxplot(ribo_only$E[i,]~ index_factor, main= "Ribosome Occupancy")
+  boxplot(rna_only$E[i,]~rna_index_factor, main="RNA_Expression")
+  summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
+  summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
+}
 ###
 
 
