@@ -297,6 +297,8 @@ type <- type[-51]
 v3$design <- model.matrix(~sample_labels_joint + type)
 row.names(v3) <- joint_count_ids
 
+#save (v3, file="~/project/CORE_DATAFILES/Joint_Expression_RNA_Ribo_Voom")
+#save (type, file="~/project/CORE_DATAFILES/Joint_Expression_RNA_Ribo_Classification_Factor")
 # EXTRACT JOINT
 joint_replication_ribo <- duplicated(sample_labels_joint[type=="Ribo"]) | duplicated(sample_labels_joint[type=="Ribo"], fromLast=TRUE)
 joint_replication_rna <- duplicated(sample_labels_joint[type=="RNA"]) | duplicated(sample_labels_joint[type=="RNA"], fromLast=TRUE)
@@ -472,8 +474,8 @@ abline(v=1, lwd=3)
 
 length(which(rnacv/ribocv > 2))
 length(which(rnacv/ribocv < .5))
-#write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) > 2)], file="~/Desktop/RNA_variable.txt", row.names=F)
-#write.table(gene_names_joint_expression_matrix[which((rna_cv_between_individuals/rna_repcv_median) / (ribo_cv_between_individuals/ribo_repcv_median) < .5)], file="~/Desktop/Ribo_variable.txt", row.names=F)
+sorted_cvs <- sort(rnacv/ribocv , index.return=T)
+#write.table(row.names(joint_expression_common)[sorted_cvs$ix], file = "~/project/CORE_DATAFILES/Sorted_InterIndividualCV_RNA_to_Ribo.txt", row.names=F)
 
 ############################################################
 # Differential Expression Analysis and Translation Efficiency
@@ -963,31 +965,85 @@ multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
 number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
 number_alleles <- number_alleles[!multi]
 MAF <- floor(0.05 * max(number_alleles))
+hist(number_alleles, 50, xlab="Number of Alleles", main="")
 
-# Right now the multi ones are filtered but we should keep those somehow
+rna_only <- v3[,type=="RNA"]
+sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
+sample_labels_rna <- sample_labels_rna[grep("GM", sample_labels_rna)]
+ribo_only <- v3[,type=="Ribo"]
+sample_labels_ribo <- unlist(strsplit(colnames(ribo_only), split= "_"))
+sample_labels_ribo <- sample_labels_ribo[grep("GM", sample_labels_ribo)]
+
+#Kozak multi
+multi_diff = kozak_merge$V2[multi] - kozak_merge$V3[multi]
+multi_ind = kozak_var_ind[multi,]
+multi_alleles <- apply(multi_ind, 1, function(x){length(grep('NA', x))})
+total_alleles <- by(multi_alleles, as.factor(multi_ind[,1]), sum)  
+
+# 10/17 transcripts pass the max(allele)
+# One idea is to treat everything as quantitative. Hence the Beta in lm is a modifier of the change in Kozak strength
+# This can be applied to all but 0 change ones; For the single variant ones this is identitical to 0,1,2 coding
+
+# "ENST00000263461.5" is significant ribo not significant rna WDR11-001 which is also implicated in cancer => FDR ~ .5
+# I should order WDR11-001 and from single ones:  65, 145 FDR .5;   316, 319 FDR < .1 
+multi_pval <- c()
+for (i in names(total_alleles[total_alleles > max(number_alleles)*.1 ]) ) { 
+ my_index = which ( row.names(ribo_only) == enst_hgnc[grep (i, enst_hgnc), 2])
+ # Add other requirements
+ if ( length(my_index) ) { 
+ index_factor <- rep(0, times=length(sample_labels_ribo))
+ # Modify index factor using the corresponding multi_diff
+ rna_index_factor <- rep (0, times=length(sample_labels_rna))
+ 
+  all_variants <-  (which(multi_ind[,1] == i))
+  for ( j in all_variants) { 
+   # Find corresponding ribo 
+    all_ind <- grep("NA",multi_ind[j,-1], value=T)
+    allele_num <- rle(all_ind)$lengths
+    ind_unique <- unique(all_ind)
+    ind_unique <- sub("NA", "GM", ind_unique)
+    ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
+    ribo_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo, value=T)
+    index_factor[ribo_index] = index_factor[ribo_index] + (multi_diff[j] * allele_num[match(ribo_index_values, ind_unique)])
+    
+    rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
+    rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
+    rna_index_factor[rna_index] <- rna_index_factor[rna_index] +  (multi_diff[j] * allele_num[match(rna_index_values, ind_unique)] )
+  }
+# print (index_factor)
+ multi_pval <- c(multi_pval, summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4])
+  boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Kozak Strength" , names=unique(sort(round(index_factor, digits=2))) )
+  boxplot(rna_only$E[my_index,]~rna_index_factor, ylab="RNA Expression", xlab= "Kozak Strength", names=unique(sort(round(index_factor, digits=2))))
+summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
+summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
+ }
+}
+
+# For WDR11
+#boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Kozak Strength" , names=unique(sort(round(index_factor, digits=2))), main="WDR11" )
+#legend("topright", paste("p-val = ",  round(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=4 ), sep="" ), inset=0.05, bty= "n" )
+#boxplot(rna_only$E[my_index,]~rna_index_factor, ylab="RNA Expression", xlab= "Kozak Strength", names=unique(sort(round(index_factor, digits=2))), main="WDR11")
+#legend("topright", paste("p-val = ",  round(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
+
 # Kozak Diff is WT - VARIANT
 # Positive score means WT kozak strength is better
 # Negative score means VARIANT kozak Strength is better
 kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V3[!multi]
 kozak_var_ind <- kozak_var_ind[!multi,]
 
-
 # Note that there is a strong enrichment for single individual variants
-
 # grep ("10847|19240", sample_labels) gives the index of the expr value
 # Go over the individuals, grep the samples and calculate difference in mean
 ribo_diff <- c()
 list_of_pval <- c()
-ribo_only <- v3[,type=="Ribo"]
-sample_labels_ribo <- unlist(strsplit(colnames(ribo_only), split= "_"))
-sample_labels_ribo <- sample_labels_ribo[grep("GM", sample_labels_ribo)]
+
 for (i in 1:length(kozak_var_ind[,1])) { 
   all_ind <- grep("NA",kozak_var_ind[i,-1], value=T)
   allele_num <- rle(all_ind)$lengths
   ind_unique <- unique(all_ind)
   ind_unique <- sub("NA", "GM", ind_unique)
   # CHECK ENST EQUIVALENT IS PRESENT IN V$E, IF NOT ADD NA
-  my_index <- which ( joint_count_ids == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
+  my_index <- which ( row.names(ribo_only) == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
   
   ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
   ribo_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo, value=T)
@@ -1042,6 +1098,11 @@ boxplot(abs(kozak_diff[a1]), abs(kozak_diff[q1]))
 # Allelic effect boxplots
 # Add comparison to RNA
 significant_transcripts <- kozak_var_ind[a1, 1]
+# 316 -> ENST00000362031.4  SNX6 
+# 319 -> ENST00000366628.4  NTPCR
+# 65 -> ENST00000254759.3 COQ3 -> This another mitochondrial gene with alternative translation initiation site that is Kozak dependent switch
+# 145 -> ENST00000295641.10 STK11IP -- Let's not order this one
+# ODC1 might also be interesting in the future but the FDR is too high to follow up now. 
 significant_gene_ids <- enst_hgnc[grep(paste(significant_transcripts, collapse="|"), enst_hgnc),2]
 ribo_indicies <- grep(paste(significant_gene_ids, collapse="|"), row.names(ribo_only))
 # 316, 319 have clear boxplots with expected direction
@@ -1050,10 +1111,7 @@ ribo_indicies <- grep(paste(significant_gene_ids, collapse="|"), row.names(ribo_
 # 52, 234, 500 have the same effect at RNA
 # 316, 319 are definitely at TE; 
 # When we get to 50% FDR, 65, 145 (no Kozak effect) is also TE
-# 65 ODC1 may be important in cancer through overexpression might relate to mycn; 
-rna_only <- v3[,type=="RNA"]
-sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
-sample_labels_rna <- sample_labels_rna[grep("GM", sample_labels_rna)]
+
 for ( i in a1) { 
   all_ind <- grep("NA",kozak_var_ind[i,-1], value=T)
   allele_num <- rle(all_ind)$lengths
@@ -1071,8 +1129,10 @@ for ( i in a1) {
   
   index_factor <- rep(0,times=length(sample_labels_ribo))
   index_factor[ribo_index] <- allele_num[match(ribo_index_values, ind_unique)]
-  boxplot(ribo_only$E[i,]~ index_factor, main= "Ribosome Occupancy")
-  boxplot(rna_only$E[i,]~rna_index_factor, main="RNA_Expression")
+  boxplot(ribo_only$E[i,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Number of Alleles", main = enst_hgnc[grep(kozak_var_ind[i,1], enst_hgnc), 2] )
+  legend("topright", paste("p-val = ",  signif(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
+  boxplot(rna_only$E[i,]~rna_index_factor, ylab="RNA Expression", xlab="Number of Alleles", main = enst_hgnc[grep(kozak_var_ind[i,1], enst_hgnc), 2])
+  legend("topright", paste("p-val = ",  signif(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
   summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
   summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
 }
