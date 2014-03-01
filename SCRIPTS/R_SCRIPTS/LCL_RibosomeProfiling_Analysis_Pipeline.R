@@ -673,12 +673,12 @@ length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
 median(across_ind_rna_correlation)
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
-# Use p.adjust for the cutoff
 pval_cutoff <- 0.001
 color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
 color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
 color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 3
-plot(across_ind_ribo_correlation, across_ind_rna_correlation, pch=19, cex=.65, tck=.02, col=c("Black", "Red", "Blue", "Gold")[as.factor(color_by_pval)])
+plot(across_ind_ribo_correlation, across_ind_rna_correlation, pch=19, cex=.65, tck=.02, col=c("Black", "Red", "Blue", "Gold")[as.factor(color_by_pval)], 
+     xlab="Between Individual Ribosome Occupancy-Protein Expression Correlation", ylab = "Between Individual RNA-Protein Expression Correlation")
 cor.test(across_ind_ribo_correlation, across_ind_rna_correlation)
 p1 <- hist(across_ind_ribo_correlation,40)
 p2 <- hist(across_ind_rna_correlation,40)
@@ -706,6 +706,22 @@ quantile(across_ind_rna_correlation)
 #### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
 gm12878_prot <- read.csv('~/project/CORE_DATAFILES/GM12878_B0_FDR5_140120_shortforCan.csv', stringsAsFactors=F)
 gm12878_prot <- merge(gm12878_prot, ensg_hgnc, by.x="ID.1", by.y="ENSG")
+gm12878_prot = gm12878_prot[,c(5,14)]
+all_prot_data = merge(gm12878_prot, protein_absolute_ibaq, by="HGNC")
+all_prot_data = all_prot_data[-which(all_prot_data$USE == 0), ]
+
+plot(log10(as.numeric(all_prot_data$USE)), log10(all_prot_data$ibaq.human), pch = 19, cex=.65, xlab="GM12878_Label_Free", ylab="SILAC", main="log10 iBAQ")
+abline(lm(log10(all_prot_data$ibaq.human) ~ log10(as.numeric(all_prot_data$USE))), lwd = 2)
+lines(lowess(log10(all_prot_data$ibaq.human) ~ log10(as.numeric(all_prot_data$USE))), lwd=2)
+cor.test(all_prot_data$ibaq.human, as.numeric(all_prot_data$USE), method="spearman")
+
+fit.prot <- lm(log10(all_prot_data$ibaq.human) ~ log10(as.numeric(all_prot_data$USE)))
+
+outlier_colors <- rep("Black",times = length(log10(all_prot_data$ibaq.human) ))
+outlier_colors[abs(stdres(fit.prot)) > 2] <- "Red"
+plot( log10(as.numeric(all_prot_data$USE)),stdres(fit.prot) , pch=19, cex=0.2, ylab="Standardized Residuals", col=outlier_colors)
+prot_inconsistent <- (abs(stdres(fit.prot)) > 2)
+all_prot_data = all_prot_data[!prot_inconsistent, ]
 
 gm12878_ribo <- grep("GM12878", colnames(v))
 gm12878_ribo_mean <- apply(v$E[,gm12878_ribo], 1, mean)
@@ -716,7 +732,7 @@ gm12878_rna_mean  <- apply(v2$E[,gm12878_rna], 1, mean)
 gm12878_rna_mean <- data.frame(HGNC=rownames(v2), gm12878_rna_mean)
 
 ribo_rna_12878 <- merge(gm12878_ribo_mean, gm12878_rna_mean, by="HGNC")
-ribo_rna_prot_12878 <- merge(ribo_rna_12878, gm12878_prot, by="HGNC")
+ribo_rna_prot_12878 <- merge(ribo_rna_12878, gm12878_prot, by="HGNC")2
 ribo_rna_prot_12878 <- ribo_rna_prot_12878[as.numeric(ribo_rna_prot_12878$USE) > 1000 & ribo_rna_prot_12878$gm12878_ribo_mean > 5, ] 
 
 plot(ribo_rna_prot_12878$gm12878_ribo_mean, ribo_rna_prot_12878$gm12878_rna_mean, cex=0.2, pch=19, xlim=c(5,15), ylim=c(3,15))
@@ -725,17 +741,13 @@ plot(ribo_rna_prot_12878$gm12878_ribo_mean,  log10(as.numeric(ribo_rna_prot_1287
 plot(ribo_rna_prot_12878$gm12878_rna_mean,  log10(as.numeric(ribo_rna_prot_12878$USE)), pch=19, cex=.2, xlim=c(4, 15))
 
 #Spearman - Grand Mean is BEST
-cor.test(ribo_rna_prot_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_12878$USE)+1), method="spearman")
-cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12878$USE)+1), method="spearman")
+cor.test(ribo_rna_prot_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_12878$USE)), method="spearman")
+cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12878$USE)), method="spearman")
 
-cor.test(ribo_rna_prot_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_12878$USE)+1))
-cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12878$USE)+1))
+cor.test(ribo_rna_prot_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_12878$USE)))
+cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12878$USE)))
 
-# Ribo -- MEAN
-# USE -> 0.485/0.35, USE.1 0.471/0.37, MAYBE.USE 0.461/0.382, MAYBE.USE2 0.485/0.35
-# RNA -> Ever so slightly lower in spearman, equal in pearson
-
-#### CMPARISION WITH ACROSS GENE QUANTIFICATION FROM SILAC
+#### COMPARISION WITH ACROSS GENE QUANTIFICATION FROM SILAC
 grand_mean_rna <- apply (v3$E[,type=="RNA"], 1, median)
 #grand_mean_rna <- apply (norm_expr_joint[,1:84], 1, median)
 grand_mean_rna  <- data.frame(HGNC=joint_count_ids, grand_mean_rna)
@@ -759,7 +771,9 @@ ribo_rna_te_prot <- ribo_rna_te_prot[,-c(5,6,8,9)]
 #write.table(ribo_rna_te_prot, file=paste(data_dir, "Radial_Sets_Attribute_Table_4Levels_Gene_Expression.txt", sep=""), row.names=F)
 # We might want to standardize the measurements
 ribo_rna_te_prot$ibaq.human <- log10(ribo_rna_te_prot$ibaq.human)
-cor(ribo_rna_te_prot[,-1], use="complete.obs", method="spearman")
+all_cors = cor(ribo_rna_te_prot[,-1], use="complete.obs", method="spearman")
+plot(ribo_rna_te_prot$grand_mean_te, ribo_rna_te_prot$ibaq.human, pch= 19, cex =.4, tck = .02, xlim = c(-3,3), xlab="Median Translation Efficiency", ylab="log10 iBAQ protein expression")
+text(par("usr")[2] - 0.75, par("usr")[4] - 0.75, labels= paste("Spearman rho", signif(all_cors[3,4], 2) , sep=" = "))
 ribo_rna_te_prot[,-1] <- scale(ribo_rna_te_prot[,-1], scale=F)
 row.names(ribo_rna_te_prot) <- ribo_rna_te_prot[,1]
 ribo_rna_te_prot <- as.matrix(ribo_rna_te_prot[,2:5])

@@ -1,0 +1,43 @@
+# species: Homo sapiens
+# support: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+# associations retrieved on: 2014-02-28 19:56:18-05
+# gofunc built on: 2013-10-27 21:51:15.890197-04
+# gene associations file: ftp://ftp.geneontology.org/pub/go/gene-associations/gene_association.goa_human.gz
+#   revision: 0
+#   downloaded on: 2013-10-27 16:13:44-04
+# GO DAG files from: http://archive.geneontology.org/latest-full/go_201310-assocdb-tables.tar.gz
+#   downloaded on: 2013-10-17 16:47:31-04
+# translation required: yes
+# translation info:
+#   authority: ensembl
+#     synergizer db built on: 2012-02-05 16:36:50.758813-05
+#     synergizer db built from: Ensembl Genes 65 / Ensembl Metazoa Genes 12 / Ensembl Plants Genes 10
+#   namespace: hgnc_symbol
+#   coverage: 99.6%
+# size of "genespace": 2451
+# number of attributes: 9652
+# NOTE: these associations have been restricted to the genes included
+# in the user-supplied gene space.
+# NOTE: the last record consists of all the entities in the
+# "genespace" that are not associated with any attribute (for
+# the requested support).
+# Original number of entities in query: 87
+# Number of entities in query: 87
+# Total number of entities: 2451
+# Total number of attributes: 9652
+# Original total number of attributes: 17516
+# Translation required: yes
+# Translation coverage: 0.995567
+# Mode: unordered
+# Number of simulations: 1000
+# Adjusted P-value cutoff: 0.05
+# Over/under: over
+# Evidence codes: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+OVERREPRESENTED ATTRIBUTES
+N	X	LOD	P	P_adj	attrib ID	attrib name
+7	22	1.14990913421251	6.16655501708631e-06	0.012	GO:0006805	xenobiotic metabolic process
+7	22	1.14990913421251	6.16655501708631e-06	0.012	GO:0071466	cellular response to xenobiotic stimulus
+7	23	1.12257200332919	8.61074019612756e-06	0.014	GO:0009410	response to xenobiotic stimulus
+18	129	0.730769618835717	2.61863380607638e-07	0.001	GO:0005576	extracellular region
+22	229	0.552873921458715	7.59055315628767e-06	0.014	GO:0006955	immune response
+20	210	0.539914520214446	2.495654797996e-05	0.033	GO:0006952	defense response
