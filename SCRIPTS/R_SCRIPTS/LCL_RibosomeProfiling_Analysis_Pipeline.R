@@ -5,6 +5,7 @@ library("qtl")
 library ("sva")
 library("MASS")
 library("kohonen")
+library("pgirmess")
 #library ("isva")
 # I decided not to use isva after initial tests
 
@@ -758,6 +759,7 @@ grand_mean_ribo <- data.frame (HGNC=joint_count_ids, grand_mean_ribo)
 # Calculated TE correlates weakly with Protein amount but better than ratio
 # It might be again due to polysome profile shape
 # The amount of protein TE correlation is likely cell type specific
+# Another apprach is to Use TE_FIT3 directly here; SAME CAN BE DONE FOR RIBO/RNA
 grand_mean_te <- apply(te_fit4$coefficients, 1, median)
 mean_te_df <- data.frame(HGNC=row.names(te_fit4), grand_mean_te)
 m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
@@ -1150,6 +1152,26 @@ for ( i in a1) {
   summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
   summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
 }
+
+# Take the translation efficiency table and for each position look for significant diff with Kruskal
+kozak_seq_score_table <- read.table('~/project/CORE_DATAFILES/Kozak_IDs_PWM_Strand_Seq_HGNC_TE_Ribo.bed')
+
+# Translation Efficiency and Ribosome Occupancy are different somewhat
+f <- function(s, letter) strsplit(s, "")[[1]][letter]
+g <- function(s) strsplit(s, "")[[1]][c(4,10)]
+
+for ( j in c(1:6, 10:11)) { 
+seq_factor <- sapply(as.character(kozak_seq_score_table$V7), f, letter=j)
+k1 <- kruskal.test(kozak_seq_score_table$V9 ~ as.factor(seq_factor))
+print (k1$p.value * 8)
+print(kruskalmc(kozak_seq_score_table$V9 ~ as.factor(seq_factor), probs=.01))
+boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(-1,1), notch=T, range=.001, cex=.2)
+#boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(4,6), notch=T, range=.001, cex=.2)
+}
+# In light of this across transcript comparison, we might want to revisit across individual diff
+# Formalize the across gene analysis and maybe do the testing with TE
+
+
 ###
 
 
