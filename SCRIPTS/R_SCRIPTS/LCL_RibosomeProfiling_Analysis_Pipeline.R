@@ -8,6 +8,8 @@ library("kohonen")
 #library ("isva")
 # I decided not to use isva after initial tests
 
+### FIX SOM FOR BETWEEN INDIVIDUAL, MIGHT WANT TO INCLUDE THE PROT IN THE SOM
+
 ## NOTES
 ## Test for difference in variance
 ## Calculate F-value using anova on lm for each gene. Compare Ribo RNA
@@ -877,9 +879,6 @@ plot(som.exp, type="counts")
 # som.exp$unit.classif has the info about where each gene went
 # Create Matrix of the quantity of interest and pass this directly to plotCplane and remove componentPlaneMatrix function
 # We also need some visually appealing colors
-ribo_code_mean <- apply(som.exp$codes$ribo, 1, mean)
-plotCplane(som.exp, variable=ribo_code_mean)
-
 ## Write function to apply function to each cell of SOM.
 ## We will plot these once we have the good tools for plotting
 # som.exp$unit.classif keeps track of the cell each object belongs to
@@ -893,7 +892,41 @@ cor_between_ind <- function (x) {
  cors <- apply(x, 1, function(y){cor(y[1:14], y[15:28], use="pairwise.complete.obs", method="spearman")})
  return (median(cors, na.rm=T))
 }
-by(data.frame(cbind(som.exp$data$ribo,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
+
+# It might make more sense to make these plots with the som that includes the protein levels
+ribo_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$ribo,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
+rna_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$rna,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
+te_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$te,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
+
+median (ribo_prot_cor_in_som, na.rm=T)
+median(across_ind_ribo_correlation)
+median (rna_prot_cor_in_som, na.rm=T)
+median(across_ind_rna_correlation)
+median(te_prot_cor_in_som)
+
+plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation")
+plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation")
+plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation")
+
+plot.kohonen(som.exp, type="counts" )
+
+# absolute.som$data -> Numeric Matrix
+# abs.som.data.noNA -> Numeric Matrix, 4th column is ibaq.human
+ribo_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(1,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
+rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
+te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
+prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, FUN = colMeans)
+
+plotCplane(absolute.som, variable=ribo_prot_cor_across_genes_som)
+plotCplane(absolute.som, variable=rna_prot_cor_across_genes_som)
+plotCplane(absolute.som, variable=te_prot_cor_across_genes_som)
+
+plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="property", main ="Ribosome Occupancy Protein Correlation")
+plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation")
+plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation")
+plot.kohonen(absolute.som, property=prot_mean, type = "property")
+#abs.som.data.noNA
+# absolute.som
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 # Calculate correlation between APPRIS USAGE AND TRANSLATION
