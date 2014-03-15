@@ -5,6 +5,7 @@ library("qtl")
 library ("sva")
 library("MASS")
 library("kohonen")
+library("pgirmess")
 #library ("isva")
 # I decided not to use isva after initial tests
 
@@ -760,6 +761,7 @@ grand_mean_ribo <- data.frame (HGNC=joint_count_ids, grand_mean_ribo)
 # Calculated TE correlates weakly with Protein amount but better than ratio
 # It might be again due to polysome profile shape
 # The amount of protein TE correlation is likely cell type specific
+# Another apprach is to Use TE_FIT3 directly here; SAME CAN BE DONE FOR RIBO/RNA
 grand_mean_te <- apply(te_fit4$coefficients, 1, median)
 mean_te_df <- data.frame(HGNC=row.names(te_fit4), grand_mean_te)
 m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
@@ -985,34 +987,33 @@ hist(across_ind_cuff_cor, 50)
 # Do not test ones with MAF < XX 
 kozak_scores <- read.table('~/project/CORE_DATAFILES/Kozak_Reference_Sequence_Scores.txt')
 kozak_score_variants <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores.txt',
-stringsAsFactors=FALSE, fill=T, col.names=paste ("V", seq(1:59), sep=""))
-kozak_score_variants_hapmap <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores_HapMap.txt', stringsAsFactors=F, fill=T, col.names=paste ("V", seq(1:9), sep=""))
-all_kozak_score_variants <- merge(kozak_score_variants, kozak_score_variants_hapmap, all=T, by=c("V1", "V2", "V3") )
+stringsAsFactors=FALSE, fill=T, col.names=paste ("V", seq(1:60), sep=""))
+kozak_score_variants_hapmap <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores_HapMap.txt', stringsAsFactors=F, fill=T, col.names=paste ("V", seq(1:10), sep=""))
+all_kozak_score_variants <- merge(kozak_score_variants, kozak_score_variants_hapmap, all=T, by=c("V1", "V2", "V3", "V4") )
 all_kozak_score_variants[is.na(all_kozak_score_variants)] <- ""
-kozak_var_ind <- all_kozak_score_variants[,-c(2,3)]
+kozak_var_ind <- all_kozak_score_variants[,-c(2,3,4)]
 
+# Each transcript will contribute a delta Kozak and delta expression
 # There is a correlation between number of alleles and difference. 
 # If there are a lot of alleles than the difference is less likely to be negative
 # If number of alleles is less than 8
-kozak_score_variants<- all_kozak_score_variants[,c(1,3)]
+kozak_score_variants<- all_kozak_score_variants[,c(1,4)]
 kozak_merge <- merge(kozak_score_variants, kozak_scores, by="V1")
-p1 <- hist(kozak_merge$V2,50)
-p2 <- hist(kozak_merge$V3[number_alleles<10],50)
-p2 <- hist(kozak_merge$V3,50)
-plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6), xlab="Kozak Score", main="Distribution of Kozak Scores")
-plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
-boxplot(kozak_merge$V3, kozak_merge$V2, col=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)), notch=T, range=1, xlab=NULL)
-wilcox.test(kozak_merge$V3, kozak_merge$V2)
 multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
-
-#Go over the variant containing transcripts
-# Some transcripts have multiple variants and should be treated separately
-# Then for each transcript calculate difference in ribo-expression 
-# Each transcript will contribute a delta Kozak and delta expression
 number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
 number_alleles <- number_alleles[!multi]
 MAF <- floor(0.05 * max(number_alleles))
 hist(number_alleles, 50, xlab="Number of Alleles", main="")
+
+p1 <- hist(kozak_merge$V2,50)
+p2 <- hist(kozak_merge$V4[number_alleles<10],50)
+p2 <- hist(kozak_merge$V4,50)
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6), xlab="Kozak Score", main="Distribution of Kozak Scores")
+plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
+boxplot(kozak_merge$V4, kozak_merge$V2, col=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)), notch=T, range=1, xlab=NULL)
+wilcox.test(kozak_merge$V4, kozak_merge$V2)
+
+
 
 rna_only <- v3[,type=="RNA"]
 sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
@@ -1022,7 +1023,7 @@ sample_labels_ribo <- unlist(strsplit(colnames(ribo_only), split= "_"))
 sample_labels_ribo <- sample_labels_ribo[grep("GM", sample_labels_ribo)]
 
 #Kozak multi
-multi_diff = kozak_merge$V2[multi] - kozak_merge$V3[multi]
+multi_diff = kozak_merge$V4[multi] - kozak_merge$V4[multi]
 multi_ind = kozak_var_ind[multi,]
 multi_alleles <- apply(multi_ind, 1, function(x){length(grep('NA', x))})
 total_alleles <- by(multi_alleles, as.factor(multi_ind[,1]), sum)  
@@ -1075,7 +1076,7 @@ summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights
 # Kozak Diff is WT - VARIANT
 # Positive score means WT kozak strength is better
 # Negative score means VARIANT kozak Strength is better
-kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V3[!multi]
+kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V4[!multi]
 kozak_var_ind <- kozak_var_ind[!multi,]
 
 # Note that there is a strong enrichment for single individual variants
@@ -1183,6 +1184,26 @@ for ( i in a1) {
   summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
   summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
 }
+
+# Take the translation efficiency table and for each position look for significant diff with Kruskal
+kozak_seq_score_table <- read.table('~/project/CORE_DATAFILES/Kozak_IDs_PWM_Strand_Seq_HGNC_TE_Ribo.bed')
+
+# Translation Efficiency and Ribosome Occupancy are different somewhat
+f <- function(s, letter) strsplit(s, "")[[1]][letter]
+g <- function(s) strsplit(s, "")[[1]][c(4,10)]
+
+for ( j in c(1:6, 10:11)) { 
+seq_factor <- sapply(as.character(kozak_seq_score_table$V7), f, letter=j)
+k1 <- kruskal.test(kozak_seq_score_table$V9 ~ as.factor(seq_factor))
+print (k1$p.value * 8)
+print(kruskalmc(kozak_seq_score_table$V9 ~ as.factor(seq_factor), probs=.01))
+boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(-1,1), notch=T, range=.001, cex=.2)
+#boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(4,6), notch=T, range=.001, cex=.2)
+}
+# In light of this across transcript comparison, we might want to revisit across individual diff
+# Formalize the across gene analysis and maybe do the testing with TE
+
+
 ###
 
 
