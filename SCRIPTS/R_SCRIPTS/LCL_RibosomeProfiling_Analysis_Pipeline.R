@@ -7,20 +7,7 @@ library("MASS")
 library("kohonen")
 library("pgirmess")
 #library ("isva")
-# I decided not to use isva after initial tests
-
 ### FIX SOM FOR BETWEEN INDIVIDUAL, MIGHT WANT TO INCLUDE THE PROT IN THE SOM
-
-## NOTES
-## Test for difference in variance
-## Calculate F-value using anova on lm for each gene. Compare Ribo RNA
-## Permute the Ribo & RNA labels within each individual. If we have 4 reps of RNA 2 reps of Ribo
-## We can get 4 reps of Ribo and 2 reps of RNA
-
-# Number of bases covered is not a good measure
-# The number of species correlates better with length but
-# Total read number gives tighter clustering 
-# Should use total read number for the analysis
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
@@ -76,11 +63,16 @@ all_rnaseq <- all_rnaseq[,-c(55, 77)]
 all_rnaseq_counts <- DGEList(counts= all_rnaseq)
 
 ## Cufflinks Ratios
-cuff_ratios <- read.table(paste(data_dir, "Transcript_CufflinksRatios_wIDs", sep=""), header=T)
-cuff_ratios <- merge(cuff_ratios, ensg_hgnc, by.x="gene.identifier", by.y="ENSG")
+#cuff_ratios <- read.table(paste(data_dir, "Transcript_CufflinksRatios_wIDs", sep=""), header=T)
+#cuff_ratios <- merge(cuff_ratios, ensg_hgnc, by.x="gene.identifier", by.y="ENSG")
 
 ## RIBOSEQ_COUNTS
 # CDS SPECIES
+
+# Number of bases covered is not a good measure
+# The number of species correlates better with length but
+# Total read number gives tighter clustering 
+# Should use total read number for the analysis
 species <- read.table(paste(data_dir, "Reformatted_Species_Counts_All_Libraries.tsv", sep=""),header=T)
 CDS_species <- split (species, species$REGION)[[2]]
 CDS_species <- CDS_species[,grep("Counts", colnames(CDS_species))]
@@ -100,7 +92,7 @@ CDS_IDs <- CDS[,1]
 covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 
 ######## DATA ANALYSIS ##################################
-################### THIS SECTION NEEDS TO BE FIXED
+################### NORMALIZATION OF COUNTS AND INITIAL QC
 ## SPECIES TO COUNTS COMPARISON
 species_sum <- rowSums(CDS_species)
 cds_count_sum <- rowSums(CDS_Counts)
@@ -116,15 +108,13 @@ ratios_dataframe <- data.frame(ID=CDS_IDs, ReadCount=log10(cds_count_sum+1) , Sp
 #count_to_species <- predict(loess(ReadCount~SpeciesCount, data=ratios_dataframe, statistics="approximate", trace.hat="approximate"), se=T)
 #c1 <- count_to_species$fit+10^2*count_to_species$s
 #length(which(ratios_dataframe$ReadCount- c1 > 0))
-
 # c2 <- count_to_species$fit-10^2*count_to_species$s
 # plot(ratios_dataframe$ReadCount, ratios_dataframe$SpeciesCount, pch=19, cex=0.2)
 #lines(ratios_dataframe$ReadCount,count_to_species$fit, col="red")
 # lines(ratios_dataframe$ReadCount,count_to_species$fit+3*count_to_species$s, lty=2)
 # lines(ratios_dataframe$ReadCount,count_to_species$fit-3*count_to_species$s, lty=2)
 
-
-# RNASEQ NORMALIZATION AND VOOM
+# RNASEQ NORMALIZATION-- VOOM
 rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
 all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
 # Identify differences in PolyA to RiboZero and remove
@@ -160,10 +150,8 @@ hc_rnaseq <- hclust( norm_dd_rnaseq)
 # BATCH CORRECTION IS ESSENTIAL HERE
 rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,25), rep(4, 15) ) 
 batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=design_rnaseq)
-
 # Update v2$E with batch_removed; this keeps weights
 v2$E <- batch_removed
-
 #write.table(batch_removed,
 #file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
 #sep="\t", row.names=as.character(rna_seq_normalized_with_ids[,1])[!abs(stdres(fit.rna)) > 3])
@@ -171,7 +159,7 @@ v2$E <- batch_removed
 batch_dd_rnaseq <- dist( t( batch_removed) )
 hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
 
-# VOOM- TMM Normalization- Ribosome Profiling
+# VOOM- TMM Normalization of Ribosome Profiling
 cds_counts <- DGEList(counts=CDS_Counts)
 isexpr <- rowSums(cpm(cds_counts) > 1) >= 36
 cds_counts <- cds_counts[isexpr,]
@@ -192,12 +180,12 @@ norm_hc <- hclust (norm_dd)
 replicate_present <- duplicated(sample_labels) | duplicated(sample_labels, fromLast = TRUE)
 norm_dd_rep <- dist(t (v$E[,replicate_present] ) )
 norm_hc_rep <- hclust (norm_dd_rep)
-
 #write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in36_RiboProfiling_Expression", 
 #row.names=CDS_IDs[isexpr], sep="\t")
 
-#
-
+############################################
+### ALTERNATIVE AND PREFFERED APPROACH IS TO PROCESS ALL RNA_SEQ AND RIBO_SEQ
+### LIBRARIES JOINTLY -- DO ALL QC HERE
 ### An alternative way to process RNA-Seq Ribo-Seq jointly
 # RNA - all_rnaseq_counts
 # Ribo - cds_counts
@@ -254,7 +242,7 @@ plotMDS(v3$E, labels=type)
 
 #### COMMENTED OUT SVA NORMALIZATION
 # # We can look sva correlations with sequencing depth, batch, etc
-# #GM19139 - HAS no RNA index 124
+# # GM19139 - HAS no RNA index 124
 # # GM19139 is most similar to GM19137 - For SVA purposes use GM19137
 # full_design_nosingular <- model.matrix(~sample_labels_joint[-124] + type[-124])
 # #svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
@@ -330,97 +318,7 @@ row.names(joint_expression_common) <- joint_count_ids
 
 
 ##### ANALYSIS REQUIRING JOINT RNA-RIBOSEQ WITH REPLICATES
-### DIFFERENCE IN VARIATION
-### THIS APPROACH IS COMMENTED OUT
-# 
-# # Test for difference in variance per gene across individuals
-# # Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
-# # Test statistic is the difference between F values, significance is by permutation testing
-# # Need to think about issues with respect to degrees of freedom associated with the calculated F-value
-# 
-# #joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
-# #joint_expression_matrix <- joint_expression_matrix[,-1]
-# joint_expression_matrix <- joint_expression_common$E
-# #gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
-# #sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
-# #sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
-# sample_id_all <- sample_labels_joint_common
-# sample_id_all[1:51] <- paste(sample_id_all[1:51], "RNA", sep="_")
-# sample_id_all[52:84] <- paste(sample_id_all[52:84], "Ribosome_Profiling", sep="_")
-# 
-# # GO over each gene. Calculate F-value for ribo and rna separately
-# # One issue is that mean diff is highly correlated with p-value.
-# # The higher the mean diff, the higher the p-value
-# Mean_diff <- apply(joint_expression_matrix, 1, function(x) {mean(x[1:52] - mean(x[53:84]))} ) 
-# joint_expression_matrix_mean_subtracted <- t(apply(joint_expression_matrix, 1, function(x) {c(x[1:52]-mean(x[1:52]), x[53:84]-mean(x[53:84])  )}))
-# F_diff <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
-#   (summary (aov(x[52:84] ~ as.factor(sample_id_all[52:84])))[[1]]$F[1] ) - (summary(aov(x[1:51] ~ as.factor(sample_id_all[1:51])))[[1]]$F[1])
-#   })
-# F_diff_pval <- c()
-# individuals <- unique(sample_id_all)
-# # Even with 100 permutations, this is extremely slow
-# # If I have the time, I will rewrite this with apply
-# # Something like: 
-# #perm_values <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
-# #  (summary (aov(x[ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1] ) - (summary(aov(x[!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1])
-# #})
-# # FINISH THE F_PVAL CALCULATION
-# for (i in 1:length(F_diff)) {
-#     # Need some permutation scheme-
-#     # Go over individuals and assign the ribo/rna label
-#     perm_values <- c()
-#     for (k in 1:100) { 
-#     ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
-#     for (j in 1: length(individuals)) {
-#       if (runif(1) > 0.5) { 
-#         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
-#       }  
-#     }
-#     ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
-#     rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
-#     perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
-#     }
-#     p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
-#     F_diff_pval <- c(F_diff_pval, 2*p1)
-# }
-# hist(F_diff, 300)
-# hist(F_diff, 300, xlim=c(-20,20))
-# hist(F_diff[F_diff_pval<0.05], 200, xlab="F_Diff", main="Significant Differences in Variance")
-# hist(Mean_diff, 100)
-# plot(F_diff_pval, Mean_diff, pch=19, cex=.2, xlab="Pvalue", ylab="Mean Expression Difference")
-# # RNA expression is more variable for most things consistent with previous reports that suggests buffering
-# # Extract_ids and run FuncAssociate. 
-# 
-# save (F_diff, file= "~/project/CORE_DATAFILES/FValue_Differences")
-# save (F_diff_pval, file="~/project/CORE_DATAFILES/FValue_Differences_Pvals")
-# save (joint_expression_matrix_mean_subtracted, file="~/project/CORE_DATAFILES/Joint_Expression_Matrix")
-# save(low_pval_indices, file="~/project/CORE_DATAFILES/low_pval_indices")
-# # For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
-# low_pval_indices <- which(F_diff_pval < 0.05)
-# # rna_variable <- F_diff[low_pval_indices] < 0
-# # ribo_variable <- F_diff[low_pval_indices] > 0
-# # write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
-# # write.table(gene_names_joint_expression_matrix[low_pval_indices][ribo_variable], file="~/Desktop/Ribo_variable.txt", row.names=F)
-# # write.table(gene_names_joint_expression_matrix, file="~/Desktop/All_Tested_IDs", row.names=F)
-# for (i in low_pval_indices) { 
-#   perm_values <- c()
-#   for (k in 1:10000) { 
-#     ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
-#     for (j in 1: length(individuals)) {
-#       if (runif(1) > 0.5) { 
-#         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
-#       }  
-#     }
-#     ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
-#     rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
-#     perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
-#   }
-#   p1 <- min (length(which( perm_values > F_diff[i] ) ) /10000 , length(which( perm_values < F_diff[i] ) ) /10000 )
-#   F_diff_pval[i] <-  2*p1  
-# }
-#####################################
-# END OF OLD VARIATION ANALYSIS
-
+### COMPARING VARIATION IN THE EXPRESSION VALUES
 # Alternative much simpler approach is to use ratio of CVs
 # It is unclear if CV makes sense as the relationship between Var Mean is different
 # It might make more sense to multiply by the associated weights
@@ -931,57 +829,6 @@ plot.kohonen(absolute.som, property=prot_mean, type = "property")
 # absolute.som
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
-# Calculate correlation between APPRIS USAGE AND TRANSLATION
-cuff_ratios <- cuff_ratios[cuff_ratios$HGNC %in% row.names(v3) ,]
-# Batch correct APPRIS AND THE REMAINING EXPRESSIONS
-appris_expression <- as.matrix(cuff_ratios[,seq(2,ncol(cuff_ratios)-1, by=3)])
-nonappris_expression <- as.matrix(cuff_ratios[,seq(3,ncol(cuff_ratios), by=3)]  )
-cuff_ids <- cuff_ratios[, 179]
-
-cuff_batch <- c (rep(1,16), rep(2, 18), rep(3,25)) 
-s1 <- unlist(strsplit(colnames(appris_expression), "_"))
-sample_labels_cuff <- s1[grep('GM', s1)]
-cuff_design <- model.matrix(~sample_labels_cuff)
-# Need to remove genes with all zeros
-s1 <- apply(nonappris_expression, 1, function(x){sum(x==0)}) == 59
-s2 <- apply(appris_expression, 1, function(x){sum(x==0)})== 59
-nonappris_expression <- nonappris_expression[!(s1 | s2), ]
-appris_expression <- appris_expression[!(s1 | s2), ]
-cuff_ids <- cuff_ids[!(s1 | s2)]
-# Filter samples with no variation or very low/high ratio in all samples
-
-batch_removed_appris <- ComBat (appris_expression, batch=cuff_batch, mod=cuff_design)
-batch_removed_nonappris <- ComBat (nonappris_expression, batch=cuff_batch, mod=cuff_design)
-cuff_ratios_batch_corrected <- batch_removed_appris / (batch_removed_appris + batch_removed_nonappris)
-# Even after batch correction GEUVADIS CORRELATES POORLY WITH SNYDER
-row.names(cuff_ratios_batch_corrected) <- cuff_ids
-one_frames <- read.table('~/project/CORE_DATAFILES/gencode.v15.protein_coding.one_frame_only.ids', header=F)
-one_frames <- merge (one_frames, ensg_hgnc, by.x="V1", by.y="ENSG")
-# Most of the one-frame transcripts have poor expression and hence are filtered out
-cuff_ratio_one_frame_prots <- merge(one_frames, cuff_ratios_batch_corrected, by.x="HGNC", by.y="row.names")
-
-cuff_replicate_median <- apply (cuff_ratio_one_frame_prots[,-c(1,2)], 1, function(x) {
-  aggregate(x, by= list(as.factor(sample_labels_cuff)), median)  
-} )
-# We can try to use everything or we can subset to Snyder
-# Calculate per sample median ratio
-
-# redo using Hagen's ratio appris sum cor ribo nonappris to ribo
-ribo_replicate_mean <- apply(v3$E[row.names(v3)%in% cuff_ratio_one_frame_prots[,1],type=="Ribo"],1 ,function(x){
-  aggregate(x, by=list(as.factor(sample_labels_joint[type=="Ribo"])), mean)  
-})
-
-ribo_replicate_mean <- lapply(ribo_replicate_mean, function(x){x <- x[-c(8,10,12,15,16,23),]})
-cuff_replicate_median <- lapply(cuff_replicate_median, function(x){x <- x[-10,]})
-
-c2 <- mapply (cbind, cuff_replicate_median, ribo_replicate_mean, SIMPLIFY=F)
-across_ind_cuff_cor <- as.numeric(lapply(c2, function(x){ cor.test(x[,2], x[,4], method="spearman")$p.value }))
-hist(across_ind_cuff_cor, 50)
-# There are very few cases of signal at p < 0.005. The two cases with FDR < .25 are not UTR variants
-# There is a bunch RP stuff that messes this up. Better leave this as a future project
-# "ENSG00000006453"    "BAIAP2L1-001" 
-
-
 ### KOZAK SEQUENCE ANALYSIS
 # Modify to include the multi-variant cases as well as genotype dosage
 # Do not test ones with MAF < XX 
@@ -1012,8 +859,6 @@ plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6), xlab="Kozak Score", main="Distribut
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
 boxplot(kozak_merge$V4, kozak_merge$V2, col=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)), notch=T, range=1, xlab=NULL)
 wilcox.test(kozak_merge$V4, kozak_merge$V2)
-
-
 
 rna_only <- v3[,type=="RNA"]
 sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
@@ -1325,9 +1170,6 @@ output_clusters <- function (k, data_original, hc, names)
 # # Uncomment region to output various clusters
 #hcr <- hclust(dist(ranked_data_na_omit_normalized))
 #output_clusters(4, ranked_data_na_omit_normalized, hcr, names_post_omit)
-
-
-
 ##
 
 
@@ -1349,5 +1191,148 @@ cor.test(m1[keep(m1[,2:35], 100),39], m1_species_sum[keep(m1[,2:35], 100)], meth
 pdf ("Length_vs_TotalCDSCoverage.pdf")
 plot(log10(CDS_Len[keep(CDS_Coverage,1000),1]), log10(rowSums(CDS_Coverage[keep(CDS_Coverage,1000),])), pch=19, cex=0.4)
 dev.off()
+
+### DIFFERENCE IN VARIATION
+### THIS APPROACH IS COMMENTED OUT
+# 
+# # Test for difference in variance per gene across individuals
+# # Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
+# # Test statistic is the difference between F values, significance is by permutation testing
+# # Need to think about issues with respect to degrees of freedom associated with the calculated F-value
+# 
+# #joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
+# #joint_expression_matrix <- joint_expression_matrix[,-1]
+# joint_expression_matrix <- joint_expression_common$E
+# #gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
+# #sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
+# #sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
+# sample_id_all <- sample_labels_joint_common
+# sample_id_all[1:51] <- paste(sample_id_all[1:51], "RNA", sep="_")
+# sample_id_all[52:84] <- paste(sample_id_all[52:84], "Ribosome_Profiling", sep="_")
+# 
+# # GO over each gene. Calculate F-value for ribo and rna separately
+# # One issue is that mean diff is highly correlated with p-value.
+# # The higher the mean diff, the higher the p-value
+# Mean_diff <- apply(joint_expression_matrix, 1, function(x) {mean(x[1:52] - mean(x[53:84]))} ) 
+# joint_expression_matrix_mean_subtracted <- t(apply(joint_expression_matrix, 1, function(x) {c(x[1:52]-mean(x[1:52]), x[53:84]-mean(x[53:84])  )}))
+# F_diff <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
+#   (summary (aov(x[52:84] ~ as.factor(sample_id_all[52:84])))[[1]]$F[1] ) - (summary(aov(x[1:51] ~ as.factor(sample_id_all[1:51])))[[1]]$F[1])
+#   })
+# F_diff_pval <- c()
+# individuals <- unique(sample_id_all)
+# # Even with 100 permutations, this is extremely slow
+# # If I have the time, I will rewrite this with apply
+# # Something like: 
+# #perm_values <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
+# #  (summary (aov(x[ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1] ) - (summary(aov(x[!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1])
+# #})
+# # FINISH THE F_PVAL CALCULATION
+# for (i in 1:length(F_diff)) {
+#     # Need some permutation scheme-
+#     # Go over individuals and assign the ribo/rna label
+#     perm_values <- c()
+#     for (k in 1:100) { 
+#     ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
+#     for (j in 1: length(individuals)) {
+#       if (runif(1) > 0.5) { 
+#         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
+#       }  
+#     }
+#     ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
+#     rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
+#     perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
+#     }
+#     p1 <- min (length(which( perm_values > F_diff[i] ) ) /100 , length(which( perm_values < F_diff[i] ) ) /100 )
+#     F_diff_pval <- c(F_diff_pval, 2*p1)
+# }
+# hist(F_diff, 300)
+# hist(F_diff, 300, xlim=c(-20,20))
+# hist(F_diff[F_diff_pval<0.05], 200, xlab="F_Diff", main="Significant Differences in Variance")
+# hist(Mean_diff, 100)
+# plot(F_diff_pval, Mean_diff, pch=19, cex=.2, xlab="Pvalue", ylab="Mean Expression Difference")
+# # RNA expression is more variable for most things consistent with previous reports that suggests buffering
+# # Extract_ids and run FuncAssociate. 
+# 
+# save (F_diff, file= "~/project/CORE_DATAFILES/FValue_Differences")
+# save (F_diff_pval, file="~/project/CORE_DATAFILES/FValue_Differences_Pvals")
+# save (joint_expression_matrix_mean_subtracted, file="~/project/CORE_DATAFILES/Joint_Expression_Matrix")
+# save(low_pval_indices, file="~/project/CORE_DATAFILES/low_pval_indices")
+# # For the set of transcripts where F_diff_pval < 0.01, do more extensive permutation -- run this overnight
+# low_pval_indices <- which(F_diff_pval < 0.05)
+# # rna_variable <- F_diff[low_pval_indices] < 0
+# # ribo_variable <- F_diff[low_pval_indices] > 0
+# # write.table(gene_names_joint_expression_matrix[low_pval_indices][rna_variable], file="~/Desktop/RNA_variable.txt", row.names=F)
+# # write.table(gene_names_joint_expression_matrix[low_pval_indices][ribo_variable], file="~/Desktop/Ribo_variable.txt", row.names=F)
+# # write.table(gene_names_joint_expression_matrix, file="~/Desktop/All_Tested_IDs", row.names=F)
+# for (i in low_pval_indices) { 
+#   perm_values <- c()
+#   for (k in 1:10000) { 
+#     ribo <- c(rep(FALSE, 51), rep(TRUE, 84-51))
+#     for (j in 1: length(individuals)) {
+#       if (runif(1) > 0.5) { 
+#         ribo[sample_id_all== individuals[j]] <- !ribo[sample_id_all== individuals[j]]  
+#       }  
+#     }
+#     ribo_F_perm <- summary (aov(joint_expression_matrix_mean_subtracted[i,ribo] ~ as.factor(sample_id_all[ribo])))[[1]]$F[1]
+#     rna_F_perm <- summary(aov(joint_expression_matrix_mean_subtracted[i,!ribo] ~ as.factor(sample_id_all[!ribo])))[[1]]$F[1]
+#     perm_values <- c(perm_values, ribo_F_perm - rna_F_perm)
+#   }
+#   p1 <- min (length(which( perm_values > F_diff[i] ) ) /10000 , length(which( perm_values < F_diff[i] ) ) /10000 )
+#   F_diff_pval[i] <-  2*p1  
+# }
+#####################################
+# END OF OLD VARIATION ANALYSIS
+
+
+# Calculate correlation between APPRIS USAGE AND TRANSLATION
+cuff_ratios <- cuff_ratios[cuff_ratios$HGNC %in% row.names(v3) ,]
+# Batch correct APPRIS AND THE REMAINING EXPRESSIONS
+appris_expression <- as.matrix(cuff_ratios[,seq(2,ncol(cuff_ratios)-1, by=3)])
+nonappris_expression <- as.matrix(cuff_ratios[,seq(3,ncol(cuff_ratios), by=3)]  )
+cuff_ids <- cuff_ratios[, 179]
+
+cuff_batch <- c (rep(1,16), rep(2, 18), rep(3,25)) 
+s1 <- unlist(strsplit(colnames(appris_expression), "_"))
+sample_labels_cuff <- s1[grep('GM', s1)]
+cuff_design <- model.matrix(~sample_labels_cuff)
+# Need to remove genes with all zeros
+s1 <- apply(nonappris_expression, 1, function(x){sum(x==0)}) == 59
+s2 <- apply(appris_expression, 1, function(x){sum(x==0)})== 59
+nonappris_expression <- nonappris_expression[!(s1 | s2), ]
+appris_expression <- appris_expression[!(s1 | s2), ]
+cuff_ids <- cuff_ids[!(s1 | s2)]
+# Filter samples with no variation or very low/high ratio in all samples
+
+batch_removed_appris <- ComBat (appris_expression, batch=cuff_batch, mod=cuff_design)
+batch_removed_nonappris <- ComBat (nonappris_expression, batch=cuff_batch, mod=cuff_design)
+cuff_ratios_batch_corrected <- batch_removed_appris / (batch_removed_appris + batch_removed_nonappris)
+# Even after batch correction GEUVADIS CORRELATES POORLY WITH SNYDER
+row.names(cuff_ratios_batch_corrected) <- cuff_ids
+one_frames <- read.table('~/project/CORE_DATAFILES/gencode.v15.protein_coding.one_frame_only.ids', header=F)
+one_frames <- merge (one_frames, ensg_hgnc, by.x="V1", by.y="ENSG")
+# Most of the one-frame transcripts have poor expression and hence are filtered out
+cuff_ratio_one_frame_prots <- merge(one_frames, cuff_ratios_batch_corrected, by.x="HGNC", by.y="row.names")
+
+cuff_replicate_median <- apply (cuff_ratio_one_frame_prots[,-c(1,2)], 1, function(x) {
+  aggregate(x, by= list(as.factor(sample_labels_cuff)), median)  
+} )
+# We can try to use everything or we can subset to Snyder
+# Calculate per sample median ratio
+
+# redo using Hagen's ratio appris sum cor ribo nonappris to ribo
+ribo_replicate_mean <- apply(v3$E[row.names(v3)%in% cuff_ratio_one_frame_prots[,1],type=="Ribo"],1 ,function(x){
+  aggregate(x, by=list(as.factor(sample_labels_joint[type=="Ribo"])), mean)  
+})
+
+ribo_replicate_mean <- lapply(ribo_replicate_mean, function(x){x <- x[-c(8,10,12,15,16,23),]})
+cuff_replicate_median <- lapply(cuff_replicate_median, function(x){x <- x[-10,]})
+
+c2 <- mapply (cbind, cuff_replicate_median, ribo_replicate_mean, SIMPLIFY=F)
+across_ind_cuff_cor <- as.numeric(lapply(c2, function(x){ cor.test(x[,2], x[,4], method="spearman")$p.value }))
+hist(across_ind_cuff_cor, 50)
+# There are very few cases of signal at p < 0.005. The two cases with FDR < .25 are not UTR variants
+# There is a bunch RP stuff that messes this up. Better leave this as a future project
+# "ENSG00000006453"    "BAIAP2L1-001" 
+#############################################################
 
 
