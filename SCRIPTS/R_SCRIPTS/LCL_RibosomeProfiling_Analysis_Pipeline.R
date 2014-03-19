@@ -619,21 +619,22 @@ cor.test(all_prot_data$ibaq.human, as.numeric(all_prot_data$USE), method="spearm
 fit.prot <- lm(log10(all_prot_data$ibaq.human) ~ log10(as.numeric(all_prot_data$USE)))
 
 outlier_colors <- rep("Black",times = length(log10(all_prot_data$ibaq.human) ))
-outlier_colors[abs(stdres(fit.prot)) > 2] <- "Red"
+outlier_colors[abs(stdres(fit.prot)) > 1] <- "Red"
 plot( log10(as.numeric(all_prot_data$USE)),stdres(fit.prot) , pch=19, cex=0.2, ylab="Standardized Residuals", col=outlier_colors)
-prot_inconsistent <- (abs(stdres(fit.prot)) > 2)
+prot_inconsistent <- (abs(stdres(fit.prot)) > 1)
 all_prot_data = all_prot_data[!prot_inconsistent, ]
 
-gm12878_ribo <- grep("GM12878", colnames(v))
-gm12878_ribo_mean <- apply(v$E[,gm12878_ribo], 1, mean)
-gm12878_ribo_mean <- data.frame(HGNC=CDS[isexpr,1], gm12878_ribo_mean)
+gm12878_ribo <- v3$E[,c(85,86)]
+gm12878_ribo_mean <- apply(gm12878_ribo, 1, median)
+gm12878_ribo_mean <- data.frame(HGNC=row.names(v3), gm12878_ribo_mean)
 
-gm12878_rna <- grep("GM12878", colnames(v2))
-gm12878_rna_mean  <- apply(v2$E[,gm12878_rna], 1, mean)
-gm12878_rna_mean <- data.frame(HGNC=rownames(v2), gm12878_rna_mean)
+gm12878_rna <- v3$E[,c(1,2,3,21,22)]
+gm12878_rna_mean  <- apply(gm12878_rna, 1, median)
+gm12878_rna_mean <- data.frame(HGNC=row.names(v3), gm12878_rna_mean)
 
 ribo_rna_12878 <- merge(gm12878_ribo_mean, gm12878_rna_mean, by="HGNC")
-ribo_rna_prot_12878 <- merge(ribo_rna_12878, gm12878_prot, by="HGNC")2
+ribo_rna_prot_12878 <- merge(ribo_rna_12878, gm12878_prot, by="HGNC")
+ribo_rna_prot_consistent_12878 <- merge(ribo_rna_12878, all_prot_data, by="HGNC")
 ribo_rna_prot_12878 <- ribo_rna_prot_12878[as.numeric(ribo_rna_prot_12878$USE) > 1000 & ribo_rna_prot_12878$gm12878_ribo_mean > 5, ] 
 
 plot(ribo_rna_prot_12878$gm12878_ribo_mean, ribo_rna_prot_12878$gm12878_rna_mean, cex=0.2, pch=19, xlim=c(5,15), ylim=c(3,15))
@@ -642,6 +643,9 @@ plot(ribo_rna_prot_12878$gm12878_ribo_mean,  log10(as.numeric(ribo_rna_prot_1287
 plot(ribo_rna_prot_12878$gm12878_rna_mean,  log10(as.numeric(ribo_rna_prot_12878$USE)), pch=19, cex=.2, xlim=c(4, 15))
 
 #Spearman - Grand Mean is BEST
+cor.test(ribo_rna_prot_consistent_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_consistent_12878$USE)))
+cor.test(ribo_rna_prot_consistent_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_consistent_12878$USE)))
+
 cor.test(ribo_rna_prot_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_12878$USE)), method="spearman")
 cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12878$USE)), method="spearman")
 
@@ -649,17 +653,18 @@ cor.test(ribo_rna_prot_12878$gm12878_ribo_mean, log10(as.numeric(ribo_rna_prot_1
 cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12878$USE)))
 
 #### COMPARISION WITH ACROSS GENE QUANTIFICATION FROM SILAC
+#CDS_Len <- data.frame(LENGTH=CDS_Len[,1])
+#row.names(CDS_Len) <- CDS_IDs
+#CDS_Len <- CDS_Len[row.names(CDS_Len) %in% joint_count_ids,]
+
 grand_mean_rna <- apply (v3$E[,type=="RNA"], 1, median)
-#grand_mean_rna <- apply (norm_expr_joint[,1:84], 1, median)
 grand_mean_rna  <- data.frame(HGNC=joint_count_ids, grand_mean_rna)
 grand_mean_ribo <- apply(v3$E[,type=="Ribo"], 1, median)
-#grand_mean_ribo <- apply (norm_expr_joint[,85:133], 1, median)
 grand_mean_ribo <- data.frame (HGNC=joint_count_ids, grand_mean_ribo)
 
 # Calculated TE correlates weakly with Protein amount but better than ratio
 # It might be again due to polysome profile shape
 # The amount of protein TE correlation is likely cell type specific
-# Another apprach is to Use TE_FIT3 directly here; SAME CAN BE DONE FOR RIBO/RNA
 grand_mean_te <- apply(te_fit4$coefficients, 1, median)
 mean_te_df <- data.frame(HGNC=row.names(te_fit4), grand_mean_te)
 m1 <- merge(mean_te_df, gm12878_prot, by="HGNC")
