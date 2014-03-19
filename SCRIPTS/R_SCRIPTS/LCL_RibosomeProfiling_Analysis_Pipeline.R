@@ -365,12 +365,12 @@ ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x
 rnacv <- (rna_cv_between_individuals/rna_repcv_median) 
 ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
 
-hist(rnacv, 200)
-hist(ribocv, 200)
+hist(rnacv, 200, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation")
+hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation")
 low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
 p1 <- hist(rnacv/ribocv, 100 )
 # One idea is to remove low interindividual to intraindividual genes
-plot(p1, col=rgb(0,0,1,1/4),  tck=.02, xlab="RNA/Ribo", main="Between/ Within Individual CV", ylim=c(0,500))
+plot(p1, col=rgb(0,0,1,1/4),  tck=.02, xlab="RNA Expression to Ribosome Occupancy Ratio", main="Between/ Within Individual CV", ylim=c(0,500))
 abline(v=1, lwd=3)
 
 length(which(rnacv/ribocv > 2))
@@ -835,20 +835,32 @@ plot.kohonen(absolute.som, property=prot_mean, type = "property")
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
-# Modify to include the multi-variant cases as well as genotype dosage
+# Each transcript will contribute a delta Kozak and delta expression and type of variant
+# We dropped 18508 from the analysis but it can still be part of the individuals. 
+
 # Do not test ones with MAF < XX 
 kozak_scores <- read.table('~/project/CORE_DATAFILES/Kozak_Reference_Sequence_Scores.txt')
 kozak_score_variants <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores.txt',
 stringsAsFactors=FALSE, fill=T, col.names=paste ("V", seq(1:60), sep=""))
-kozak_score_variants_hapmap <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores_HapMap.txt', stringsAsFactors=F, fill=T, col.names=paste ("V", seq(1:10), sep=""))
+kozak_score_variants_hapmap <- read.table('~/project/CORE_DATAFILES/Kozak_Variant_Sequence_Scores_HapMap.txt', 
+stringsAsFactors=F, fill=T, col.names=paste ("V", seq(1:10), sep=""))
 all_kozak_score_variants <- merge(kozak_score_variants, kozak_score_variants_hapmap, all=T, by=c("V1", "V2", "V3", "V4") )
 all_kozak_score_variants[is.na(all_kozak_score_variants)] <- ""
+for ( i in 1:dim(all_kozak_score_variants)[2]) { 
+  for (j in 1:dim(all_kozak_score_variants)[1]) { 
+    if (all_kozak_score_variants[j,i] == "NA18508" ) { 
+      all_kozak_score_variants[j,i] = ""
+    }
+  }
+}
+gm18508_unique_variants = 
+  which (apply(all_kozak_score_variants, 1, function(x) { length(which(x==""))} ) ==62)
+all_kozak_score_variants <- all_kozak_score_variants[-gm18508_unique_variants, ]
 kozak_var_ind <- all_kozak_score_variants[,-c(2,3,4)]
 
-# Each transcript will contribute a delta Kozak and delta expression
-# There is a correlation between number of alleles and difference. 
+#which(kozak_var_ind == "NA18508")
+
 # If there are a lot of alleles than the difference is less likely to be negative
-# If number of alleles is less than 8
 kozak_score_variants<- all_kozak_score_variants[,c(1,4)]
 kozak_merge <- merge(kozak_score_variants, kozak_scores, by="V1")
 multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
@@ -873,18 +885,21 @@ sample_labels_ribo <- unlist(strsplit(colnames(ribo_only), split= "_"))
 sample_labels_ribo <- sample_labels_ribo[grep("GM", sample_labels_ribo)]
 
 #Kozak multi
-multi_diff = kozak_merge$V4[multi] - kozak_merge$V4[multi]
+multi_diff = kozak_merge$V2[multi] - kozak_merge$V4[multi]
 multi_ind = kozak_var_ind[multi,]
 multi_alleles <- apply(multi_ind, 1, function(x){length(grep('NA', x))})
 total_alleles <- by(multi_alleles, as.factor(multi_ind[,1]), sum)  
 
-# 10/17 transcripts pass the max(allele)
-# One idea is to treat everything as quantitative. Hence the Beta in lm is a modifier of the change in Kozak strength
-# This can be applied to all but 0 change ones; For the single variant ones this is identitical to 0,1,2 coding
+# One idea is to treat everything as quantitative. 
+# Hence the Beta in lm is a modifier of the change in Kozak strength
+# This can be applied to all but 0 change ones; 
+# For the single variant ones this is identitical to 0,1,2 coding
 
 # "ENST00000263461.5" is significant ribo not significant rna WDR11-001 which is also implicated in cancer => FDR ~ .5
 # I should order WDR11-001 and from single ones:  65, 145 FDR .5;   316, 319 FDR < .1 
 multi_pval <- c()
+# total_number_of_alleles can be greater than max(number_alleles) as it is the sum in two positions
+
 for (i in names(total_alleles[total_alleles > max(number_alleles)*.1 ]) ) { 
  my_index = which ( row.names(ribo_only) == enst_hgnc[grep (i, enst_hgnc), 2])
  # Add other requirements
