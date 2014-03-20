@@ -866,16 +866,18 @@ kozak_merge <- merge(kozak_score_variants, kozak_scores, by="V1")
 multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
 number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
 number_alleles <- number_alleles[!multi]
-MAF <- floor(0.05 * max(number_alleles))
+MAF <- floor(0.05 * 60)
 hist(number_alleles, 50, xlab="Number of Alleles", main="")
 
 p1 <- hist(kozak_merge$V2,50)
-p2 <- hist(kozak_merge$V4[number_alleles<10],50)
-p2 <- hist(kozak_merge$V4,50)
+p2 <- hist(kozak_merge$V4[number_alleles<=MAF],50)
+#p2 <- hist(kozak_merge$V4,50)
 plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6), xlab="Kozak Score", main="Distribution of Kozak Scores")
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
 boxplot(kozak_merge$V4, kozak_merge$V2, col=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)), notch=T, range=1, xlab=NULL)
 wilcox.test(kozak_merge$V4, kozak_merge$V2)
+boxplot(kozak_merge$V2 -kozak_merge$V4)
+abline(h = 0)
 
 rna_only <- v3[,type=="RNA"]
 sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
@@ -884,7 +886,7 @@ ribo_only <- v3[,type=="Ribo"]
 sample_labels_ribo <- unlist(strsplit(colnames(ribo_only), split= "_"))
 sample_labels_ribo <- sample_labels_ribo[grep("GM", sample_labels_ribo)]
 
-#Kozak multi
+#Kozak multi -- There is one position where all 60 is alternate
 multi_diff = kozak_merge$V2[multi] - kozak_merge$V4[multi]
 multi_ind = kozak_var_ind[multi,]
 multi_alleles <- apply(multi_ind, 1, function(x){length(grep('NA', x))})
@@ -899,8 +901,7 @@ total_alleles <- by(multi_alleles, as.factor(multi_ind[,1]), sum)
 # I should order WDR11-001 and from single ones:  65, 145 FDR .5;   316, 319 FDR < .1 
 multi_pval <- c()
 # total_number_of_alleles can be greater than max(number_alleles) as it is the sum in two positions
-
-for (i in names(total_alleles[total_alleles > max(number_alleles)*.1 ]) ) { 
+for (i in names(total_alleles[total_alleles > 60*.1 ]) ) { 
  my_index = which ( row.names(ribo_only) == enst_hgnc[grep (i, enst_hgnc), 2])
  # Add other requirements
  if ( length(my_index) ) { 
