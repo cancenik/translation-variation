@@ -837,6 +837,7 @@ plot.kohonen(absolute.som, property=prot_mean, type = "property")
 ### KOZAK SEQUENCE ANALYSIS
 # Each transcript will contribute a delta Kozak and delta expression and type of variant
 # We dropped 18508 from the analysis but it can still be part of the individuals. 
+# There are a bunch of ATG variants; our PWM scores for these are identical for variant and ref 
 
 # Do not test ones with MAF < XX 
 kozak_scores <- read.table('~/project/CORE_DATAFILES/Kozak_Reference_Sequence_Scores.txt')
@@ -977,6 +978,13 @@ for (i in 1:length(kozak_var_ind[,1])) {
     list_of_pval <- c(list_of_pval,NA)
   }
 }
+
+# Type of mutation and associated ribosome diff
+ribo_diff_mutation_type = data.frame(DIFF=ribo_diff, TYPE=all_kozak_score_variants[!multi,2])
+ribo_diff_mutation_type = ribo_diff_mutation_type[!is.na(ribo_diff_mutation_type[,1]),]
+i1 <- ribo_diff_mutation_type[,2] %in% names(table(ribo_diff_mutation_type[,2]))[table(ribo_diff_mutation_type[,2]) > 2]
+boxplot(ribo_diff_mutation_type[i1,1] ~ factor(ribo_diff_mutation_type[i1,2]))
+abline(h=0)
 
 # When we look at the pvalues, All the significant changes have Kozak strength changes in the upper half
 # The direction of the effect is inconsistent in some
