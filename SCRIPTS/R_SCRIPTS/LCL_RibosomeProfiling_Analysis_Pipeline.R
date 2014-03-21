@@ -120,7 +120,7 @@ all_rnaseq_counts <- all_rnaseq_counts[!polyA_RZ_inconsistent,]
 row.names(all_rnaseq_counts) <- (geuvadis_CDS$ID[rnaexpr])[!polyA_RZ_inconsistent]
 all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
 sample_id_rna <- unlist(strsplit(colnames(all_rnaseq_counts), split= "_"))
-sample_id_rna <- sample_id[grep("GM", sample_id_rna)]
+sample_id_rna <- sample_id_rna[grep("GM", sample_id_rna)]
 design_rnaseq <- model.matrix(~sample_id_rna)
 
 # VOOM/TMM Normalization of Ribosome Profiling
@@ -749,12 +749,9 @@ all_kozak_score_variants <- all_kozak_score_variants[-gm18508_unique_variants, ]
 atg_variants <- grep ("6|7|8", all_kozak_score_variants$V2)
 all_kozak_score_variants <- all_kozak_score_variants[-atg_variants,]
 kozak_var_ind <- all_kozak_score_variants[,-c(2,3,4)]
-
-#which(kozak_var_ind == "NA18508")
-
-# If there are a lot of alleles than the difference is less likely to be negative
 kozak_score_variants<- all_kozak_score_variants[,c(1,4)]
 kozak_merge <- merge(kozak_score_variants, kozak_scores, by="V1")
+
 multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
 number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
 number_alleles <- number_alleles[!multi]
@@ -830,7 +827,6 @@ summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights
  }
 }
 
-#### SOMETHING IS BROKEN AGAIN!!!!
 # Kozak Diff is WT - VARIANT
 # Positive score means WT kozak strength is better
 # Negative score means VARIANT kozak Strength is better
@@ -838,16 +834,16 @@ summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights
 # Go over the individuals, grep the samples and calculate difference in mean
 
 kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V4[!multi]
-kozak_var_ind <- kozak_var_ind[!multi,]
+single_var_ind <- kozak_var_ind[!multi,]
 ribo_diff <- c()
 list_of_pval <- c()
-for (i in 1:length(kozak_var_ind[,1])) { 
-  all_ind <- grep("NA",kozak_var_ind[i,-1], value=T)
+for (i in 1:length(single_var_ind[,1])) { 
+  all_ind <- grep("NA",single_var_ind[i,-1], value=T)
   allele_num <- rle(all_ind)$lengths
   ind_unique <- unique(all_ind)
   ind_unique <- sub("NA", "GM", ind_unique)
   # CHECK ENST EQUIVALENT IS PRESENT IN V3$E, IF NOT ADD NA
-  my_index <- which ( row.names(ribo_only) == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
+  my_index <- which ( row.names(ribo_only) == enst_hgnc[grep (single_var_ind[i,1], enst_hgnc),2] )
   
   ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
   ribo_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo, value=T)
@@ -861,8 +857,10 @@ for (i in 1:length(kozak_var_ind[,1])) {
     index_factor[ribo_index] <- allele_num[match(ribo_index_values, ind_unique)]
     my_pval <- summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4]
     list_of_pval <- c(list_of_pval, my_pval)
-    if ( my_pval < 0.001) {
+    if ( my_pval < 0.01) {
     boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Allele Number" , names=unique(sort(index_factor)), main=row.names(ribo_only)[my_index] )
+    legend("topright", paste("p-val = ",  signif(my_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )
+    
     rna_index_factor <- rep (0, times=length(sample_labels_rna))
     rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
     rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
@@ -897,14 +895,6 @@ plot(ribo_diff, kozak_diff, cex=0.65, pch=19, xlim=c(-1.2, 1.2), tck = .02, col=
 abline(v=c(0), h=c(0,log(2), -log(2)))
 
 # Some figure to show that the significantly different Ribo Diff Ones have significant effect on Kozak
-length((kozak_diff)[!is.na(p.adjust(list_of_pval))])
-length((kozak_diff)[significant_ribo_diff])
-length(which (abs(kozak_diff[!is.na(p.adjust(list_of_pval))]) > log(2)) )
-length(which(abs(kozak_diff[significant_ribo_diff]) > log(2)))
-fmat <- matrix(nrow=2, ncol=2)
-fmat[2,] <- c(0, 101-5)
-fmat[1,] <- c(5, 0)
-fisher.test(fmat)
 boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval))]))
 wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval))]))
 
@@ -1219,7 +1209,7 @@ hist(across_ind_cuff_cor, 50)
 # Multiple variants always occur on different positions
 # It seems like that all the significant ones are high allele frequency. We might exclude singletons from testing
 
-# Allelic effect boxplots
+# Allelic effect boxplots --- KOZAK_VAR_IND <=> SINGLE_VAR_IND
 significant_transcripts <- kozak_var_ind[significant_ribo_diff, 1]
 # 316 -> ENST00000362031.4  SNX6 
 # 319 -> ENST00000366628.4  NTPCR
