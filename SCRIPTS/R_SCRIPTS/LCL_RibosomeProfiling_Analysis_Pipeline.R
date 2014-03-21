@@ -6,7 +6,6 @@ library ("sva")
 library("MASS")
 library("kohonen")
 library("pgirmess")
-#library ("isva")
 ### FIX SOM FOR BETWEEN INDIVIDUAL, MIGHT WANT TO INCLUDE THE PROT IN THE SOM
 
 # Data Directory
@@ -67,18 +66,12 @@ all_rnaseq_counts <- DGEList(counts= all_rnaseq)
 #cuff_ratios <- merge(cuff_ratios, ensg_hgnc, by.x="gene.identifier", by.y="ENSG")
 
 ## RIBOSEQ_COUNTS
-# CDS SPECIES
-
-# Number of bases covered is not a good measure
-# The number of species correlates better with length but
-# Total read number gives tighter clustering 
-# Should use total read number for the analysis
+# CDS SPECIES 
 species <- read.table(paste(data_dir, "Reformatted_Species_Counts_All_Libraries.tsv", sep=""),header=T)
 CDS_species <- split (species, species$REGION)[[2]]
 CDS_species <- CDS_species[,grep("Counts", colnames(CDS_species))]
 
 # Total Number of Reads
-#data <- read.table ("Reformatted_Transcript_Counts_All_Libraries.tsv", header=T)
 data <- read.table ("~/project/CORE_DATAFILES/Reformatted_Transcript_Counts_All_Libraries.tsv", header=T)
 CDS <- split (data, data$REGION)[[2]]
 UTR3 <- split (data, data$REGION)[[3]]
@@ -88,9 +81,7 @@ CDS_Coverage <- CDS[, grep("CoveredBases", colnames(CDS))]
 CDS_Len <- CDS[,grep("Len", colnames(CDS))]
 CDS_IDs <- CDS[,1]
 
-#covariates <-  read.table ("Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
-covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
-
+#covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 ######## DATA ANALYSIS ##################################
 ################### NORMALIZATION OF COUNTS AND INITIAL QC
 ## SPECIES TO COUNTS COMPARISON
@@ -101,10 +92,8 @@ plot(log10(cds_count_sum+1), log10(species_sum+1), cex=0.2)
 ratios_dataframe <- data.frame(ID=CDS_IDs, ReadCount=log10(cds_count_sum+1) , SpeciesCount=log10(species_sum+1) )
 
 #### Perform loess regression between read_count to species_count
-# Call outliers as 2*SE away from the fit-- Need to think about length here. 
-# A very short gene with very high expression might be expected to have a skewed ratio
+# Call outliers as 2*SE away from the fit
 ## This needs a lot of memory
-
 #count_to_species <- predict(loess(ReadCount~SpeciesCount, data=ratios_dataframe, statistics="approximate", trace.hat="approximate"), se=T)
 #c1 <- count_to_species$fit+10^2*count_to_species$s
 #length(which(ratios_dataframe$ReadCount- c1 > 0))
@@ -114,15 +103,14 @@ ratios_dataframe <- data.frame(ID=CDS_IDs, ReadCount=log10(cds_count_sum+1) , Sp
 # lines(ratios_dataframe$ReadCount,count_to_species$fit+3*count_to_species$s, lty=2)
 # lines(ratios_dataframe$ReadCount,count_to_species$fit-3*count_to_species$s, lty=2)
 
-# RNASEQ NORMALIZATION-- VOOM
+# RNASEQ NORMALIZATION
+# Identify differences in PolyA to RiboZero and remove
 rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
 all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
-# Identify differences in PolyA to RiboZero and remove
 polyA_mean <- apply(all_rnaseq_counts[,grep("polyA", colnames(all_rnaseq_counts))],1, mean)
 RZ_mean <- apply(all_rnaseq_counts[,grep("RiboZero", colnames(all_rnaseq_counts))],1, mean)
 plot(log10(polyA_mean), log10(RZ_mean), cex=0.2, pch=19, ylab="log10(RiboZero_ReadCount)", xlab="log10(PolyA_ReadCount)", main="Comparing RNASeq Methods")
 fit.rna <- lm(log10(RZ_mean)~log10(polyA_mean))
-# Identify outliers
 # rna_seq_normalized$ID[abs(stdres(fit.rna)) > 3]
 outlier_colors <- rep("Black", length(log10(polyA_mean)))
 outlier_colors[abs(stdres(fit.rna)) > 3] <- "Red"
@@ -130,63 +118,23 @@ plot(log10(polyA_mean),stdres(fit.rna) , pch=19, cex=0.2, xlab="Log10(PolyA_Read
 polyA_RZ_inconsistent <- (abs(stdres(fit.rna)) > 3)
 all_rnaseq_counts <- all_rnaseq_counts[!polyA_RZ_inconsistent,]
 row.names(all_rnaseq_counts) <- (geuvadis_CDS$ID[rnaexpr])[!polyA_RZ_inconsistent]
-
 all_rnaseq_counts <- calcNormFactors (all_rnaseq_counts, method= "TMM")
-#all_rnaseq_counts$samples
-#cor (all_rnaseq[rnaexpr,], method="spearman")
-sample_id <- unlist(strsplit(colnames(all_rnaseq_counts), split= "_"))
-sample_id <- sample_id[grep("GM", sample_id)]
-design_rnaseq <- model.matrix(~sample_id)
+sample_id_rna <- unlist(strsplit(colnames(all_rnaseq_counts), split= "_"))
+sample_id_rna <- sample_id[grep("GM", sample_id_rna)]
+design_rnaseq <- model.matrix(~sample_id_rna)
 
-#pdf("Mean_Variance_Modelling_RNASEQ.pdf")
-v2 <- voom (all_rnaseq_counts, design_rnaseq, plot=T)
-#dev.off()
-
-replicate_present_rnaseq <- duplicated(sample_id) | duplicated(sample_id, fromLast = TRUE)
-
-norm_dd_rnaseq <- dist( t( v2$E) )
-hc_rnaseq <- hclust( norm_dd_rnaseq)
-
-# BATCH CORRECTION IS ESSENTIAL HERE
-rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,25), rep(4, 15) ) 
-batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=design_rnaseq)
-# Update v2$E with batch_removed; this keeps weights
-v2$E <- batch_removed
-#write.table(batch_removed,
-#file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
-#sep="\t", row.names=as.character(rna_seq_normalized_with_ids[,1])[!abs(stdres(fit.rna)) > 3])
-
-batch_dd_rnaseq <- dist( t( batch_removed) )
-hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
-
-# VOOM- TMM Normalization of Ribosome Profiling
+# VOOM/TMM Normalization of Ribosome Profiling
 cds_counts <- DGEList(counts=CDS_Counts)
 isexpr <- rowSums(cpm(cds_counts) > 1) >= 36
 cds_counts <- cds_counts[isexpr,]
 row.names(cds_counts) <- CDS_IDs[isexpr]
-dim(cds_counts)
 cds_counts <- calcNormFactors (cds_counts, method= "TMM")
-#cds_counts$samples
 s1 <- unlist(strsplit(colnames(CDS_Counts), "_"))
 sample_labels <- s1[grep('GM', s1)]
 table(sample_labels)
-design <- model.matrix(~sample_labels)
-#pdf("Mean_Variance_Modeling_voom.pdf")
-v <- voom(cds_counts,design, plot=T)
-#dev.off()
-row.names(v) <- CDS_IDs[isexpr]
-norm_dd <- dist(t (v$E ) ) 
-norm_hc <- hclust (norm_dd)
-replicate_present <- duplicated(sample_labels) | duplicated(sample_labels, fromLast = TRUE)
-norm_dd_rep <- dist(t (v$E[,replicate_present] ) )
-norm_hc_rep <- hclust (norm_dd_rep)
-#write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in36_RiboProfiling_Expression", 
-#row.names=CDS_IDs[isexpr], sep="\t")
 
 ############################################
 ### ALTERNATIVE AND PREFFERED APPROACH IS TO PROCESS ALL RNA_SEQ AND RIBO_SEQ
-### LIBRARIES JOINTLY -- DO ALL QC HERE
-### An alternative way to process RNA-Seq Ribo-Seq jointly
 # RNA - all_rnaseq_counts
 # Ribo - cds_counts
 joint_counts <- merge(all_rnaseq_counts$counts, cds_counts$counts,  by="row.names")
@@ -212,67 +160,11 @@ reps_ribo_joint <- duplicated(sample_labels_joint[85:134]) | duplicated(sample_l
 joint_dd_rep <- dist(t (v3$E[,85:134][,reps_ribo_joint] ) )
 joint_ribo_rep <- hclust (joint_dd_rep)
 plot(joint_ribo_rep)
-
 reps_rna_joint <- duplicated(sample_labels_joint[1:84]) | duplicated(sample_labels_joint[1:84], fromLast = TRUE)
 joint_dd_rna <- dist(t (v3$E[,1:84][,reps_rna_joint]))
 joint_rna_hc <- hclust(joint_dd_rna)
 plot(joint_rna_hc)
-
 plotMDS(v3$E, labels=type)
-
-# SVA/Batch Correction for Joint data
-# p1 <- paste (covariates$Date_Cells_Frozen, covariates$Date_Ribosome_Footprint, covariates$Data_Gel_Purified, sep="_")
-# p1 <- covariates$Data_Gel_Purified
-# p2 <- paste (covariates$Sequencing_ID, "Counts", sep="_")
-# p1 <- p1[p2 %in% colnames(v$E)]
-# p2 <- p2[p2 %in% colnames(v$E)]
-# p1 <- p1[sort (p2, index.return=T)$ix]
-# mod <- model.matrix(~as.factor(sample_labels), data=as.data.frame(v$E))
-# svobj <- sva (v$E, mod=mod, B=20)
-# fit = lmFit(v$E, svobj$sv)
-# norm_expr <- residuals (fit, v$E)
-# row.names(v) <- CDS_IDs[isexpr]
-# #save (v, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalizedEList.RData')
-# # Replace v$E with norm_expr
-# sva_norm_weights <- v
-# sva_norm_weights$E <- norm_expr
-# #save (sva_norm_weights, file='~/project/CORE_DATAFILES/RiboProfiling_TMM_Voom_normalized_SVA_EList.RData')
-# sva_dd <- dist( t ( norm_expr[,replicate_present]))
-# sva_hc <- hclust (sva_dd) 
-
-#### COMMENTED OUT SVA NORMALIZATION
-# # We can look sva correlations with sequencing depth, batch, etc
-# # GM19139 - HAS no RNA index 124
-# # GM19139 is most similar to GM19137 - For SVA purposes use GM19137
-# full_design_nosingular <- model.matrix(~sample_labels_joint[-124] + type[-124])
-# #svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
-# svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50, n.sv=3)
-# fit_joint <- lmFit(v3$E[,-124], svobj_joint$sv) 
-# fit2 <- eBayes(fit_joint)
-# sst <- rowSums(v3$E^2)
-# ssr <- sst-fit2$df.residual*fit2$sigma^2
-# hist((ssr/sst), 50)
-# quantile(ssr/sst)
-
-# With 20 components
-# 0%         25%         50%         75%        100% 
-# 0.006377750 0.009714234 0.013078694 0.023458592 0.408221116 
-# With 3 components
-# 0.0002159566 0.0072133405 0.0084482581 0.0103326042 0.1358229828 
-# With 10 components
-# 0.002256528 0.008297705 0.009897312 0.014138372 0.265767843 
-
-# norm_expr_joint <- residuals(fit_joint, v3$E[,-124])
-# cor_coefs <- c()
-# for (i in 1:133) {
-#   cor_coefs[i] <- (cor.test(norm_expr_joint[,i], v3$E[,-124][,i]))$estimate
-# }
-# hist(as.numeric(cor_coefs), 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression")
-# hist(as.numeric(cor_coefs)[type[-124]=="Ribo"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-Ribo")
-# hist(as.numeric(cor_coefs)[type[-124]=="RNA"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-RNA")
-# max(as.numeric(cor_coefs))
-# plot(norm_expr_joint[,94], v3$E[,-124][,94], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[94], cex=.2)
-# plot(norm_expr_joint[,126], v3$E[,-124][,126], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[127], cex=.2)
 
 # Extract Joint Replicated Subset
 cor_coefs_rna_median <- apply(cor(v3$E[,1:84]),1, median)
@@ -305,16 +197,11 @@ joint_expression_common <- v3[,c(joint_replication_rna, joint_replication_ribo)]
 joint_expression_common$design <- model.matrix(~sample_labels_joint_common+type_common)
 row.names(joint_expression_common) <- joint_count_ids
 
-# # OUTPUT SVA RNA and normal RNA
 # # UPDATE v3 to remove GM18504_Rep2
 # write.table(v3$E[,type=="RNA"], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RNA_Expression", sep=""), 
 # row.names=joint_count_ids, sep="\t")
 # write.table(v3$E[,type=="Ribo"], file =paste (data_dir, "TMM_VarianceMeanDetrended_QN_FullModel_RiboProfiling_Expression", sep=""), 
 #             row.names=joint_count_ids, sep="\t")            
-# write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RNA_Expression", sep=""),             
-#             row.names=joint_count_ids, sep="\t")
-# write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
-#             row.names=joint_count_ids, sep="\t")
 
 
 ##### ANALYSIS REQUIRING JOINT RNA-RIBOSEQ WITH REPLICATES
@@ -959,7 +846,7 @@ for (i in 1:length(kozak_var_ind[,1])) {
   allele_num <- rle(all_ind)$lengths
   ind_unique <- unique(all_ind)
   ind_unique <- sub("NA", "GM", ind_unique)
-  # CHECK ENST EQUIVALENT IS PRESENT IN V$E, IF NOT ADD NA
+  # CHECK ENST EQUIVALENT IS PRESENT IN V3$E, IF NOT ADD NA
   my_index <- which ( row.names(ribo_only) == enst_hgnc[grep (kozak_var_ind[i,1], enst_hgnc),2] )
   
   ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
@@ -1372,4 +1259,76 @@ for ( i in significant_ribo_diff) {
   summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
   summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
 }
+
+##### OLD RNA-SEQ ONLY VOOM -- NOT USED ANYMORE
+#pdf("Mean_Variance_Modelling_RNASEQ.pdf")
+v2 <- voom (all_rnaseq_counts, design_rnaseq, plot=T)
+#dev.off()
+replicate_present_rnaseq <- duplicated(sample_id) | duplicated(sample_id, fromLast = TRUE)
+norm_dd_rnaseq <- dist( t( v2$E) )
+hc_rnaseq <- hclust( norm_dd_rnaseq)
+# BATCH CORRECTION IS ESSENTIAL HERE
+rnaseq_batch <- c (rep(1,18), rep(2, 26), rep(3,25), rep(4, 15) ) 
+batch_removed <- ComBat (v2$E, batch=rnaseq_batch, mod=design_rnaseq)
+# Update v2$E with batch_removed; this keeps weights
+v2$E <- batch_removed
+#write.table(batch_removed,
+#file ="TMM_VarianceMeanDetrended_CPM_GT1_in40_BatchRemoved_RNASeq_Expression",
+#sep="\t", row.names=as.character(rna_seq_normalized_with_ids[,1])[!abs(stdres(fit.rna)) > 3])
+batch_dd_rnaseq <- dist( t( batch_removed) )
+hc_batch_rnaseq <- hclust( batch_dd_rnaseq)
+
+###############
+# OLD_RIBO_ONLY VOOM NOT USED ANYMORE
+#pdf("Mean_Variance_Modeling_voom.pdf")
+v <- voom(cds_counts,design, plot=T)
+#dev.off()
+row.names(v) <- CDS_IDs[isexpr]
+norm_dd <- dist(t (v$E ) ) 
+norm_hc <- hclust (norm_dd)
+replicate_present <- duplicated(sample_labels) | duplicated(sample_labels, fromLast = TRUE)
+norm_dd_rep <- dist(t (v$E[,replicate_present] ) )
+norm_hc_rep <- hclust (norm_dd_rep)
+#write.table(v$E, file ="TMM_VarianceMeanDetrended_CPM_GT1_in36_RiboProfiling_Expression", 
+#row.names=CDS_IDs[isexpr], sep="\t")
+
+### SVA- Correction; we decided to not use this correction 
+# SVA/Batch Correction for Joint data
+#### COMMENTED OUT SVA NORMALIZATION
+# # We can look sva correlations with sequencing depth, batch, etc
+# # GM19139 - HAS no RNA index 124
+# # GM19139 is most similar to GM19137 - For SVA purposes use GM19137
+# full_design_nosingular <- model.matrix(~sample_labels_joint[-124] + type[-124])
+# #svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50)
+# svobj_joint <- sva (v3$E[,-124], mod=full_design_nosingular, B=50, n.sv=3)
+# fit_joint <- lmFit(v3$E[,-124], svobj_joint$sv) 
+# fit2 <- eBayes(fit_joint)
+# sst <- rowSums(v3$E^2)
+# ssr <- sst-fit2$df.residual*fit2$sigma^2
+# hist((ssr/sst), 50)
+# quantile(ssr/sst)
+
+# With 20 components
+# 0%         25%         50%         75%        100% 
+# 0.006377750 0.009714234 0.013078694 0.023458592 0.408221116 
+# With 3 components
+# 0.0002159566 0.0072133405 0.0084482581 0.0103326042 0.1358229828 
+# With 10 components
+# 0.002256528 0.008297705 0.009897312 0.014138372 0.265767843 
+
+# norm_expr_joint <- residuals(fit_joint, v3$E[,-124])
+# cor_coefs <- c()
+# for (i in 1:133) {
+#   cor_coefs[i] <- (cor.test(norm_expr_joint[,i], v3$E[,-124][,i]))$estimate
+# }
+# hist(as.numeric(cor_coefs), 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression")
+# hist(as.numeric(cor_coefs)[type[-124]=="Ribo"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-Ribo")
+# hist(as.numeric(cor_coefs)[type[-124]=="RNA"], 40, xlab="Pearson Cor Coef", main="SVA vs No-SVA Expression-RNA")
+# max(as.numeric(cor_coefs))
+# plot(norm_expr_joint[,94], v3$E[,-124][,94], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[94], cex=.2)
+# plot(norm_expr_joint[,126], v3$E[,-124][,126], pch=19, xlab="SVA", ylab="QN_TMM_Voom", main=colnames(v3$E)[127], cex=.2)
+# write.table(norm_expr_joint[,1:84], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RNA_Expression", sep=""),             
+#             row.names=joint_count_ids, sep="\t")
+# write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
+#             row.names=joint_count_ids, sep="\t")
 
