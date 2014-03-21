@@ -858,14 +858,19 @@ for (i in 1:length(single_var_ind[,1])) {
     my_pval <- summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4]
     list_of_pval <- c(list_of_pval, my_pval)
     if ( my_pval < 0.01) {
+    pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Ribo_", row.names(ribo_only)[my_index],".pdf", sep=""), width=5, height=5   )
     boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Allele Number" , names=unique(sort(index_factor)), main=row.names(ribo_only)[my_index] )
     legend("topright", paste("p-val = ",  signif(my_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )
-    
+    dev.off()
     rna_index_factor <- rep (0, times=length(sample_labels_rna))
     rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
     rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
     rna_index_factor[rna_index] <-  allele_num[match(rna_index_values, ind_unique)] 
+    rna_pval <- summary(lm(rna_only$E[my_index,]~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4]
+    pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/RNA_", row.names(rna_only)[my_index], ".pdf",  sep=""), width=5, height=5   )
     boxplot(rna_only$E[my_index,]~ rna_index_factor, ylab= "RNA Expression", xlab="Allele Number" , names=unique(sort(index_factor)), main= row.names(rna_only)[my_index] )
+    legend("topright", paste("p-val = ",  signif(rna_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )  
+    dev.off()
     }
   }
   else { 
@@ -895,9 +900,10 @@ plot(ribo_diff, kozak_diff, cex=0.65, pch=19, xlim=c(-1.2, 1.2), tck = .02, col=
 abline(v=c(0), h=c(0,log(2), -log(2)))
 
 # Some figure to show that the significantly different Ribo Diff Ones have significant effect on Kozak
+# We can just state this; when we take transcripts with ribo difference significant at 5% FDR
+# Wilcox.test p-value is 0.02
 boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval))]))
 wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval))]))
-
 
 
 # Take the translation efficiency table and for each position look for significant diff with Kruskal
@@ -905,7 +911,6 @@ kozak_seq_score_table <- read.table('~/project/CORE_DATAFILES/Kozak_IDs_PWM_Stra
 # Translation Efficiency and Ribosome Occupancy are different somewhat
 f <- function(s, letter) strsplit(s, "")[[1]][letter]
 g <- function(s) strsplit(s, "")[[1]][c(4,10)]
-
 for ( j in c(1:6, 10:11)) { 
 seq_factor <- sapply(as.character(kozak_seq_score_table$V7), f, letter=j)
 k1 <- kruskal.test(kozak_seq_score_table$V9 ~ as.factor(seq_factor))
