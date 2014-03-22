@@ -253,8 +253,9 @@ rnacv <- (rna_cv_between_individuals/rna_repcv_median)
 ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
 
 pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=4, height=4)
-#99% of the dataset is less than 8; so limit xlim
-hist(rnacv, 200, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
+#99% of the dataset is less than 8; so limit xlim to 0_to_8
+# We changed number of breaks so that the number of breaks in x-axis is similar
+hist(rnacv, 100, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
 dev.off()
 pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=4, height=4)
 hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
@@ -440,12 +441,10 @@ across_ind_rna_correlation <- c()
 across_ind_rna_correlation_pval <- c()
 
 for (i in 1:length(rna_replicate_mean_prot)) { 
-# Get two numeric matching vectors
 #  cor1 <-  cor.test(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[rna_samples], use="pairwise.complete.obs")
   cor1 <-  cor.test(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[rna_samples], use="pairwise.complete.obs", method="spearman")
   across_ind_rna_correlation <- c(across_ind_rna_correlation, cor1$estimate)
   across_ind_rna_correlation_pval <- c(across_ind_rna_correlation_pval, cor1$p.value)
-  # We can also spearman , method="spearman"
 }  
 
 ribo_samples <- match(as.character(ribo_replicate_mean_prot[[1]]$Group.1), sample_labels_joint_prot[type_prot=="Prot"],)
@@ -457,8 +456,7 @@ across_ind_ribo_correlation_pval <- c()
 for (i in 1:length(ribo_replicate_mean_prot)) { 
   # Get two numeric matching vectors
 #  cor1 <-cor.test(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs")
-  cor1 <-cor.test(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs", method="spearman")
-  
+  cor1 <-cor.test(ribo_replicate_mean_prot[[i]]$x[ribo_in_prot], as.numeric(as.matrix(linfeng_protein_ribo_rna[i,type_prot=="Prot"]))[ribo_samples], use="pairwise.complete.obs", method="spearman")  
   across_ind_ribo_correlation <- c(across_ind_ribo_correlation, cor1$estimate)
   across_ind_ribo_correlation_pval <- c(across_ind_ribo_correlation_pval, cor1$p.value)
 } 
@@ -467,25 +465,35 @@ length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
 median(across_ind_rna_correlation)
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
-pval_cutoff <- 0.001
+# FDR ~ 25%
+pval_cutoff <- 0.0001
 color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
 color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
 color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 3
 plot(across_ind_ribo_correlation, across_ind_rna_correlation, pch=19, cex=.65, tck=.02, col=c("Black", "Red", "Blue", "Gold")[as.factor(color_by_pval)], 
      xlab="Between Individual Ribosome Occupancy-Protein Expression Correlation", ylab = "Between Individual RNA-Protein Expression Correlation")
 cor.test(across_ind_ribo_correlation, across_ind_rna_correlation)
+#### ADD FISHER'S TEST FOR ENRICHMENT -- Huge Enrichment for Both correlating significantly
+fmat <- matrix(nrow=2, ncol=2)
+fmat[1,1] = length(which(across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff))
+fmat[1,2] =  length(which(across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval > pval_cutoff))
+fmat[2,1] = length(which(across_ind_ribo_correlation_pval > pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff))
+fmat[2,2] = length(which(across_ind_ribo_correlation_pval > pval_cutoff & across_ind_rna_correlation_pval > pval_cutoff))
+fisher.test(fmat)
+
+# Histograms of Across Ind Ribo-Prot, RNA-Prot and Ribo-RNA correlations
 p1 <- hist(across_ind_ribo_correlation,40)
 p2 <- hist(across_ind_rna_correlation,40)
 plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), add=T)
 legend(.6,200,c("RNA", "Ribosome Occupancy"), bty="n", fill=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)))
-# Color points in different regions and add some labels
-# Tick mark iceri al aralarini daralt
-# rna to ribo
+
 # Remove one column which is not shared
 ribo_replicate_mean_rna <- lapply(ribo_replicate_mean_prot, function(x){x <- x[-24,]})
 c2 <- mapply (cbind, rna_replicate_mean_prot, ribo_replicate_mean_rna, SIMPLIFY=F)
-across_ind_rna_ribo <- as.numeric(lapply(c2, function(x){ cor(x[,2], x[,4]) }))
+across_ind_rna_ribo <- as.numeric(lapply(c2, function(x){ cor(x[,2], x[,4],method="spearman") }))
+p3 <- hist(across_ind_rna_ribo, 40)
+plot(p3, col=rgb(0,1,0,1/4), xlim=c(-1,1), add=T)
 
 quantile(across_ind_rna_ribo)
 quantile(across_ind_ribo_correlation)
