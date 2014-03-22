@@ -252,18 +252,24 @@ ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x
 rnacv <- (rna_cv_between_individuals/rna_repcv_median) 
 ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
 
-hist(rnacv, 200, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation")
-hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation")
-low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
-p1 <- hist(rnacv/ribocv, 100 )
-# One idea is to remove low interindividual to intraindividual genes
-plot(p1, col=rgb(0,0,1,1/4),  tck=.02, xlab="RNA Expression to Ribosome Occupancy Ratio", main="Between/ Within Individual CV", ylim=c(0,500))
-abline(v=1, lwd=3)
+pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=4, height=4)
+#99% of the dataset is less than 8; so limit xlim
+hist(rnacv, 200, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
+dev.off()
+pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=4, height=4)
+hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
+dev.off()
 
+#low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
 length(which(rnacv/ribocv > 2))
 length(which(rnacv/ribocv < .5))
 sorted_cvs <- sort(rnacv/ribocv , index.return=T)
 #write.table(row.names(joint_expression_common)[sorted_cvs$ix], file = "~/project/CORE_DATAFILES/Sorted_InterIndividualCV_RNA_to_Ribo.txt", row.names=F)
+
+p1 <- hist(rnacv/ribocv, 100 )
+plot(p1, col=rgb(0,0,1,1/4),  tck=.02, xlab="RNA Expression to Ribosome Occupancy Ratio", main="Between/ Within Individual CV", ylim=c(0,500))
+abline(v=1, lwd=3)
+
 
 ############################################################
 # Differential Expression Analysis and Translation Efficiency
