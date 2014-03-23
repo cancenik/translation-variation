@@ -501,12 +501,16 @@ quantile(across_ind_ribo_correlation)
 quantile(across_ind_rna_correlation)
 
 # We can do these sorted so we can run ordered analysis
+# Another Idea is to merge all RNA significant and all Ribo Significant
+# RNA significant chemical response; extracellular region
+# Ribo Response Regulation of phosphorylation + DAVID:Post-translational modifications
 # Extracted p < 1e-4 or p<1e-3
 #write.table( row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'Ribo_RNA_Prot_Cor_IDs' ,sep=""), row.names=F ) 
 #write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff], file=paste (data_dir,'Ribo_Prot_Cor_IDs',sep=""), row.names=F ) 
 #write.table(row.names(linfeng_protein_ribo_rna), file= paste (data_dir,'Prot_RNA_Ribo_Common_IDs',sep=""), row.names=F)
 #write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'RNA_Prot_Cor_IDs',sep=""), row.names=F)
 ## COMPARISION TO CHRISTINE'S PROTEOMICS
+# Christine Quantification correlation to SILAC proteomics is pretty low. May be better not use this
 #### Compare absolute levels of protein with rna and ribo -- Overall correlation is better with ribosome profiling
 gm12878_prot <- read.csv('~/project/CORE_DATAFILES/GM12878_B0_FDR5_140120_shortforCan.csv', stringsAsFactors=F)
 gm12878_prot <- merge(gm12878_prot, ensg_hgnc, by.x="ID.1", by.y="ENSG")
@@ -530,7 +534,6 @@ all_prot_data = all_prot_data[!prot_inconsistent, ]
 gm12878_ribo <- v3$E[,c(85,86)]
 gm12878_ribo_mean <- apply(gm12878_ribo, 1, median)
 gm12878_ribo_mean <- data.frame(HGNC=row.names(v3), gm12878_ribo_mean)
-
 gm12878_rna <- v3$E[,c(1,2,3,21,22)]
 gm12878_rna_mean  <- apply(gm12878_rna, 1, median)
 gm12878_rna_mean <- data.frame(HGNC=row.names(v3), gm12878_rna_mean)
