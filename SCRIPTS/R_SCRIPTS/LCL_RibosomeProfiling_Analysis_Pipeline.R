@@ -481,25 +481,27 @@ fmat[2,1] = length(which(across_ind_ribo_correlation_pval > pval_cutoff & across
 fmat[2,2] = length(which(across_ind_ribo_correlation_pval > pval_cutoff & across_ind_rna_correlation_pval > pval_cutoff))
 fisher.test(fmat)
 
-# Histograms of Across Ind Ribo-Prot, RNA-Prot and Ribo-RNA correlations
-p1 <- hist(across_ind_ribo_correlation,40)
-p2 <- hist(across_ind_rna_correlation,40)
-plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
-plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), add=T)
-legend(.6,200,c("RNA", "Ribosome Occupancy"), bty="n", fill=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)))
-
 # Remove one column which is not shared
 ribo_replicate_mean_rna <- lapply(ribo_replicate_mean_prot, function(x){x <- x[-24,]})
 c2 <- mapply (cbind, rna_replicate_mean_prot, ribo_replicate_mean_rna, SIMPLIFY=F)
 across_ind_rna_ribo <- as.numeric(lapply(c2, function(x){ cor(x[,2], x[,4],method="spearman") }))
+# Histograms of Across Ind Ribo-Prot, RNA-Prot and Ribo-RNA correlations
+p1 <- hist(across_ind_ribo_correlation,40)
+p2 <- hist(across_ind_rna_correlation,40)
 p3 <- hist(across_ind_rna_ribo, 40)
+pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations.pdf", width=9, height=6.5)
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
+plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), add=T)
 plot(p3, col=rgb(0,1,0,1/4), xlim=c(-1,1), add=T)
-
+legend(.4,170,c("RNA Expression-\nProtein Expression", "Ribosome Occupancy-\nProtein Expression", "RNA Expression-\nRibosome Occupancy"), 
+       yjust =0.5, x.intersp=0.2, y.intersp=1.5,bty="n", border="white", fill=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4), rgb(0,1,0,1/4)), cex=.9)
+dev.off()
 quantile(across_ind_rna_ribo)
 quantile(across_ind_ribo_correlation)
 quantile(across_ind_rna_correlation)
 
 # We can do these sorted so we can run ordered analysis
+# Extracted p < 1e-4 or p<1e-3
 #write.table( row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff], file=paste (data_dir,'Ribo_RNA_Prot_Cor_IDs' ,sep=""), row.names=F ) 
 #write.table(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff], file=paste (data_dir,'Ribo_Prot_Cor_IDs',sep=""), row.names=F ) 
 #write.table(row.names(linfeng_protein_ribo_rna), file= paste (data_dir,'Prot_RNA_Ribo_Common_IDs',sep=""), row.names=F)
