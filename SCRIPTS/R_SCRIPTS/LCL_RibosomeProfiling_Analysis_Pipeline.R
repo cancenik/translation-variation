@@ -6,7 +6,7 @@ library ("sva")
 library("MASS")
 library("kohonen")
 library("pgirmess")
-### FIX SOM FOR BETWEEN INDIVIDUAL, MIGHT WANT TO INCLUDE THE PROT IN THE SOM
+#source('~/project/kohonen_hexagonal/kohonnen_hex.R')
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
@@ -963,15 +963,6 @@ pdf("Species_Counts_log10.pdf")
 plot(log10(cds_count_sum+1), log10(m1_species_sum+1), pch=19, cex=0.4)
 dev.off()
 
-# All-by_all correlation plot becomes infeasible
-pdf("LCL_Ribo_Pairs_Normalized.pdf")
-pairs(v$E[,replicate_present], diag.panel=panel.hist, upper.panel=NULL, lower.panel=NULL)
-dev.off()
-
-pdf ("LCL_Ribo_MDS_RepPresent.pdf")
-plotMDS(v$E[,replicate_present], labels=sample_labels[replicate_present])
-dev.off()
-
 pdf ("LCL_Ribo_Hierarchical_Clustering_Normalized_Counts.pdf", height=11, width=9)
 plot(norm_hc)
 dev.off()
@@ -979,7 +970,6 @@ dev.off()
 pdf("Distribution_of_Normalized_RiboExpression.pdf")
 hist(norm_expr,100)
 dev.ofF()
-
 
 pdf ("LCL_RiboWithReps_Hierarchical_Clustering_Normalized_Counts.pdf", height=11, width=9)
 plot(norm_hc_rep)
@@ -1016,8 +1006,6 @@ panel.smoothScatter <- function (x, y, ...) {
     par(new=TRUE)
     smoothScatter(x, y, nrpoints=0)
 }
-
-keep <- function(x, n) {rowSums(x) > n}
 
 # This function would crash if there is only one data point in a cluster
 output_clusters <- function (k, data_original, hc, names)
@@ -1063,26 +1051,6 @@ output_clusters <- function (k, data_original, hc, names)
 #hcr <- hclust(dist(ranked_data_na_omit_normalized))
 #output_clusters(4, ranked_data_na_omit_normalized, hcr, names_post_omit)
 ##
-
-
-## MISC
-# TOTAL COVERED BASES
-colSums(CDS_Coverage[,-c(1,2)])
-dim (CDS_Coverage[keep(CDS_Coverage[,-c(1,2)], 100),])
-cm <- cor(CDS_Coverage[keep(CDS_Coverage[,-c(1,2)], 100),-c(1,2)])
-dd <- dist (t(log10(CDS_Coverage[keep(CDS_Coverage[,-c(1,2)], 100),-c(1,2)]+1)) )
-hc <- hclust (dd, "ward") 
-hc <- hclust (dd)
-
-# Length Correlations
-cor.test(CDS_Len[keep(CDS_Counts,1000),1], rowSums(CDS_Counts[keep(CDS_Counts,1000),]))
-cor.test(m1[keep(m1[,2:35], 100),39], m1_species_sum[keep(m1[,2:35], 100)])
-cor.test(m1[keep(m1[,2:35], 100),39], m1_species_sum[keep(m1[,2:35], 100)], method="spearman")
-
-# Length to Read Count Correlation
-pdf ("Length_vs_TotalCDSCoverage.pdf")
-plot(log10(CDS_Len[keep(CDS_Coverage,1000),1]), log10(rowSums(CDS_Coverage[keep(CDS_Coverage,1000),])), pch=19, cex=0.4)
-dev.off()
 
 ### DIFFERENCE IN VARIATION
 ### THIS APPROACH IS COMMENTED OUT
