@@ -6,6 +6,7 @@ library ("sva")
 library("MASS")
 library("kohonen")
 library("pgirmess")
+library(RColorBrewer)
 #source('~/project/kohonen_hexagonal/kohonnen_hex.R')
 
 # Data Directory
@@ -332,8 +333,8 @@ ribo_fit2 <- eBayes(ribo_fit2)
 rna_fit2 <- contrasts.fit(rna_fit, contrast.matrix)
 rna_fit2 <- eBayes(rna_fit2)
 
-topTable(ribo_fit2)
-topTable(rna_fit2)
+#topTable(ribo_fit2)
+#topTable(rna_fit2)
 results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=log2(1.5))
 results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=log2(1.5))
 as.numeric(apply(abs(results.ribo), 2, sum))
@@ -713,12 +714,14 @@ median (ribo_prot_cor_in_som, na.rm=T)
 median(across_ind_ribo_correlation)
 median (rna_prot_cor_in_som, na.rm=T)
 median(across_ind_rna_correlation)
-median(te_prot_cor_in_som)
+median(te_prot_cor_in_som, na.rm=T)
 
-plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation")
-plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation")
-plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation")
+### Let's use a red-blue color scale
+redblue_cols <- function(x) {brewer.pal(x, "RdBu")}
 
+plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation", palette.name=redblue_cols, ncolors=11)
 plot.kohonen(som.exp, type="counts" )
 
 # absolute.som$data -> Numeric Matrix
@@ -728,14 +731,18 @@ rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), abs
 te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, FUN = colMeans)
 
-plotCplane(absolute.som, variable=ribo_prot_cor_across_genes_som)
-plotCplane(absolute.som, variable=rna_prot_cor_across_genes_som)
-plotCplane(absolute.som, variable=te_prot_cor_across_genes_som)
+#plotCplane(absolute.som, variable=ribo_prot_cor_across_genes_som)
+#plotCplane(absolute.som, variable=rna_prot_cor_across_genes_som)
+#plotCplane(absolute.som, variable=te_prot_cor_across_genes_som)
 
-plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="property", main ="Ribosome Occupancy Protein Correlation")
-plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation")
-plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation")
-plot.kohonen(absolute.som, property=prot_mean, type = "property")
+plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="property", main ="Ribosome Occupancy Protein Correlation", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation", palette.name=redblue_cols, ncolors=11)
+# Prot_mean is less meaningful than codebook vector
+plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=absolute.som$codes$Y, type = "property", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, type = "codes")
+
 #abs.som.data.noNA
 # absolute.som
 
