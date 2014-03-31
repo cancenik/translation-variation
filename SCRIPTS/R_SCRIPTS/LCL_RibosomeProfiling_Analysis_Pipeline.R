@@ -933,7 +933,9 @@ wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adju
 
 
 # Take the translation efficiency table and for each position look for significant diff with Kruskal
+# Generate this table by merging kozak data with translation efficiency table (grand_mean_te)
 kozak_seq_score_table <- read.table('~/project/CORE_DATAFILES/Kozak_IDs_PWM_Strand_Seq_HGNC_TE_Ribo.bed')
+
 # Translation Efficiency and Ribosome Occupancy are different somewhat
 f <- function(s, letter) strsplit(s, "")[[1]][letter]
 g <- function(s) strsplit(s, "")[[1]][c(4,10)]
@@ -945,8 +947,6 @@ print(kruskalmc(kozak_seq_score_table$V9 ~ as.factor(seq_factor), probs=.01))
 boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(-1,1), notch=T, range=.001, cex=.2)
 #boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(4,6), notch=T, range=.001, cex=.2)
 }
-# Formalize the across gene analysis and maybe do the testing with TE
-
 
 ###
 

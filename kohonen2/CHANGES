@@ -1,0 +1,22 @@
+This package contains modifications to the kononen package version 2.0.9
+The kohonen package version 2.0.0 is originally described in 
+R. Wehrens and L.M.C. Buydens, J. Stat. Softw. 21(5), 2007
+
+This modified package in termed kohonen2 and developed by Alan Boyle
+The modified package is included in:
+"Dynamic Trans-Acting Factor Co-localization in Human Cells". Cell 2013
+Authors:  Dan Xie*, Alan P Boyle*, Linfeng Wu*, Jie Zhai, Trupti Kawli, Michael Snyder
+
+Changes in kohonen2:
+- map.c is modified to handle large data sets. This is accomplished by moving
+	the calculation of minimum distance and classification from R to the C code.
+	This is matched with changes to map.R which no longer needs to perform large
+	matrix calculations. These changes save a lot of memory.
+
+- map.R is also modified to start classifications at 1 instead of 0 which has
+	caused some problems in downstream analysis. R does not like 0 indexing
+
+- plot.kohonen.R is modified to include hexagonal plotting, better drawing of
+	borders, and a new classes plot which shows pie charts in the neurons
+
+
