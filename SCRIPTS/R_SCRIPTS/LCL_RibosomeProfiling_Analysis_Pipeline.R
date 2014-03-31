@@ -945,8 +945,17 @@ for ( j in c(1:6, 10:11)) {
 seq_factor <- sapply(as.character(kozak_seq_score_table$V7), f, letter=j)
 k1 <- kruskal.test(kozak_seq_score_table$V9 ~ as.factor(seq_factor))
 print (k1$p.value * 8)
-print(kruskalmc(kozak_seq_score_table$V9 ~ as.factor(seq_factor), probs=.01))
-boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(-1,1), notch=T, range=.001, cex=.2)
+print(kruskalmc(kozak_seq_score_table$V9 ~ as.factor(seq_factor), probs=.05/8))
+if (j < 7) { 
+  pos = j -7
+}
+else { 
+  pos = j -6
+}
+pdf (paste('~/Google Drive/Manuscript Figures/Kozak_Analysis/Translation_Efficiency_by_Position',pos ,sep="_"), width=5, height=5 )
+boxplot(kozak_seq_score_table$V9 ~ as.factor(seq_factor), 
+        varwidth=T, ylim=c(-.75,.75), notch=T, cex=.2, whisklty=0, staplelty=0, ylab="Translation Efficiency", main = paste("Position", pos , sep = ": ") )
+dev.off()
 #boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(4,6), notch=T, range=.001, cex=.2)
 }
 
