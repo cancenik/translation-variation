@@ -6,8 +6,8 @@ library ("sva")
 library("MASS")
 library("kohonen")
 library("pgirmess")
-library(RColorBrewer)
-#source('~/project/kohonen_hexagonal/kohonnen_hex.R')
+library("RColorBrewer")
+source('~/project/kohonen2/R/plot.kohonen.R')
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
@@ -253,14 +253,14 @@ ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x
 rnacv <- (rna_cv_between_individuals/rna_repcv_median) 
 ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
 
-pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=4, height=4)
+#pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=4, height=4)
 #99% of the dataset is less than 8; so limit xlim to 0_to_8
 # We changed number of breaks so that the number of breaks in x-axis is similar
 hist(rnacv, 100, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
-dev.off()
-pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=4, height=4)
+#dev.off()
+#pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=4, height=4)
 hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
-dev.off()
+#dev.off()
 
 #low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
 length(which(rnacv/ribocv > 2))
@@ -490,13 +490,13 @@ across_ind_rna_ribo <- as.numeric(lapply(c2, function(x){ cor(x[,2], x[,4],metho
 p1 <- hist(across_ind_ribo_correlation,40)
 p2 <- hist(across_ind_rna_correlation,40)
 p3 <- hist(across_ind_rna_ribo, 40)
-pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations.pdf", width=9, height=6.5)
+#pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations.pdf", width=9, height=6.5)
 plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), add=T)
 plot(p3, col=rgb(0,1,0,1/4), xlim=c(-1,1), add=T)
 legend(.4,170,c("RNA Expression-\nProtein Expression", "Ribosome Occupancy-\nProtein Expression", "RNA Expression-\nRibosome Occupancy"), 
        yjust =0.5, x.intersp=0.2, y.intersp=1.5,bty="n", border="white", fill=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4), rgb(0,1,0,1/4)), cex=.9)
-dev.off()
+#dev.off()
 quantile(across_ind_rna_ribo)
 quantile(across_ind_ribo_correlation)
 quantile(across_ind_rna_correlation)
@@ -628,22 +628,23 @@ xdim = floor(total_cells_bdk/ydim + 0.5)
 abs.som.data.noNA <- ribo_rna_te_prot[!apply(is.na(ribo_rna_te_prot), 1, any),]
 
 # Run the SOM, 1000 times and keep track of the distances pick the one with the min 75% distance
-my_75th_distance <- 1
-for (i in 1:100) { 
-  set.seed(i*3433)
-  absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.8, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
-  if (quantile(absolute.som$distances)[4] < my_75th_distance) { 
-    my_seed <- i*3433
-    my_75th_distance <- quantile(absolute.som$distances)[4]
-  }
-}
+# This section was run once to determine the best seed
+# my_75th_distance <- 1
+# for (i in 1:100) { 
+#   set.seed(i*3433)
+#   absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.8, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
+#   if (quantile(absolute.som$distances)[4] < my_75th_distance) { 
+#     my_seed <- i*3433
+#     my_75th_distance <- quantile(absolute.som$distances)[4]
+#   }
+# }
 # best_seed is 130454
 set.seed(130454)
 absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.8, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
-plot(absolute.som)
-plot(absolute.som, type="quality")
-plot(absolute.som, type="count")
-plot(absolute.som, type="changes")
+#plot(absolute.som)
+#plot(absolute.som, type="quality")
+#plot(absolute.som, type="count")
+#plot(absolute.som, type="changes")
 
 # One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
 
@@ -682,11 +683,12 @@ xdim = floor(total_cells/ydim + 0.5)
 som.exp = supersom(data =som.data, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T)
 som.exp.prot = supersom(data =som.data.prot, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T, maxNA.fraction=9/14, weights=c(.4,.4,.15,.05))
 
-plot(som.exp, type="codes")
-plot(som.exp, type="quality")
-plot(som.exp, type="mapping", pch=19, cex=.3)
-plot(som.exp, type="changes")
-plot(som.exp, type="counts")
+# plot(som.exp, type="codes")
+# plot(som.exp, type="quality")
+# plot(som.exp, type="mapping", pch=19, cex=.3)
+# plot(som.exp, type="changes")
+# plot(som.exp, type="counts")
+
 ## Hexagonal plotting 
 # som.exp$unit.classif has the info about where each gene went
 # Create Matrix of the quantity of interest and pass this directly to plotCplane and remove componentPlaneMatrix function
@@ -793,10 +795,10 @@ plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6), xlab="Kozak Score", main="Distribut
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
 boxplot(kozak_merge$V4, kozak_merge$V2, col=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)), notch=T, range=1, xlab=NULL)
 wilcox.test(kozak_merge$V4, kozak_merge$V2)
-pdf(file="~/Google_Drive/Manuscript Figures/Kozak_Analysis/Difference_in_Kozak_Scores.pdf", width=3, height=4, bg= "transparent")
+#pdf(file="~/Google_Drive/Manuscript Figures/Kozak_Analysis/Difference_in_Kozak_Scores.pdf", width=3, height=4, bg= "transparent")
 boxplot(kozak_merge$V2 -kozak_merge$V4, notch=T)
 abline(h = 0)
-dev.off()
+#dev.off()
 rna_only <- v3[,type=="RNA"]
 sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
 sample_labels_rna <- sample_labels_rna[grep("GM", sample_labels_rna)]
@@ -884,19 +886,19 @@ for (i in 1:length(single_var_ind[,1])) {
     my_pval <- summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4]
     list_of_pval <- c(list_of_pval, my_pval)
     if ( my_pval < 0.01) {
-    pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Ribo_", row.names(ribo_only)[my_index],".pdf", sep=""), width=5, height=5   )
+    #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Ribo_", row.names(ribo_only)[my_index],".pdf", sep=""), width=5, height=5   )
     boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Allele Number" , names=unique(sort(index_factor)), main=row.names(ribo_only)[my_index] )
     legend("topright", paste("p-val = ",  signif(my_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )
-    dev.off()
+    #dev.off()
     rna_index_factor <- rep (0, times=length(sample_labels_rna))
     rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
     rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
     rna_index_factor[rna_index] <-  allele_num[match(rna_index_values, ind_unique)] 
     rna_pval <- summary(lm(rna_only$E[my_index,]~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4]
-    pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/RNA_", row.names(rna_only)[my_index], ".pdf",  sep=""), width=5, height=5   )
+    #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/RNA_", row.names(rna_only)[my_index], ".pdf",  sep=""), width=5, height=5   )
     boxplot(rna_only$E[my_index,]~ rna_index_factor, ylab= "RNA Expression", xlab="Allele Number" , names=unique(sort(index_factor)), main= row.names(rna_only)[my_index] )
     legend("topright", paste("p-val = ",  signif(rna_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )  
-    dev.off()
+    #dev.off()
     }
   }
   else { 
