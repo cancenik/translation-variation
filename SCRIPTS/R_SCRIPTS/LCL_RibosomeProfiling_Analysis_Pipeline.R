@@ -919,8 +919,8 @@ abline(h=0)
 # MAF 10% 101 , c1 < 1 => 14; c1 < .5 => 10; c1 < .01 => 4; c1 < .25 =>6
 # FDR < .1
 sum(!is.na(list_of_pval))
-length(which(p.adjust(list_of_pval) < .05))
-significant_ribo_diff <- which(p.adjust(list_of_pval) < .05)
+length(which(p.adjust(list_of_pval, method="hommel") < .05))
+significant_ribo_diff <- which(p.adjust(list_of_pval, method="hommel") < .05)
 color_by_pval <- rep(0, length(list_of_pval))
 pval_cutoff <- max(list_of_pval[significant_ribo_diff])
 color_by_pval[list_of_pval <= pval_cutoff] <- 1
@@ -930,8 +930,8 @@ abline(v=c(0), h=c(0,log(2), -log(2)))
 # Some figure to show that the significantly different Ribo Diff Ones have significant effect on Kozak
 # We can just state this; when we take transcripts with ribo difference significant at 5% FDR
 # Wilcox.test p-value is 0.02
-boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval))]))
-wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval))]))
+boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
+wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
 
 
 # Take the translation efficiency table and for each position look for significant diff with Kruskal
@@ -952,10 +952,10 @@ if (j < 7) {
 else { 
   pos = j -6
 }
-pdf (paste('~/Google Drive/Manuscript Figures/Kozak_Analysis/Translation_Efficiency_by_Position',pos ,sep="_"), width=5, height=5 )
+#pdf (paste('~/Google Drive/Manuscript Figures/Kozak_Analysis/Translation_Efficiency_by_Position',pos ,sep="_"), width=5, height=5 )
 boxplot(kozak_seq_score_table$V9 ~ as.factor(seq_factor), 
         varwidth=T, ylim=c(-.75,.75), notch=T, cex=.2, whisklty=0, staplelty=0, ylab="Translation Efficiency", main = paste("Position", pos , sep = ": ") )
-dev.off()
+#dev.off()
 #boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(4,6), notch=T, range=.001, cex=.2)
 }
 
