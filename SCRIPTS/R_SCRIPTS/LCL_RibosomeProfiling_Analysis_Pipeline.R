@@ -658,15 +658,16 @@ class(linfeng_te_columns) <- "numeric"
 linfeng_te_match <- cbind ( linfeng_te_columns[,1], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,2:5], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,6:12])
 colnames(linfeng_te_match) <- sort(colnames(te_fit3$coefficients))
 linfeng_te_match <- merge(linfeng_te_match, ensg_hgnc, by.x="row.names", by.y="ENSG")
+# joint_count_ids is the same as row.names(v3); Pad the data with NAs when there is no proteomics
 linfeng_te_match <- merge (data.frame(HGNC=joint_count_ids), linfeng_te_match, by="HGNC", all.x=T)
 row.names(linfeng_te_match) <- linfeng_te_match[,1]
 linfeng_te_match <- linfeng_te_match[,-c(1,2)]
-### We might want to scale the matrix before feeding it to SOM 
-quantile(ribo_fit2$coefficients )
-quantile(rna_fit2$coefficients )
-quantile(te_fit3$coefficients )
-quantile(linfeng_te_match, na.rm=T)
+# quantile(ribo_fit2$coefficients )
+# quantile(rna_fit2$coefficients )
+# quantile(te_fit3$coefficients )
+# quantile(linfeng_te_match, na.rm=T)
 
+# Simplifies the colnames; no order problems
 colnames(ribo_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
 colnames(rna_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
 som.data = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix])
@@ -691,39 +692,36 @@ som.exp.prot = supersom(data =som.data.prot, grid=somgrid(xdim, ydim, "hexagonal
 
 ## Hexagonal plotting 
 # som.exp$unit.classif has the info about where each gene went
-# Create Matrix of the quantity of interest and pass this directly to plotCplane and remove componentPlaneMatrix function
 # We also need some visually appealing colors
 ## Write function to apply function to each cell of SOM.
-## We will plot these once we have the good tools for plotting
 # som.exp$unit.classif keeps track of the cell each object belongs to
 # Left bottom is 1, the row above that is 1+xdim 
 # Need vector of length xdim * ydim
 
 # Calculate cor.estimate for each level grouped by unit.classif
 # X is passed as a dataframe to function
-#problem x is dataframe need to apply cor to each row
 cor_between_ind <- function (x) { 
  cors <- apply(x, 1, function(y){cor(y[1:14], y[15:28], use="pairwise.complete.obs", method="spearman")})
  return (median(cors, na.rm=T))
 }
 
+redblue_cols <- function(x) {brewer.pal(x, "RdBu")}
+
+# We can also do k-means on the meta-factors/codes and plot the k-means. This could be good for GO enrichment
+
 # It might make more sense to make these plots with the som that includes the protein levels
 ribo_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$ribo,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
 rna_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$rna,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
 te_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$te,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
-
 median (ribo_prot_cor_in_som, na.rm=T)
 median(across_ind_ribo_correlation)
 median (rna_prot_cor_in_som, na.rm=T)
 median(across_ind_rna_correlation)
 median(te_prot_cor_in_som, na.rm=T)
 
-### Let's use a red-blue color scale
-redblue_cols <- function(x) {brewer.pal(x, "RdBu")}
-
-plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation", palette.name=redblue_cols, contin=T,zlim=c(-1,1), ncolors=11)
+plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
+plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
 plot.kohonen(som.exp, type="counts" )
 
 # absolute.som$data -> Numeric Matrix
@@ -733,21 +731,27 @@ rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), abs
 te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, FUN = colMeans)
 
-#plotCplane(absolute.som, variable=ribo_prot_cor_across_genes_som)
-#plotCplane(absolute.som, variable=rna_prot_cor_across_genes_som)
-#plotCplane(absolute.som, variable=te_prot_cor_across_genes_som)
-
-plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="property", main ="Ribosome Occupancy Protein Correlation", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="property", main ="Ribosome Occupancy Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation",contin=T,zlim=c(-1,1), palette.name=redblue_cols, ncolors=11)
 # Prot_mean is less meaningful than codebook vector
 plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=absolute.som$codes$Y, type = "property", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, type = "codes")
+plot.kohonen(absolute.som, property=absolute.som$codes$Y, type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+plot.kohonen(absolute.som, type = "property", property=absolute.som$codes$X[,1],palette.name=redblue_cols, ncolors=11, contin=T, main="Ribosome Occupancy" )
+plot.kohonen(absolute.som, type = "property", property=absolute.som$codes$X[,2],palette.name=redblue_cols, ncolors=11, contin=T, main="RNA Expression" )
+plot.kohonen(absolute.som, type = "property", property=absolute.som$codes$X[,3],palette.name=redblue_cols, ncolors=11, contin=T, main="Translation Efficiency" )
 
-#abs.som.data.noNA
-# absolute.som
-
+# We can plot a pie-chart version. Convert codebook ribo, rna, te to quantile
+# Use plot.kohonen(absolute.som, type="classes", property=numericmatrix(absolute.som$codes))
+# Update function to introduce a more meaningful scaling for the pie chart
+# Update function to change sum(codes) > 1 to > 0
+code_quantiles = matrix(nrow=absolute.som$grid$xdim * absolute.som$grid$ydim, ncol=dim(absolute.som$data)[2])
+colnames(code_quantiles) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency")
+for (i in 1:dim(absolute.som$codes$X)[2]) { 
+  my.ecdf = ecdf(absolute.som$codes$X[,i])
+  code_quantiles[,i] <- round(my.ecdf(absolute.som$codes$X[,i]), digits=2)
+}
+plot.kohonen(absolute.som, type="classes", property=code_quantiles, scale=T)
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
 # Each transcript will contribute a delta Kozak and delta expression and type of variant

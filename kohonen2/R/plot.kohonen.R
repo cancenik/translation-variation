@@ -666,7 +666,8 @@ plot.kohclasses <- function(x, main, palette.name, bgcol,
               add = TRUE, bg = bgcol)
     } else {
       for(i in 1:nrow(x$grid$pts)) {
-        if(sum(codes[i,] > 1)) {
+        ## CC changed this from 1 to 0 so it works with non-binary table
+        if(sum(codes[i,] > 0)) {
             bgcol[i] = NA
         }
         hexagon(x$grid$pts[i, 1], x$grid$pts[i, 2],bg=bgcol[i],fg="black")
@@ -680,9 +681,13 @@ plot.kohclasses <- function(x, main, palette.name, bgcol,
   for(i in 1:nrow(x$grid$pts)) {
     counts<-codes[i,]
     tp<-pi/2 - 2*pi*c(0,cumsum(counts)/sum(counts))
-    scale_factor = .45
+    # Updated scale factor to .35 and added 1 to sum(counts) -> This way things at max scale are drawn to fill the polygon with ~.45 scale factor
+    scale_factor = .35
     if(scale) {
-      scale_factor = scale_factor * log10(sum(counts)) / log10(maxScale)
+      # Sum of the quantiles based scaling
+      # scale_factor = scale_factor * log10(1+sum(counts)) / log10(maxScale)
+      # We can also scale by protein level
+      scale_factor = scale_factor * (round(ecdf(x$codes$Y)(x$codes$Y[i]),digits=2)+.28)
     }
     mcolors<-palette.name(nvars)
     if (sum(counts) == 0 ) next
