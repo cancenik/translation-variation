@@ -7,6 +7,7 @@ library("MASS")
 library("kohonen")
 library("pgirmess")
 library("RColorBrewer")
+library("plyr")
 source('~/project/kohonen2/R/plot.kohonen.R')
 
 # Data Directory
@@ -690,6 +691,12 @@ plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], sc
 
 abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
 plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
+# We can add cluster boundaries by k-means
+# kmeans(absolute.som$codes, 12)$cluster
+add.cluster.boundaries(absolute.som, abs.som.which.max)
+add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 12)$cluster)
+
+# We can do a version of this where there are more classes based on differences
 
 #plot(absolute.som)
 #plot(absolute.som, type="quality")
