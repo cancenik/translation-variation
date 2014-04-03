@@ -682,12 +682,12 @@ plot.kohclasses <- function(x, main, palette.name, bgcol,
     counts<-codes[i,]
     tp<-pi/2 - 2*pi*c(0,cumsum(counts)/sum(counts))
     # Updated scale factor to .35 and added 1 to sum(counts) -> This way things at max scale are drawn to fill the polygon with ~.45 scale factor
-    scale_factor = .35
+    scale_factor = .45
     if(scale) {
       # Sum of the quantiles based scaling
       # scale_factor = scale_factor * log10(1+sum(counts)) / log10(maxScale)
       # We can also scale by protein level
-      scale_factor = scale_factor * (round(ecdf(x$codes$Y)(x$codes$Y[i]),digits=2)+.28)
+      scale_factor = scale_factor * x$codes[i,4]
     }
     mcolors<-palette.name(nvars)
     if (sum(counts) == 0 ) next
