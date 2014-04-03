@@ -8,8 +8,6 @@ library("kohonen")
 library("pgirmess")
 library("RColorBrewer")
 source('~/project/kohonen2/R/plot.kohonen.R')
-## SOM APPLICATION ISSUE IS TO FORMAT DATA APPROPRIATELY
-## THIS HAPPENS AROUND LINE 590 
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
@@ -585,16 +583,10 @@ ribo_rna_te <- merge(merge(grand_mean_ribo, grand_mean_rna, by="HGNC"), mean_te_
 ribo_rna_te_prot <- merge (ribo_rna_te, protein_absolute_ibaq, by="HGNC", all.x=T)
 ribo_rna_te_prot <- ribo_rna_te_prot[,-c(5,6,8,9)]
 #write.table(ribo_rna_te_prot, file=paste(data_dir, "Radial_Sets_Attribute_Table_4Levels_Gene_Expression.txt", sep=""), row.names=F)
-# We might want to standardize the measurements
 ribo_rna_te_prot$ibaq.human <- log10(ribo_rna_te_prot$ibaq.human)
 all_cors = cor(ribo_rna_te_prot[,-1], use="complete.obs", method="spearman")
 plot(ribo_rna_te_prot$grand_mean_te, ribo_rna_te_prot$ibaq.human, pch= 19, cex =.4, tck = .02, xlim = c(-3,3), xlab="Median Translation Efficiency", ylab="log10 iBAQ protein expression")
 text(par("usr")[2] - 0.75, par("usr")[4] - 0.75, labels= paste("Spearman rho", signif(all_cors[3,4], 2) , sep=" = "))
-### WE NEED TO DECIDE WHETHER THIS SCALING IS USEFUL
-# One issue is that TE and RNA-RIBO does not have the same interpretation
-# TE is the median of a linear model coefficient. Maybe we should switch to gene specific measure
-# Another idea is to change everthing into same scale of quantiles before applying SOM
-#ribo_rna_te_prot[,-1] <- scale(ribo_rna_te_prot[,-1], scale=F)
 row.names(ribo_rna_te_prot) <- ribo_rna_te_prot[,1]
 ribo_rna_te_prot <- as.matrix(ribo_rna_te_prot[,2:5])
 
@@ -631,22 +623,36 @@ if (floor(sqrt(total_cells_bdk/1.3333)) %% 2 == 0) {
   ydim = floor(sqrt(total_cells_bdk/1.3333)) + 1
 }
 xdim = floor(total_cells_bdk/ydim + 0.5)
+### WE NEED TO DECIDE WHETHER THIS SCALING IS USEFUL
+# We might want to standardize the measurements
+# One issue is that TE and RNA-RIBO does not have the same interpretation
+# TE is the median of a linear model coefficient. Maybe we should switch to gene specific measure
+# Another idea is to change everthing into same scale of quantiles before applying SOM
+#ribo_rna_te_prot[,-1] <- scale(ribo_rna_te_prot[,-1], scale=F)
+my.ecdf <- function (x) {ecdf(x)(x)}
+abs.som.data <- apply(ribo_rna_te_prot, 2 , my.ecdf)
 abs.som.data.noNA <- ribo_rna_te_prot[!apply(is.na(ribo_rna_te_prot), 1, any),]
 
 # Run the SOM, 1000 times and keep track of the distances pick the one with the min 75% distance
 # This section was run once to determine the best seed
-my_75th_distance <- 1
+mean_distance <- 1
 for (i in 1:500) { 
   set.seed(i)
-  absolute.som <- xyf(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.7, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
-  if (quantile(absolute.som$distances, seq(0,1,.1))[10] < my_75th_distance) { 
+  absolute.som <- som(abs.som.data.noNA, toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
+  if (mean(absolute.som$distances) < mean_distance) { 
     my_seed <- i
-    my_75th_distance <- quantile(absolute.som$distances, seq(0,1,.1))[10]
+    mean_distance <- mean(absolute.som$distances)
   }
 }
 # best_seed is 137 for xweight .8 with 90% percentile
-set.seed(137)
-absolute.som <- xyf(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.7, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
+#set.seed(137)
+# This was used before quantization of the data
+# absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.5, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
+# There is really no need to have a separate protein level when things are quantized
+# Best seed for the som with quantized data is:
+set.seed()
+absolute.som <- som(abs.som.data.noNA, toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
+
 #plot(absolute.som)
 #plot(absolute.som, type="quality")
 #plot(absolute.som, type="count")
