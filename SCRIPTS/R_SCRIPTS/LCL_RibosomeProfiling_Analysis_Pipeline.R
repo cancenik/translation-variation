@@ -8,6 +8,8 @@ library("kohonen")
 library("pgirmess")
 library("RColorBrewer")
 source('~/project/kohonen2/R/plot.kohonen.R')
+## SOM APPLICATION ISSUE IS TO FORMAT DATA APPROPRIATELY
+## THIS HAPPENS AROUND LINE 590 
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
@@ -588,7 +590,11 @@ ribo_rna_te_prot$ibaq.human <- log10(ribo_rna_te_prot$ibaq.human)
 all_cors = cor(ribo_rna_te_prot[,-1], use="complete.obs", method="spearman")
 plot(ribo_rna_te_prot$grand_mean_te, ribo_rna_te_prot$ibaq.human, pch= 19, cex =.4, tck = .02, xlim = c(-3,3), xlab="Median Translation Efficiency", ylab="log10 iBAQ protein expression")
 text(par("usr")[2] - 0.75, par("usr")[4] - 0.75, labels= paste("Spearman rho", signif(all_cors[3,4], 2) , sep=" = "))
-ribo_rna_te_prot[,-1] <- scale(ribo_rna_te_prot[,-1], scale=F)
+### WE NEED TO DECIDE WHETHER THIS SCALING IS USEFUL
+# One issue is that TE and RNA-RIBO does not have the same interpretation
+# TE is the median of a linear model coefficient. Maybe we should switch to gene specific measure
+# Another idea is to change everthing into same scale of quantiles before applying SOM
+#ribo_rna_te_prot[,-1] <- scale(ribo_rna_te_prot[,-1], scale=F)
 row.names(ribo_rna_te_prot) <- ribo_rna_te_prot[,1]
 ribo_rna_te_prot <- as.matrix(ribo_rna_te_prot[,2:5])
 
@@ -629,18 +635,18 @@ abs.som.data.noNA <- ribo_rna_te_prot[!apply(is.na(ribo_rna_te_prot), 1, any),]
 
 # Run the SOM, 1000 times and keep track of the distances pick the one with the min 75% distance
 # This section was run once to determine the best seed
-# my_75th_distance <- 1
-# for (i in 1:100) { 
-#   set.seed(i*3433)
-#   absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.8, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
-#   if (quantile(absolute.som$distances)[4] < my_75th_distance) { 
-#     my_seed <- i*3433
-#     my_75th_distance <- quantile(absolute.som$distances)[4]
-#   }
-# }
-# best_seed is 130454
-set.seed(130454)
-absolute.som <- bdk(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.8, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
+my_75th_distance <- 1
+for (i in 1:500) { 
+  set.seed(i)
+  absolute.som <- xyf(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.7, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
+  if (quantile(absolute.som$distances, seq(0,1,.1))[10] < my_75th_distance) { 
+    my_seed <- i
+    my_75th_distance <- quantile(absolute.som$distances, seq(0,1,.1))[10]
+  }
+}
+# best_seed is 137 for xweight .8 with 90% percentile
+set.seed(137)
+absolute.som <- xyf(abs.som.data.noNA[,1:3], Y= abs.som.data.noNA[,4] , toroidal=T, xweight=.7, contin=T, grid=somgrid(xdim, ydim, "hexagonal"))
 #plot(absolute.som)
 #plot(absolute.som, type="quality")
 #plot(absolute.som, type="count")
@@ -730,6 +736,10 @@ ribo_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(1,4)]), ab
 rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, FUN = colMeans)
+# ribo_mean <- by (data.frame(abs.som.data.noNA[,3]), absolute.som$unit.classif, FUN = colMeans)
+# plot.kohonen(absolute.som, property=ribo_mean, type = "property", palette.name=redblue_cols, ncolors=11)
+# plot.kohonen(absolute.som, property=absolute.som$codes$X[,3], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+
 
 plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="property", main ="Ribosome Occupancy Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
