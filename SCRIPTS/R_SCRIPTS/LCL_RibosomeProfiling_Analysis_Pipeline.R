@@ -626,6 +626,7 @@ if (floor(sqrt(total_cells_bdk/1.3333)) %% 2 == 0) {
   ydim = floor(sqrt(total_cells_bdk/1.3333)) + 1
 }
 xdim = floor(total_cells_bdk/ydim + 0.5)
+
 ### WE NEED TO DECIDE WHETHER THIS SCALING IS USEFUL
 # We might want to standardize the measurements
 # One issue is that TE and RNA-RIBO does not have the same interpretation
@@ -639,14 +640,14 @@ abs.som.data.noNA <- abs.som.data[!apply(is.na(abs.som.data), 1, any),]
 # Run the SOM, 1000 times and keep track of the distances pick the one with the min 75% distance
 # This section was run once to determine the best seed
 mean_distance <- 1
-for (i in 1:500) { 
-  set.seed(i)
-  absolute.som <- som(abs.som.data.noNA, toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
-  if (mean(absolute.som$distances) < mean_distance) { 
-    my_seed <- i
-    mean_distance <- mean(absolute.som$distances)
-  }
-}
+# for (i in 1:500) { 
+#   set.seed(i)
+#   absolute.som <- som(abs.som.data.noNA, toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
+#   if (mean(absolute.som$distances) < mean_distance) { 
+#     my_seed <- i
+#     mean_distance <- mean(absolute.som$distances)
+#   }
+# }
 # best_seed is 137 for xweight .8 with 90% percentile
 #set.seed(137)
 # This was used before quantization of the data
@@ -697,6 +698,22 @@ add.cluster.boundaries(absolute.som, abs.som.which.max)
 add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 12)$cluster)
 
 # We can do a version of this where there are more classes based on differences
+# Test prediction -- Not doing much better than rna alone
+# set.seed(173)
+# training <- sample(c(T,F), nrow(abs.som.data.noNA),  prob=c(.95,.05), replace=T)
+# absolute.som.train <- som(abs.som.data.noNA[training,1:3], toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
+# Xtest= abs.som.data.noNA[!training,1:3]
+# Ytrain=abs.som.data.noNA[training,4]
+# YTrue= abs.som.data.noNA[!training,4]
+# absolute.predictions <- predict.kohonen(absolute.som.train, newdata=Xtest, trainY=Ytrain)
+# diff_true_pred = abs(absolute.predictions$prediction - YTrue )
+# diff_rna_true = abs( abs.som.data.noNA[!training,2] - YTrue)
+# diff_random_true = abs( runif(length(YTrue)) - YTrue)
+# hist(diff_random_true, 25, xlim = c(0,1))
+# hist(diff_rna_true, 25, xlim = c(0,1))
+# hist(diff_true_pred, 25, xlim = c(0,1))
+# length(which(diff_rna_true < .2))
+# length(which(diff_true_pred < .2))
 
 #plot(absolute.som)
 #plot(absolute.som, type="quality")
@@ -731,19 +748,20 @@ te.quantiles = matrix(ecdf(te_matrix)(te_matrix), ncol = 14, dimnames = list(row
 prot.quantiles = matrix(ecdf(as.matrix(linfeng_te_match))(as.matrix(linfeng_te_match)), ncol = 14, dimnames = list(rownames(linfeng_te_match), colnames(linfeng_te_match)))
 dropCols <- c(2,7)
 dropRows <- !apply(is.na(prot.quantiles[,-dropCols]), 1, any)
-
-som.data = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_matrix)
+#singleNARows <- which(apply(is.na(prot.quantiles[,-dropCols]),1, sum) == 1)
+  
+som.data = list (  ribo= ribo.quantiles[dropRows, -dropCols] , rna = rna.quantiles[dropRows, -dropCols] ,te = te.quantiles[dropRows, -dropCols])
 som.data.prot = list ( ribo= ribo.quantiles , rna = rna.quantiles ,te = te.quantiles, prot=prot.quantiles)
 som.data.prot.noNA = list ( ribo= ribo.quantiles[dropRows, -dropCols] , rna = rna.quantiles[dropRows, -dropCols] ,te = te.quantiles[dropRows, -dropCols], prot=prot.quantiles[dropRows, -dropCols])
   
-total_cells <- floor(sqrt(length(som.data.prot)/2) * sqrt (dim(som.data.prot$ribo)[1] * dim(som.data.prot$ribo)[2]))
+#total_cells <- floor(sqrt(length(som.data.prot)/2) * sqrt (dim(som.data.prot$ribo)[1] * dim(som.data.prot$ribo)[2]))
 total_cells.noNA <- floor(sqrt(length(som.data.prot.noNA)/2) * sqrt (dim(som.data.prot.noNA$ribo)[1] * dim(som.data.prot.noNA$ribo)[2]))
-if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
-  ydim.total = floor(sqrt(total_cells/1.3333))
-} else { 
-  ydim.total = floor(sqrt(total_cells/1.3333)) + 1
-}
-xdim.total = floor(total_cells/ydim.total + 0.5)
+# if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
+#   ydim.total = floor(sqrt(total_cells/1.3333))
+# } else { 
+#   ydim.total = floor(sqrt(total_cells/1.3333)) + 1
+# }
+# xdim.total = floor(total_cells/ydim.total + 0.5)
 
 if (floor(sqrt(total_cells.noNA/1.3333)) %% 2 == 0) { 
   ydim.total.noNA = floor(sqrt(total_cells.noNA/1.3333))
@@ -753,11 +771,29 @@ if (floor(sqrt(total_cells.noNA/1.3333)) %% 2 == 0) {
 xdim.total.noNA = floor(total_cells.noNA/ydim.total.noNA + 0.5)
 
 # We can play with weights Increased weight to RNA, Ribo compared to TE - Change weights to increase quality of SOM
-#som.exp = supersom(data =som.data, grid=somgrid(xdim.total, ydim.total, "hexagonal"), toroidal=T, contin=T)
+som.exp = supersom(data =som.data, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
 som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
 # Give proteins higher weight for tighter clustering
 som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
 
+# PREDICTION DOESN'T WORK THAT MUCH BETTER THAN RNA ALONE HERE. 
+# The training set and test set don't have the same distribution of prot quantiles
+# Xtest <- list ( ribo= ribo.quantiles[singleNARows, -dropCols] , 
+#                 rna = rna.quantiles[singleNARows, -dropCols] ,
+#                 te = te.quantiles[singleNARows, -dropCols],
+#                 prot=prot.quantiles[singleNARows, -dropCols])
+# 
+# prot.predictions <- predict.kohonen(som.exp.prot, newdata=Xtest, whatmap=c(1,2,3) )
+# diff_in_pred <- prot.predictions$prediction - prot.quantiles[singleNARows,-dropCols]
+# 
+# THRESHOLD <- .1
+# sum( abs(apply(diff_in_pred, 1, median, na.rm=T)) < THRESHOLD) 
+# random.prediction <- matrix(runif(3708), ncol= ncol(prot.predictions$prediction))
+# diff_wrandom <- random.prediction - prot.quantiles[singleNARows,-dropCols]
+# sum( abs(apply(diff_wrandom, 1, median, na.rm=T)) < THRESHOLD) 
+# diff_wrna <- rna.quantiles[singleNARows, -dropCols] - prot.quantiles[singleNARows,-dropCols]
+# diff_betweenpred_and_random <-abs(diff_in_pred) - abs(diff_wrandom)
+# diff_betweenpred_and_rna <- abs(diff_in_pred) - abs(diff_wrna)
 
 # VANILLA SOM WITH NONA PROT OR JUST THE EXPRESSION DATA
 #som.exp = som(data =som.data, grid=somgrid(xdim.total, ydim.total, "hexagonal"), toroidal=T)
@@ -768,11 +804,6 @@ plot.kohonen(som.exp.prot, type="changes")
 plot.kohonen(som.exp.prot, type="quality")
 mean(som.exp.prot$distances)
 plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
-
-# We can use the trained supersom to do prediction of relative protein levels
-# We trained the map using all the noNA prot data.
-# We can predict the protein levels of the ones with NAs using their corresponding rna, ribo, te profiles
-# We can assess performance by the number of individuals for which the prediction is relatively close
 
 # plot(som.exp, type="codes")
 # plot(som.exp, type="quality")
