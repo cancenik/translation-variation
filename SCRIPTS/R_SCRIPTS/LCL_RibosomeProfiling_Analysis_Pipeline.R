@@ -719,34 +719,66 @@ linfeng_te_match <- merge(linfeng_te_match, ensg_hgnc, by.x="row.names", by.y="E
 linfeng_te_match <- merge (data.frame(HGNC=joint_count_ids), linfeng_te_match, by="HGNC", all.x=T)
 row.names(linfeng_te_match) <- linfeng_te_match[,1]
 linfeng_te_match <- linfeng_te_match[,-c(1,2)]
-# quantile(ribo_fit2$coefficients )
-# quantile(rna_fit2$coefficients )
-# quantile(te_fit3$coefficients )
-# quantile(linfeng_te_match, na.rm=T)
 
 # Simplifies the colnames; no order problems
 colnames(ribo_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
 colnames(rna_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
-som.data = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix])
-som.data.prot = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix], prot=as.matrix(linfeng_te_match))
+te_matrix = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix]
+# The easiest way for interpretation is using quantized data
+ribo.quantiles = matrix(ecdf(ribo_fit2$coefficients)(ribo_fit2$coefficients), ncol = 14, dimnames = list(rownames(ribo_fit2$coefficients), colnames(ribo_fit2$coefficients)))
+rna.quantiles = matrix(ecdf(rna_fit2$coefficients)(rna_fit2$coefficients), ncol = 14, dimnames = list(rownames(rna_fit2$coefficients), colnames(rna_fit2$coefficients)))
+te.quantiles = matrix(ecdf(te_matrix)(te_matrix), ncol = 14, dimnames = list(rownames(te_matrix), colnames(te_matrix)))
+prot.quantiles = matrix(ecdf(as.matrix(linfeng_te_match))(as.matrix(linfeng_te_match)), ncol = 14, dimnames = list(rownames(linfeng_te_match), colnames(linfeng_te_match)))
+dropCols <- c(2,7)
+dropRows <- !apply(is.na(prot.quantiles[,-dropCols]), 1, any)
 
-total_cells <- floor(sqrt(length(som.data)/2) * sqrt (dim(ribo_fit2$coefficients)[1] * dim(ribo_fit2$coefficients)[2]))
+som.data = list ( ribo= ribo_fit2$coefficients , rna = rna_fit2$coefficients, te = te_matrix)
+som.data.prot = list ( ribo= ribo.quantiles , rna = rna.quantiles ,te = te.quantiles, prot=prot.quantiles)
+som.data.prot.noNA = list ( ribo= ribo.quantiles[dropRows, -dropCols] , rna = rna.quantiles[dropRows, -dropCols] ,te = te.quantiles[dropRows, -dropCols], prot=prot.quantiles[dropRows, -dropCols])
+  
+total_cells <- floor(sqrt(length(som.data.prot)/2) * sqrt (dim(som.data.prot$ribo)[1] * dim(som.data.prot$ribo)[2]))
+total_cells.noNA <- floor(sqrt(length(som.data.prot.noNA)/2) * sqrt (dim(som.data.prot.noNA$ribo)[1] * dim(som.data.prot.noNA$ribo)[2]))
 if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
-  ydim = floor(sqrt(total_cells/1.3333))
+  ydim.total = floor(sqrt(total_cells/1.3333))
 } else { 
-  ydim = floor(sqrt(total_cells/1.3333)) + 1
+  ydim.total = floor(sqrt(total_cells/1.3333)) + 1
 }
-xdim = floor(total_cells/ydim + 0.5)
+xdim.total = floor(total_cells/ydim.total + 0.5)
+
+if (floor(sqrt(total_cells.noNA/1.3333)) %% 2 == 0) { 
+  ydim.total.noNA = floor(sqrt(total_cells.noNA/1.3333))
+} else { 
+  ydim.total.noNA = floor(sqrt(total_cells.noNA/1.3333)) + 1
+}
+xdim.total.noNA = floor(total_cells.noNA/ydim.total.noNA + 0.5)
+
 # We can play with weights Increased weight to RNA, Ribo compared to TE - Change weights to increase quality of SOM
-som.exp = supersom(data =som.data, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T)
-som.exp.prot = supersom(data =som.data.prot, grid=somgrid(xdim, ydim, "hexagonal"), toroidal=T, contin=T, maxNA.fraction=9/14, weights=c(.4,.4,.15,.05))
+#som.exp = supersom(data =som.data, grid=somgrid(xdim.total, ydim.total, "hexagonal"), toroidal=T, contin=T)
+som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
+# Give proteins higher weight for tighter clustering
+som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
+
+
+# VANILLA SOM WITH NONA PROT OR JUST THE EXPRESSION DATA
+#som.exp = som(data =som.data, grid=somgrid(xdim.total, ydim.total, "hexagonal"), toroidal=T)
+#som.exp.prot.noNA = som(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T)
+plot.kohonen(som.exp.prot, type="counts")
+plot.kohonen(som.exp.prot, type="codes")
+plot.kohonen(som.exp.prot, type="changes")
+plot.kohonen(som.exp.prot, type="quality")
+mean(som.exp.prot$distances)
+plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
+
+# We can use the trained supersom to do prediction of relative protein levels
+# We trained the map using all the noNA prot data.
+# We can predict the protein levels of the ones with NAs using their corresponding rna, ribo, te profiles
+# We can assess performance by the number of individuals for which the prediction is relatively close
 
 # plot(som.exp, type="codes")
 # plot(som.exp, type="quality")
 # plot(som.exp, type="mapping", pch=19, cex=.3)
 # plot(som.exp, type="changes")
 # plot(som.exp, type="counts")
-
 
 
 # Calculate cor.estimate for each level grouped by unit.classif
