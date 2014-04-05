@@ -662,9 +662,13 @@ ribo_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(1,4)]), ab
 rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), absolute.som$unit.classif, FUN = function(x){cor(x,  method="spearman")[1,2]} )
 te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, FUN = colMeans)
-# ribo_mean <- by (data.frame(abs.som.data.noNA[,3]), absolute.som$unit.classif, FUN = colMeans)
-# plot.kohonen(absolute.som, property=ribo_mean, type = "property", palette.name=redblue_cols, ncolors=11)
-# plot.kohonen(absolute.som, property=absolute.som$codes$X[,3], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+ribo_mean <- by (data.frame(abs.som.data.noNA[,1]), absolute.som$unit.classif, FUN = colMeans)
+
+plot.kohonen(absolute.som, property=ribo_mean, type = "property", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=absolute.som$codes[,1], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+
+plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
 
 ## Hexagonal plotting 
 # som.exp$unit.classif has the info about where each gene went
@@ -678,8 +682,7 @@ plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="proper
 plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation",contin=T,zlim=c(-1,1), palette.name=redblue_cols, ncolors=11)
 
-plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,1],palette.name=redblue_cols, ncolors=11, contin=T, main="Ribosome Occupancy" )
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,2],palette.name=redblue_cols, ncolors=11, contin=T, main="RNA Expression" )
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],palette.name=redblue_cols, ncolors=11, contin=T, main="Translation Efficiency" )
@@ -695,7 +698,7 @@ plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette
 # We can add cluster boundaries by k-means
 # kmeans(absolute.som$codes, 12)$cluster
 add.cluster.boundaries(absolute.som, abs.som.which.max)
-add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 12)$cluster)
+add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 3)$cluster)
 
 # We can do a version of this where there are more classes based on differences
 # Test prediction -- Not doing much better than rna alone
