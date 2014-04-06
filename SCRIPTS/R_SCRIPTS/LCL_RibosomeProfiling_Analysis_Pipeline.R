@@ -8,6 +8,9 @@ library("kohonen")
 library("pgirmess")
 library("RColorBrewer")
 library("plyr")
+library("apcluster")
+library("RDAVIDWebService")
+#david<-DAVIDWebService$new(email="ccenik@stanford.edu")
 source('~/project/kohonen2/R/plot.kohonen.R')
 
 # Data Directory
@@ -656,11 +659,7 @@ mean_distance <- 1
 # Best seed for the som with quantized data is:173
 set.seed(173)
 absolute.som <- som(abs.som.data.noNA, toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
-# absolute.som$data -> Numeric Matrix
 # abs.som.data.noNA -> Numeric Matrix, 4th column is ibaq.human
-ribo_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(1,4)]), absolute.som$unit.classif, FUN = function(x){cor(x, method="spearman")[1,2]} )
-rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), absolute.som$unit.classif, FUN = function(x){cor(x,  method="spearman")[1,2]} )
-te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, FUN = colMeans)
 # ribo_mean <- by (data.frame(abs.som.data.noNA[,3]), absolute.som$unit.classif, FUN = colMeans)
 # plot.kohonen(absolute.som, property=ribo_mean, type = "property", palette.name=redblue_cols, ncolors=11)
@@ -673,52 +672,44 @@ prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, 
 # som.exp$unit.classif keeps track of the cell each object belongs to
 # Left bottom is 1, the row above that is 1+xdim 
 # Need vector of length xdim * ydim
-# UNIT-WISE CORRELATIONS ARE LESS MEANINGFUL IN SOM
+
+# Unit-wise correlation is less meaningful. Might be better to try correlation after k-means
+
+ribo_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(1,4)]), absolute.som$unit.classif, FUN = function(x){cor(x, method="spearman")[1,2]} )
+rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), absolute.som$unit.classif, FUN = function(x){cor(x,  method="spearman")[1,2]} )
+te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="property", main ="Ribosome Occupancy Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation",contin=T,zlim=c(-1,1), palette.name=redblue_cols, ncolors=11)
 
-plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,1],palette.name=redblue_cols, ncolors=11, contin=T, main="Ribosome Occupancy" )
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,2],palette.name=redblue_cols, ncolors=11, contin=T, main="RNA Expression" )
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],palette.name=redblue_cols, ncolors=11, contin=T, main="Translation Efficiency" )
+plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
 
 # We can plot a pie-chart version. Convert codebook ribo, rna, te to quantile
 # Use plot.kohonen(absolute.som, type="classes", property=numericmatrix(absolute.som$codes))
 # Update function to introduce a more meaningful scaling for the pie chart
 # Update function to change sum(codes) > 1 to > 0
 plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T)
-
 abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
 plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
+
 # We can add cluster boundaries by k-means
 # kmeans(absolute.som$codes, 12)$cluster
 add.cluster.boundaries(absolute.som, abs.som.which.max)
 add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 12)$cluster)
 
-# We can do a version of this where there are more classes based on differences
-# Test prediction -- Not doing much better than rna alone
-# set.seed(173)
-# training <- sample(c(T,F), nrow(abs.som.data.noNA),  prob=c(.95,.05), replace=T)
-# absolute.som.train <- som(abs.som.data.noNA[training,1:3], toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
-# Xtest= abs.som.data.noNA[!training,1:3]
-# Ytrain=abs.som.data.noNA[training,4]
-# YTrue= abs.som.data.noNA[!training,4]
-# absolute.predictions <- predict.kohonen(absolute.som.train, newdata=Xtest, trainY=Ytrain)
-# diff_true_pred = abs(absolute.predictions$prediction - YTrue )
-# diff_rna_true = abs( abs.som.data.noNA[!training,2] - YTrue)
-# diff_random_true = abs( runif(length(YTrue)) - YTrue)
-# hist(diff_random_true, 25, xlim = c(0,1))
-# hist(diff_rna_true, 25, xlim = c(0,1))
-# hist(diff_true_pred, 25, xlim = c(0,1))
-# length(which(diff_rna_true < .2))
-# length(which(diff_true_pred < .2))
+# Affinity propagation
+ap.cluster <- apcluster(negDistMat(r=2), absolute.som$codes,q=0.1)
+# corSimMat(method="spearman")
+plot(ap.cluster, absolute.som$codes)
+heatmap(ap.cluster)
 
-#plot(absolute.som)
-#plot(absolute.som, type="quality")
-#plot(absolute.som, type="count")
-#plot(absolute.som, type="changes")
+ap.cluster.full <- apcluster(negDistMat(r=2), absolute.som$data,q= 0)
+plot(ap.cluster.full, absolute.som$data)
+heatmap(ap.cluster.full)
 
 # One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
 
@@ -776,28 +767,6 @@ som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, 
 # Give proteins higher weight for tighter clustering
 som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
 
-# PREDICTION DOESN'T WORK THAT MUCH BETTER THAN RNA ALONE HERE. 
-# The training set and test set don't have the same distribution of prot quantiles
-# Xtest <- list ( ribo= ribo.quantiles[singleNARows, -dropCols] , 
-#                 rna = rna.quantiles[singleNARows, -dropCols] ,
-#                 te = te.quantiles[singleNARows, -dropCols],
-#                 prot=prot.quantiles[singleNARows, -dropCols])
-# 
-# prot.predictions <- predict.kohonen(som.exp.prot, newdata=Xtest, whatmap=c(1,2,3) )
-# diff_in_pred <- prot.predictions$prediction - prot.quantiles[singleNARows,-dropCols]
-# 
-# THRESHOLD <- .1
-# sum( abs(apply(diff_in_pred, 1, median, na.rm=T)) < THRESHOLD) 
-# random.prediction <- matrix(runif(3708), ncol= ncol(prot.predictions$prediction))
-# diff_wrandom <- random.prediction - prot.quantiles[singleNARows,-dropCols]
-# sum( abs(apply(diff_wrandom, 1, median, na.rm=T)) < THRESHOLD) 
-# diff_wrna <- rna.quantiles[singleNARows, -dropCols] - prot.quantiles[singleNARows,-dropCols]
-# diff_betweenpred_and_random <-abs(diff_in_pred) - abs(diff_wrandom)
-# diff_betweenpred_and_rna <- abs(diff_in_pred) - abs(diff_wrna)
-
-# VANILLA SOM WITH NONA PROT OR JUST THE EXPRESSION DATA
-#som.exp = som(data =som.data, grid=somgrid(xdim.total, ydim.total, "hexagonal"), toroidal=T)
-#som.exp.prot.noNA = som(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T)
 plot.kohonen(som.exp.prot, type="counts")
 plot.kohonen(som.exp.prot, type="codes")
 plot.kohonen(som.exp.prot, type="changes")
@@ -820,7 +789,6 @@ cor_between_ind <- function (x) {
 }
 
 # We can also do k-means on the meta-factors/codes and plot the k-means. This could be good for GO enrichment
-
 # It might make more sense to make these plots with the som that includes the protein levels
 ribo_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$ribo,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
 rna_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$rna,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
@@ -1422,3 +1390,46 @@ norm_hc_rep <- hclust (norm_dd_rep)
 # write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
 #             row.names=joint_count_ids, sep="\t")
 
+### UNUSED SOM PREDICTION 
+# We can do a version of this where there are more classes based on differences
+# Test prediction -- Not doing much better than rna alone
+# set.seed(173)
+# training <- sample(c(T,F), nrow(abs.som.data.noNA),  prob=c(.95,.05), replace=T)
+# absolute.som.train <- som(abs.som.data.noNA[training,1:3], toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
+# Xtest= abs.som.data.noNA[!training,1:3]
+# Ytrain=abs.som.data.noNA[training,4]
+# YTrue= abs.som.data.noNA[!training,4]
+# absolute.predictions <- predict.kohonen(absolute.som.train, newdata=Xtest, trainY=Ytrain)
+# diff_true_pred = abs(absolute.predictions$prediction - YTrue )
+# diff_rna_true = abs( abs.som.data.noNA[!training,2] - YTrue)
+# diff_random_true = abs( runif(length(YTrue)) - YTrue)
+# hist(diff_random_true, 25, xlim = c(0,1))
+# hist(diff_rna_true, 25, xlim = c(0,1))
+# hist(diff_true_pred, 25, xlim = c(0,1))
+# length(which(diff_rna_true < .2))
+# length(which(diff_true_pred < .2))
+
+#plot(absolute.som)
+#plot(absolute.som, type="quality")
+#plot(absolute.som, type="count")
+#plot(absolute.som, type="changes")
+
+
+# PREDICTION DOESN'T WORK THAT MUCH BETTER THAN RNA ALONE HERE. 
+# The training set and test set don't have the same distribution of prot quantiles
+# Xtest <- list ( ribo= ribo.quantiles[singleNARows, -dropCols] , 
+#                 rna = rna.quantiles[singleNARows, -dropCols] ,
+#                 te = te.quantiles[singleNARows, -dropCols],
+#                 prot=prot.quantiles[singleNARows, -dropCols])
+# 
+# prot.predictions <- predict.kohonen(som.exp.prot, newdata=Xtest, whatmap=c(1,2,3) )
+# diff_in_pred <- prot.predictions$prediction - prot.quantiles[singleNARows,-dropCols]
+# 
+# THRESHOLD <- .1
+# sum( abs(apply(diff_in_pred, 1, median, na.rm=T)) < THRESHOLD) 
+# random.prediction <- matrix(runif(3708), ncol= ncol(prot.predictions$prediction))
+# diff_wrandom <- random.prediction - prot.quantiles[singleNARows,-dropCols]
+# sum( abs(apply(diff_wrandom, 1, median, na.rm=T)) < THRESHOLD) 
+# diff_wrna <- rna.quantiles[singleNARows, -dropCols] - prot.quantiles[singleNARows,-dropCols]
+# diff_betweenpred_and_random <-abs(diff_in_pred) - abs(diff_wrandom)
+# diff_betweenpred_and_rna <- abs(diff_in_pred) - abs(diff_wrna)
