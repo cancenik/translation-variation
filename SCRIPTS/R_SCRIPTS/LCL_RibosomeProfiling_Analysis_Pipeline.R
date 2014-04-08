@@ -8,6 +8,9 @@ library("kohonen")
 library("pgirmess")
 library("RColorBrewer")
 library("plyr")
+library("apcluster")
+library("RDAVIDWebService")
+library("gplots")
 source('~/project/kohonen2/R/plot.kohonen.R')
 
 # Data Directory
@@ -161,12 +164,18 @@ v3$E[,1:84] <- batch_removed_joint
 reps_ribo_joint <- duplicated(sample_labels_joint[85:134]) | duplicated(sample_labels_joint[85:134], fromLast = TRUE)
 joint_dd_rep <- dist(t (v3$E[,85:134][,reps_ribo_joint] ) )
 joint_ribo_rep <- hclust (joint_dd_rep)
-plot(joint_ribo_rep)
+select_first <- function(s) strsplit(s, "_")[[1]][1]
+labels_ribo = sapply(colnames(v3$E[,85:134][,reps_ribo_joint]),select_first)
+## SAVE FROM ZOOM
+plot(joint_ribo_rep, labels= labels_ribo, sub = "", xlab="", main= "Clustering Ribosome Profiling Libraries")
 reps_rna_joint <- duplicated(sample_labels_joint[1:84]) | duplicated(sample_labels_joint[1:84], fromLast = TRUE)
 joint_dd_rna <- dist(t (v3$E[,1:84][,reps_rna_joint]))
 joint_rna_hc <- hclust(joint_dd_rna)
-plot(joint_rna_hc)
+labels_rna = sapply(colnames(v3$E[,1:84][,reps_rna_joint]) , select_first)
+labels_lab_rna = sapply(colnames(v3$E[,1:84][,reps_rna_joint]), function(s) {tail(strsplit(s, "_")[[1]],n=1 )} )
+plot(joint_rna_hc, labels= paste(labels_rna, labels_lab_rna, sep="_"), sub = "", xlab="", main= "Clustering RNA-Seq Libraries")
 plotMDS(v3$E, labels=type)
+# plotMDS (v3$E[,type=="RNA"])
 
 # Extract Joint Replicated Subset
 cor_coefs_rna_median <- apply(cor(v3$E[,1:84]),1, median)
@@ -254,16 +263,17 @@ ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x
 rnacv <- (rna_cv_between_individuals/rna_repcv_median) 
 ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
 
-#pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=4, height=4)
+#pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=5, height=5)
 #99% of the dataset is less than 8; so limit xlim to 0_to_8
 # We changed number of breaks so that the number of breaks in x-axis is similar
 hist(rnacv, 100, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
 #dev.off()
-#pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=4, height=4)
+#pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=5, height=5)
 hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
 #dev.off()
 
 #low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
+#names(rna_replicate_mean_weights)
 length(which(rnacv/ribocv > 2))
 length(which(rnacv/ribocv < .5))
 sorted_cvs <- sort(rnacv/ribocv , index.return=T)
@@ -656,11 +666,7 @@ mean_distance <- 1
 # Best seed for the som with quantized data is:173
 set.seed(173)
 absolute.som <- som(abs.som.data.noNA, toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
-# absolute.som$data -> Numeric Matrix
 # abs.som.data.noNA -> Numeric Matrix, 4th column is ibaq.human
-ribo_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(1,4)]), absolute.som$unit.classif, FUN = function(x){cor(x, method="spearman")[1,2]} )
-rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), absolute.som$unit.classif, FUN = function(x){cor(x,  method="spearman")[1,2]} )
-te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, FUN = colMeans)
 ribo_mean <- by (data.frame(abs.som.data.noNA[,1]), absolute.som$unit.classif, FUN = colMeans)
 
@@ -677,51 +683,48 @@ plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", p
 # som.exp$unit.classif keeps track of the cell each object belongs to
 # Left bottom is 1, the row above that is 1+xdim 
 # Need vector of length xdim * ydim
-# UNIT-WISE CORRELATIONS ARE LESS MEANINGFUL IN SOM
+
+# Unit-wise correlation is less meaningful. Might be better to try correlation after k-means
+
+ribo_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(1,4)]), absolute.som$unit.classif, FUN = function(x){cor(x, method="spearman")[1,2]} )
+rna_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(2,4)]), absolute.som$unit.classif, FUN = function(x){cor(x,  method="spearman")[1,2]} )
+te_prot_cor_across_genes_som <- by (data.frame(abs.som.data.noNA[,c(3,4)]), absolute.som$unit.classif, FUN = function(x){cor(x)[1,2]} )
 plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="property", main ="Ribosome Occupancy Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation",contin=T,zlim=c(-1,1), palette.name=redblue_cols, ncolors=11)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> a8b91a07059c6719e54b73798979e6473e253fec
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,1],palette.name=redblue_cols, ncolors=11, contin=T, main="Ribosome Occupancy" )
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,2],palette.name=redblue_cols, ncolors=11, contin=T, main="RNA Expression" )
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],palette.name=redblue_cols, ncolors=11, contin=T, main="Translation Efficiency" )
+plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
 
 # We can plot a pie-chart version. Convert codebook ribo, rna, te to quantile
 # Use plot.kohonen(absolute.som, type="classes", property=numericmatrix(absolute.som$codes))
 # Update function to introduce a more meaningful scaling for the pie chart
 # Update function to change sum(codes) > 1 to > 0
 plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T)
-
 abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
 plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
+
 # We can add cluster boundaries by k-means
 # kmeans(absolute.som$codes, 12)$cluster
 add.cluster.boundaries(absolute.som, abs.som.which.max)
 add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 3)$cluster)
 
-# We can do a version of this where there are more classes based on differences
-# Test prediction -- Not doing much better than rna alone
-# set.seed(173)
-# training <- sample(c(T,F), nrow(abs.som.data.noNA),  prob=c(.95,.05), replace=T)
-# absolute.som.train <- som(abs.som.data.noNA[training,1:3], toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
-# Xtest= abs.som.data.noNA[!training,1:3]
-# Ytrain=abs.som.data.noNA[training,4]
-# YTrue= abs.som.data.noNA[!training,4]
-# absolute.predictions <- predict.kohonen(absolute.som.train, newdata=Xtest, trainY=Ytrain)
-# diff_true_pred = abs(absolute.predictions$prediction - YTrue )
-# diff_rna_true = abs( abs.som.data.noNA[!training,2] - YTrue)
-# diff_random_true = abs( runif(length(YTrue)) - YTrue)
-# hist(diff_random_true, 25, xlim = c(0,1))
-# hist(diff_rna_true, 25, xlim = c(0,1))
-# hist(diff_true_pred, 25, xlim = c(0,1))
-# length(which(diff_rna_true < .2))
-# length(which(diff_true_pred < .2))
+# Affinity propagation
+ap.cluster <- apcluster(negDistMat(r=2), absolute.som$codes,q=0.1)
+# corSimMat(method="spearman")
+plot(ap.cluster, absolute.som$codes)
+heatmap(ap.cluster)
 
-#plot(absolute.som)
-#plot(absolute.som, type="quality")
-#plot(absolute.som, type="count")
-#plot(absolute.som, type="changes")
+#ap.cluster.full <- apcluster(negDistMat(r=2), absolute.som$data,q= 0)
+#plot(ap.cluster.full, absolute.som$data)
+#heatmap(ap.cluster.full)
 
 # One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
 
@@ -779,28 +782,6 @@ som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, 
 # Give proteins higher weight for tighter clustering
 som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
 
-# PREDICTION DOESN'T WORK THAT MUCH BETTER THAN RNA ALONE HERE. 
-# The training set and test set don't have the same distribution of prot quantiles
-# Xtest <- list ( ribo= ribo.quantiles[singleNARows, -dropCols] , 
-#                 rna = rna.quantiles[singleNARows, -dropCols] ,
-#                 te = te.quantiles[singleNARows, -dropCols],
-#                 prot=prot.quantiles[singleNARows, -dropCols])
-# 
-# prot.predictions <- predict.kohonen(som.exp.prot, newdata=Xtest, whatmap=c(1,2,3) )
-# diff_in_pred <- prot.predictions$prediction - prot.quantiles[singleNARows,-dropCols]
-# 
-# THRESHOLD <- .1
-# sum( abs(apply(diff_in_pred, 1, median, na.rm=T)) < THRESHOLD) 
-# random.prediction <- matrix(runif(3708), ncol= ncol(prot.predictions$prediction))
-# diff_wrandom <- random.prediction - prot.quantiles[singleNARows,-dropCols]
-# sum( abs(apply(diff_wrandom, 1, median, na.rm=T)) < THRESHOLD) 
-# diff_wrna <- rna.quantiles[singleNARows, -dropCols] - prot.quantiles[singleNARows,-dropCols]
-# diff_betweenpred_and_random <-abs(diff_in_pred) - abs(diff_wrandom)
-# diff_betweenpred_and_rna <- abs(diff_in_pred) - abs(diff_wrna)
-
-# VANILLA SOM WITH NONA PROT OR JUST THE EXPRESSION DATA
-#som.exp = som(data =som.data, grid=somgrid(xdim.total, ydim.total, "hexagonal"), toroidal=T)
-#som.exp.prot.noNA = som(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T)
 plot.kohonen(som.exp.prot, type="counts")
 plot.kohonen(som.exp.prot, type="codes")
 plot.kohonen(som.exp.prot, type="changes")
@@ -823,7 +804,6 @@ cor_between_ind <- function (x) {
 }
 
 # We can also do k-means on the meta-factors/codes and plot the k-means. This could be good for GO enrichment
-
 # It might make more sense to make these plots with the som that includes the protein levels
 ribo_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$ribo,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
 rna_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$rna,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
@@ -840,6 +820,44 @@ plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Betw
 plot.kohonen(som.exp, type="counts" )
 
 
+### PATHWAY ENRICHMENT ANALYSIS WITH RDAVID
+david<-DAVIDWebService$new(email="ccenik@stanford.edu")
+# We will use ENSEMBL_GENE_ID but need to crop the -001 and select species to human
+# GENE_ID 92% coverage
+# TRANSRIPT_ID 87$ == We will use GENE_IDS
+
+hgnc_to_ensg_convert <- function(x) {
+  xdf <- data.frame(ID=x)
+  list = unlist(strsplit(merge(xdf, hgnc_to_ensg, by.x="ID", by.y="V5" )$V2, split=".", fixed=T))
+  list = list[seq(1, length(list), 2)]
+  return (list)
+}
+#getIdTypes(david)
+background_list = hgnc_to_ensg_convert(row.names(v3))
+addList(david, background_list, idType="ENSEMBL_GENE_ID", listName="V3", listType="Background")
+
+# Across Ind RNA-Prot; RNA-RIBO
+high_across_ind_ribo_correlation = row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval<= pval_cutoff]
+high_ribo_cor_list = hgnc_to_ensg_convert(high_across_ind_ribo_correlation)
+addList(david, high_ribo_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboCorProt", listType="Gene")
+
+#setCurrentSpecies(david, )
+getAllAnnotationCategoryNames(david)
+setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+termCluster<-getClusterReport(david,type="Term")
+getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+
+## Variation in expression between individuals
+# RNA/RIBO
+high_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv > 2)]
+low_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv < .5)]
+high_rna_ribo_variation = hgnc_to_ensg_convert(high_rna_ribo_variation)
+low_rna_ribo_variation = hgnc_to_ensg_convert(low_rna_ribo_variation)
+addList(david, high_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="HighRNARiboVariation", listType="Gene")
+addList(david, low_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="LowRNARiboVariation", listType="Gene")
+setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
+# setCurrentGeneListPosition(david, 1)
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
@@ -940,9 +958,9 @@ for (i in names(total_alleles[total_alleles > 60*.1 ]) ) {
 # print (index_factor)
  multi_pval <- c(multi_pval, summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4])
   boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Kozak Strength" , names=unique(sort(round(index_factor, digits=2))) )
-legend("topright", paste("p-val = ",  round(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=4 ), sep="" ), inset=0.05, bty= "n" )
+legend("topright", paste("p-val = ",  signif(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
   boxplot(rna_only$E[my_index,]~rna_index_factor, ylab="RNA Expression", xlab= "Kozak Strength", names=unique(sort(round(index_factor, digits=2))))
-legend("topright", paste("p-val = ",  round(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
+legend("topright", paste("p-val = ",  signif(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
 summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
 summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
  }
@@ -981,7 +999,7 @@ for (i in 1:length(single_var_ind[,1])) {
     if ( my_pval < 0.01) {
     #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Ribo_", row.names(ribo_only)[my_index],".pdf", sep=""), width=5, height=5   )
     boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Allele Number" , names=unique(sort(index_factor)), main=row.names(ribo_only)[my_index] )
-    legend("topright", paste("p-val = ",  signif(my_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )
+    legend("bottomright", paste("p-val = ",  signif(my_pval, digits=2 ), sep="" ), inset=0.05, bty= "n" )
     #dev.off()
     rna_index_factor <- rep (0, times=length(sample_labels_rna))
     rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
@@ -990,7 +1008,7 @@ for (i in 1:length(single_var_ind[,1])) {
     rna_pval <- summary(lm(rna_only$E[my_index,]~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4]
     #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/RNA_", row.names(rna_only)[my_index], ".pdf",  sep=""), width=5, height=5   )
     boxplot(rna_only$E[my_index,]~ rna_index_factor, ylab= "RNA Expression", xlab="Allele Number" , names=unique(sort(index_factor)), main= row.names(rna_only)[my_index] )
-    legend("topright", paste("p-val = ",  signif(rna_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )  
+    legend("topright", paste("p-val = ",  signif(rna_pval, digits=2 ), sep="" ), inset=0.05, bty= "n" )  
     #dev.off()
     }
   }
@@ -1026,6 +1044,97 @@ abline(v=c(0), h=c(0,log(2), -log(2)))
 boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
 wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
 
+#Experimental Results -- RATIOS
+t1 <- c(3.96542345327789,
+        3.44234121174092,
+        3.04438144930569,
+        2.93967231943929,
+        4.11347731000547)
+t2 = c(2.82217506138878,
+       2.59405879757123,
+       2.35815546097475,
+       2.963013925323,
+       2.28901207104044) 
+t3= c(3.60185503263483,
+      3.62021809898122,
+      3.28314793141455,
+      2.99207787282458,
+      3.50478602453603)
+t4 = c(18.2902479279538,
+       20.6546019318151,
+       18.8193020249892,
+       16.6166007581944,
+       21.3674390573499)
+t5= c(11.0387066961044,
+      11.8931431823988,
+      11.6826039464806,
+      10.1285659460151,
+      12.0310466442286)
+t6= c(17.0039823022692,
+      17.6715785418472,
+      17.4222866730181,
+      17.3597159803328,
+      21.5216655304032)
+t7 = c(5.54029043612037,
+       3.79875677177386,
+       4.34192690011633,
+       5.46527638585086,
+       5.13069328479285)
+t8= c(2.71925726758724,
+      2.01505284250671,
+      2.26591664908055,
+      2.3069549139525,
+      3.65752843380776)
+t9 = c(3.17805617165845,
+       3.05691918246317,
+       4.87943869472912,
+       2.98700902762487,
+       6.17002355323692)
+t10 = c(12.7397566904909,
+        13.0141868294551,
+        15.0902961231795,
+        15.2084415898006,
+        20.5442642085684)
+t11 = c(11.6546081495051,
+        10.5407431725019,
+        11.5617412714154,
+        9.09057275966018,
+        13.2427496147232)
+# Based on http://nar.oxfordjournals.org/content/32/20/e160.full#disp-formula-2
+# we define outliers as 
+outlier_detect<- function(r) {
+  range = c(median(r) + 1.5*IQR(r), median(r) - 1.5*IQR(r))
+  outliers= !(r > range[1] | r < range[2])
+  return(outliers)
+}
+# 4-6-10
+#1-7 ; 2-8, 3-9, 5-11
+# Welch two sample t-test
+t.test(t1, t7)
+t.test(t1[outlier_detect(t1)], t7[outlier_detect(t7)])
+# t6, and t10 have clear outliers that can be removed
+t.test(t4, t10)
+t.test(t4[outlier_detect(t4)], t10[outlier_detect(t10)])
+t.test(t6, t10)
+t.test(t6[outlier_detect(t6)], t10[outlier_detect(t10)])
+t.test(t4, t6)
+t.test(t4[outlier_detect(t4)], t6[outlier_detect(t6)])
+
+df = matrix( c(t1, t2 , t3 , t4, t5, t6, t7, t8, t9, t10, t11), ncol=11)
+outs <- apply(df, 2, outlier_detect)
+df.summary  = data.frame(MEAN =apply(df, 2, mean), 
+                         SE = apply(df, 2, function(x){sd(x)/ sqrt(length(x))}), 
+                         PAIRING = factor (c(1, 2, 3, 4,5,4,1,2,3,4,5 ) )  ) 
+
+barplot2(df.summary$MEAN[c(1,7)], space = 0, col=c("blue", "salmon"), ylim=c(0,5.5), ylab="Rluc/Fluc Ratio",
+         plot.ci=T, ci.l= df.summary$MEAN[c(1,7)] - df.summary$SE[c(1,7)], ci.u = df.summary$MEAN[c(1,7)] + df.summary$SE[c(1,7)])
+
+barplot2(df.summary$MEAN[c(6,4,10)], space = 0, col=c("blue", "salmon", "green"), ylim=c(0,20), ylab="Rluc/Fluc Ratio",
+         plot.ci=T, ci.l= df.summary$MEAN[c(6,4,10)] - df.summary$SE[c(6,4,10)], ci.u = df.summary$MEAN[c(6,4,10)] + df.summary$SE[c(6,4,10)])
+
+
+#ggplot(df.summary, aes( PAIRING, MEAN)) + 
+#  geom_bar( stat="identity")
 
 # Take the translation efficiency table and for each position look for significant diff with Kruskal
 # Generate this table by merging kozak data with translation efficiency table (grand_mean_te)
@@ -1425,3 +1534,46 @@ norm_hc_rep <- hclust (norm_dd_rep)
 # write.table(norm_expr_joint[,85:133], file =paste (data_dir, "Top3_SVA_Removed_QN_FullModel_RiboProfiling_Expression", sep=""),             
 #             row.names=joint_count_ids, sep="\t")
 
+### UNUSED SOM PREDICTION 
+# We can do a version of this where there are more classes based on differences
+# Test prediction -- Not doing much better than rna alone
+# set.seed(173)
+# training <- sample(c(T,F), nrow(abs.som.data.noNA),  prob=c(.95,.05), replace=T)
+# absolute.som.train <- som(abs.som.data.noNA[training,1:3], toroidal=T, grid=somgrid(xdim, ydim, "hexagonal"))
+# Xtest= abs.som.data.noNA[!training,1:3]
+# Ytrain=abs.som.data.noNA[training,4]
+# YTrue= abs.som.data.noNA[!training,4]
+# absolute.predictions <- predict.kohonen(absolute.som.train, newdata=Xtest, trainY=Ytrain)
+# diff_true_pred = abs(absolute.predictions$prediction - YTrue )
+# diff_rna_true = abs( abs.som.data.noNA[!training,2] - YTrue)
+# diff_random_true = abs( runif(length(YTrue)) - YTrue)
+# hist(diff_random_true, 25, xlim = c(0,1))
+# hist(diff_rna_true, 25, xlim = c(0,1))
+# hist(diff_true_pred, 25, xlim = c(0,1))
+# length(which(diff_rna_true < .2))
+# length(which(diff_true_pred < .2))
+
+#plot(absolute.som)
+#plot(absolute.som, type="quality")
+#plot(absolute.som, type="count")
+#plot(absolute.som, type="changes")
+
+
+# PREDICTION DOESN'T WORK THAT MUCH BETTER THAN RNA ALONE HERE. 
+# The training set and test set don't have the same distribution of prot quantiles
+# Xtest <- list ( ribo= ribo.quantiles[singleNARows, -dropCols] , 
+#                 rna = rna.quantiles[singleNARows, -dropCols] ,
+#                 te = te.quantiles[singleNARows, -dropCols],
+#                 prot=prot.quantiles[singleNARows, -dropCols])
+# 
+# prot.predictions <- predict.kohonen(som.exp.prot, newdata=Xtest, whatmap=c(1,2,3) )
+# diff_in_pred <- prot.predictions$prediction - prot.quantiles[singleNARows,-dropCols]
+# 
+# THRESHOLD <- .1
+# sum( abs(apply(diff_in_pred, 1, median, na.rm=T)) < THRESHOLD) 
+# random.prediction <- matrix(runif(3708), ncol= ncol(prot.predictions$prediction))
+# diff_wrandom <- random.prediction - prot.quantiles[singleNARows,-dropCols]
+# sum( abs(apply(diff_wrandom, 1, median, na.rm=T)) < THRESHOLD) 
+# diff_wrna <- rna.quantiles[singleNARows, -dropCols] - prot.quantiles[singleNARows,-dropCols]
+# diff_betweenpred_and_random <-abs(diff_in_pred) - abs(diff_wrandom)
+# diff_betweenpred_and_rna <- abs(diff_in_pred) - abs(diff_wrna)
