@@ -10,7 +10,7 @@ library("RColorBrewer")
 library("plyr")
 library("apcluster")
 library("RDAVIDWebService")
-#david<-DAVIDWebService$new(email="ccenik@stanford.edu")
+library("gplots")
 source('~/project/kohonen2/R/plot.kohonen.R')
 
 # Data Directory
@@ -707,9 +707,9 @@ ap.cluster <- apcluster(negDistMat(r=2), absolute.som$codes,q=0.1)
 plot(ap.cluster, absolute.som$codes)
 heatmap(ap.cluster)
 
-ap.cluster.full <- apcluster(negDistMat(r=2), absolute.som$data,q= 0)
-plot(ap.cluster.full, absolute.som$data)
-heatmap(ap.cluster.full)
+#ap.cluster.full <- apcluster(negDistMat(r=2), absolute.som$data,q= 0)
+#plot(ap.cluster.full, absolute.som$data)
+#heatmap(ap.cluster.full)
 
 # One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
 
@@ -805,6 +805,32 @@ plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Betw
 plot.kohonen(som.exp, type="counts" )
 
 
+### PATHWAY ENRICHMENT ANALYSIS WITH RDAVID
+david<-DAVIDWebService$new(email="ccenik@stanford.edu")
+# We can use ENSEMBL_TRANSCRIPT_ID OR ENSEMBL_GENE_ID but need to crop the -001 and select species to human
+# We need to do this for the SOM stuff and the Variation genes. 
+#getIdTypes(david)
+# GENE_ID 92% coverage
+# TRANSRIPT_ID 87$ == We will use GENE_IDS
+hgnc_to_ensg_convert <- function(x) {
+  xdf <- data.frame(ID=x)
+  list = unlist(strsplit(merge(xdf, hgnc_to_ensg, by.x="ID", by.y="V5" )$V2, split=".", fixed=T))
+  list = list[seq(1, length(list), 2)]
+  return (list)
+}
+hgnc_ids <- data.frame(ID=row.names(v3))
+background_list <- unlist(strsplit(merge(hgnc_ids, hgnc_to_ensg, by.x="ID", by.y="V5" )$V2, split=".", fixed=T))
+background_list <- background_list[seq(1, length(background_list), 2)]
+addList(david, background_list, idType="ENSEMBL_GENE_ID", listName="V3", listType="Background")
+high_across_ind_ribo_correlation = row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval<= pval_cutoff]
+high_ribo_cor_list = hgnc_to_ensg_convert(high_across_ind_ribo_correlation)
+addList(david, high_ribo_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboCorProt", listType="Gene")
+
+#setCurrentSpecies(david, )
+getAllAnnotationCategoryNames(david)
+setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+termCluster<-getClusterReport(david,type="Term")
+getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
@@ -905,9 +931,9 @@ for (i in names(total_alleles[total_alleles > 60*.1 ]) ) {
 # print (index_factor)
  multi_pval <- c(multi_pval, summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4])
   boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Kozak Strength" , names=unique(sort(round(index_factor, digits=2))) )
-legend("topright", paste("p-val = ",  round(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=4 ), sep="" ), inset=0.05, bty= "n" )
+legend("topright", paste("p-val = ",  signif(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
   boxplot(rna_only$E[my_index,]~rna_index_factor, ylab="RNA Expression", xlab= "Kozak Strength", names=unique(sort(round(index_factor, digits=2))))
-legend("topright", paste("p-val = ",  round(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
+legend("topright", paste("p-val = ",  signif(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
 summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
 summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
  }
@@ -946,7 +972,7 @@ for (i in 1:length(single_var_ind[,1])) {
     if ( my_pval < 0.01) {
     #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Ribo_", row.names(ribo_only)[my_index],".pdf", sep=""), width=5, height=5   )
     boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Allele Number" , names=unique(sort(index_factor)), main=row.names(ribo_only)[my_index] )
-    legend("topright", paste("p-val = ",  signif(my_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )
+    legend("bottomright", paste("p-val = ",  signif(my_pval, digits=2 ), sep="" ), inset=0.05, bty= "n" )
     #dev.off()
     rna_index_factor <- rep (0, times=length(sample_labels_rna))
     rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
@@ -955,7 +981,7 @@ for (i in 1:length(single_var_ind[,1])) {
     rna_pval <- summary(lm(rna_only$E[my_index,]~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4]
     #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/RNA_", row.names(rna_only)[my_index], ".pdf",  sep=""), width=5, height=5   )
     boxplot(rna_only$E[my_index,]~ rna_index_factor, ylab= "RNA Expression", xlab="Allele Number" , names=unique(sort(index_factor)), main= row.names(rna_only)[my_index] )
-    legend("topright", paste("p-val = ",  signif(rna_pval, digits=3 ), sep="" ), inset=0.05, bty= "n" )  
+    legend("topright", paste("p-val = ",  signif(rna_pval, digits=2 ), sep="" ), inset=0.05, bty= "n" )  
     #dev.off()
     }
   }
@@ -991,6 +1017,97 @@ abline(v=c(0), h=c(0,log(2), -log(2)))
 boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
 wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
 
+#Experimental Results -- RATIOS
+t1 <- c(3.96542345327789,
+        3.44234121174092,
+        3.04438144930569,
+        2.93967231943929,
+        4.11347731000547)
+t2 = c(2.82217506138878,
+       2.59405879757123,
+       2.35815546097475,
+       2.963013925323,
+       2.28901207104044) 
+t3= c(3.60185503263483,
+      3.62021809898122,
+      3.28314793141455,
+      2.99207787282458,
+      3.50478602453603)
+t4 = c(18.2902479279538,
+       20.6546019318151,
+       18.8193020249892,
+       16.6166007581944,
+       21.3674390573499)
+t5= c(11.0387066961044,
+      11.8931431823988,
+      11.6826039464806,
+      10.1285659460151,
+      12.0310466442286)
+t6= c(17.0039823022692,
+      17.6715785418472,
+      17.4222866730181,
+      17.3597159803328,
+      21.5216655304032)
+t7 = c(5.54029043612037,
+       3.79875677177386,
+       4.34192690011633,
+       5.46527638585086,
+       5.13069328479285)
+t8= c(2.71925726758724,
+      2.01505284250671,
+      2.26591664908055,
+      2.3069549139525,
+      3.65752843380776)
+t9 = c(3.17805617165845,
+       3.05691918246317,
+       4.87943869472912,
+       2.98700902762487,
+       6.17002355323692)
+t10 = c(12.7397566904909,
+        13.0141868294551,
+        15.0902961231795,
+        15.2084415898006,
+        20.5442642085684)
+t11 = c(11.6546081495051,
+        10.5407431725019,
+        11.5617412714154,
+        9.09057275966018,
+        13.2427496147232)
+# Based on http://nar.oxfordjournals.org/content/32/20/e160.full#disp-formula-2
+# we define outliers as 
+outlier_detect<- function(r) {
+  range = c(median(r) + 1.5*IQR(r), median(r) - 1.5*IQR(r))
+  outliers= !(r > range[1] | r < range[2])
+  return(outliers)
+}
+# 4-6-10
+#1-7 ; 2-8, 3-9, 5-11
+# Welch two sample t-test
+t.test(t1, t7)
+t.test(t1[outlier_detect(t1)], t7[outlier_detect(t7)])
+# t6, and t10 have clear outliers that can be removed
+t.test(t4, t10)
+t.test(t4[outlier_detect(t4)], t10[outlier_detect(t10)])
+t.test(t6, t10)
+t.test(t6[outlier_detect(t6)], t10[outlier_detect(t10)])
+t.test(t4, t6)
+t.test(t4[outlier_detect(t4)], t6[outlier_detect(t6)])
+
+df = matrix( c(t1, t2 , t3 , t4, t5, t6, t7, t8, t9, t10, t11), ncol=11)
+outs <- apply(df, 2, outlier_detect)
+df.summary  = data.frame(MEAN =apply(df, 2, mean), 
+                         SE = apply(df, 2, function(x){sd(x)/ sqrt(length(x))}), 
+                         PAIRING = factor (c(1, 2, 3, 4,5,4,1,2,3,4,5 ) )  ) 
+
+barplot2(df.summary$MEAN[c(1,7)], space = 0, col=c("blue", "salmon"), ylim=c(0,5.5), ylab="Rluc/Fluc Ratio",
+         plot.ci=T, ci.l= df.summary$MEAN[c(1,7)] - df.summary$SE[c(1,7)], ci.u = df.summary$MEAN[c(1,7)] + df.summary$SE[c(1,7)])
+
+barplot2(df.summary$MEAN[c(6,4,10)], space = 0, col=c("blue", "salmon", "green"), ylim=c(0,20), ylab="Rluc/Fluc Ratio",
+         plot.ci=T, ci.l= df.summary$MEAN[c(6,4,10)] - df.summary$SE[c(6,4,10)], ci.u = df.summary$MEAN[c(6,4,10)] + df.summary$SE[c(6,4,10)])
+
+
+#ggplot(df.summary, aes( PAIRING, MEAN)) + 
+#  geom_bar( stat="identity")
 
 # Take the translation efficiency table and for each position look for significant diff with Kruskal
 # Generate this table by merging kozak data with translation efficiency table (grand_mean_te)
