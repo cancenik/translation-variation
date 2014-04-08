@@ -164,12 +164,18 @@ v3$E[,1:84] <- batch_removed_joint
 reps_ribo_joint <- duplicated(sample_labels_joint[85:134]) | duplicated(sample_labels_joint[85:134], fromLast = TRUE)
 joint_dd_rep <- dist(t (v3$E[,85:134][,reps_ribo_joint] ) )
 joint_ribo_rep <- hclust (joint_dd_rep)
-plot(joint_ribo_rep)
+select_first <- function(s) strsplit(s, "_")[[1]][1]
+labels_ribo = sapply(colnames(v3$E[,85:134][,reps_ribo_joint]),select_first)
+## SAVE FROM ZOOM
+plot(joint_ribo_rep, labels= labels_ribo, sub = "", xlab="", main= "Clustering Ribosome Profiling Libraries")
 reps_rna_joint <- duplicated(sample_labels_joint[1:84]) | duplicated(sample_labels_joint[1:84], fromLast = TRUE)
 joint_dd_rna <- dist(t (v3$E[,1:84][,reps_rna_joint]))
 joint_rna_hc <- hclust(joint_dd_rna)
-plot(joint_rna_hc)
+labels_rna = sapply(colnames(v3$E[,1:84][,reps_rna_joint]) , select_first)
+labels_lab_rna = sapply(colnames(v3$E[,1:84][,reps_rna_joint]), function(s) {tail(strsplit(s, "_")[[1]],n=1 )} )
+plot(joint_rna_hc, labels= paste(labels_rna, labels_lab_rna, sep="_"), sub = "", xlab="", main= "Clustering RNA-Seq Libraries")
 plotMDS(v3$E, labels=type)
+# plotMDS (v3$E[,type=="RNA"])
 
 # Extract Joint Replicated Subset
 cor_coefs_rna_median <- apply(cor(v3$E[,1:84]),1, median)
@@ -257,16 +263,17 @@ ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x
 rnacv <- (rna_cv_between_individuals/rna_repcv_median) 
 ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
 
-#pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=4, height=4)
+#pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=5, height=5)
 #99% of the dataset is less than 8; so limit xlim to 0_to_8
 # We changed number of breaks so that the number of breaks in x-axis is similar
 hist(rnacv, 100, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
 #dev.off()
-#pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=4, height=4)
+#pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=5, height=5)
 hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
 #dev.off()
 
 #low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
+#names(rna_replicate_mean_weights)
 length(which(rnacv/ribocv > 2))
 length(which(rnacv/ribocv < .5))
 sorted_cvs <- sort(rnacv/ribocv , index.return=T)
@@ -807,21 +814,21 @@ plot.kohonen(som.exp, type="counts" )
 
 ### PATHWAY ENRICHMENT ANALYSIS WITH RDAVID
 david<-DAVIDWebService$new(email="ccenik@stanford.edu")
-# We can use ENSEMBL_TRANSCRIPT_ID OR ENSEMBL_GENE_ID but need to crop the -001 and select species to human
-# We need to do this for the SOM stuff and the Variation genes. 
-#getIdTypes(david)
+# We will use ENSEMBL_GENE_ID but need to crop the -001 and select species to human
 # GENE_ID 92% coverage
 # TRANSRIPT_ID 87$ == We will use GENE_IDS
+
 hgnc_to_ensg_convert <- function(x) {
   xdf <- data.frame(ID=x)
   list = unlist(strsplit(merge(xdf, hgnc_to_ensg, by.x="ID", by.y="V5" )$V2, split=".", fixed=T))
   list = list[seq(1, length(list), 2)]
   return (list)
 }
-hgnc_ids <- data.frame(ID=row.names(v3))
-background_list <- unlist(strsplit(merge(hgnc_ids, hgnc_to_ensg, by.x="ID", by.y="V5" )$V2, split=".", fixed=T))
-background_list <- background_list[seq(1, length(background_list), 2)]
+#getIdTypes(david)
+background_list = hgnc_to_ensg_convert(row.names(v3))
 addList(david, background_list, idType="ENSEMBL_GENE_ID", listName="V3", listType="Background")
+
+# Across Ind RNA-Prot; RNA-RIBO
 high_across_ind_ribo_correlation = row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval<= pval_cutoff]
 high_ribo_cor_list = hgnc_to_ensg_convert(high_across_ind_ribo_correlation)
 addList(david, high_ribo_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboCorProt", listType="Gene")
@@ -831,6 +838,18 @@ getAllAnnotationCategoryNames(david)
 setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
 termCluster<-getClusterReport(david,type="Term")
 getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+
+## Variation in expression between individuals
+# RNA/RIBO
+high_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv > 2)]
+low_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv < .5)]
+high_rna_ribo_variation = hgnc_to_ensg_convert(high_rna_ribo_variation)
+low_rna_ribo_variation = hgnc_to_ensg_convert(low_rna_ribo_variation)
+addList(david, high_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="HighRNARiboVariation", listType="Gene")
+addList(david, low_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="LowRNARiboVariation", listType="Gene")
+setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
+# setCurrentGeneListPosition(david, 1)
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
