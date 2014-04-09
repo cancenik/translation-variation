@@ -667,15 +667,15 @@ plot.kohclasses <- function(x, main, palette.name, bgcol,
     } else {
       for(i in 1:nrow(x$grid$pts)) {
         ## CC changed this from 1 to 0 so it works with non-binary table
-        if(sum(codes[i,] > 0)) {
-            bgcol[i] = NA
-        }
+#        if(sum(codes[i,] > 0)) {
+#            bgcol[i] = NA
+#        }
         hexagon(x$grid$pts[i, 1], x$grid$pts[i, 2],bg=bgcol[i],fg="black")
       }
     }
     
-    codemins <- apply(codes, 2, min)
-    codes <- sweep(codes, 2, codemins)
+#    codemins <- apply(codes, 2, min)
+#    codes <- sweep(codes, 2, codemins)
 
   maxScale<-max(rowSums(codes))
   for(i in 1:nrow(x$grid$pts)) {

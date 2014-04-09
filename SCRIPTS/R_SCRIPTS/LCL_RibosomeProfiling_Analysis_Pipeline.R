@@ -575,14 +575,6 @@ cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12
 #row.names(CDS_Len) <- CDS_IDs
 #CDS_Len <- CDS_Len[row.names(CDS_Len) %in% joint_count_ids,]
 
-
-plot.kohonen(absolute.som, property=ribo_mean, type = "property", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=absolute.som$codes[,1], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
-
-plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
-
-## Hexagonal plotting 
 grand_mean_rna <- apply (v3$E[,type=="RNA"], 1, median)
 grand_mean_rna  <- data.frame(HGNC=joint_count_ids, grand_mean_rna)
 grand_mean_ribo <- apply(v3$E[,type=="Ribo"], 1, median)
@@ -703,9 +695,10 @@ plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=r
 # Use plot.kohonen(absolute.som, type="classes", property=numericmatrix(absolute.som$codes))
 # Update function to introduce a more meaningful scaling for the pie chart
 # Update function to change sum(codes) > 1 to > 0
-plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T)
-abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
-plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
+colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
+plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Dark2")}, bgcol= brewer.pal(7,"Set2")[cluster.membership])
+#abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
+#plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
 
 # We can add cluster boundaries by k-means
 # kmeans(absolute.som$codes, 12)$cluster
@@ -713,7 +706,24 @@ add.cluster.boundaries(absolute.som, abs.som.which.max)
 add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 3)$cluster)
 
 # Affinity propagation
-ap.cluster <- apcluster(negDistMat(r=2), absolute.som$codes,q=0.1)
+ap.cluster <- apcluster(negDistMat(r=2), absolute.som$codes,q=0)
+# ap.cluster@clusters == List of Clusters
+cluster.membership <- c()
+for (i in 1:length(ap.cluster@clusters)) { 
+cluster.membership[ap.cluster@clusters[[i]]] <- i
+}
+# We can plot a pie-chart version. Convert codebook ribo, rna, te to quantile
+# Use plot.kohonen(absolute.som, type="classes", property=numericmatrix(absolute.som$codes))
+# Update function to introduce a more meaningful scaling for the pie chart
+# Update function to change sum(codes) > 1 to > 0
+colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
+plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Dark2")}, bgcol= brewer.pal(7,"Set2")[cluster.membership])
+absolute.som$codes[ap.cluster@exemplars, ]
+
+#abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
+#plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
+
+#add.cluster.boundaries(absolute.som, cluster.membership)
 # corSimMat(method="spearman")
 plot(ap.cluster, absolute.som$codes)
 heatmap(ap.cluster)
