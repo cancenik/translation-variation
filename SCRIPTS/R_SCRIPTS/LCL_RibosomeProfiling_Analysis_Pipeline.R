@@ -575,6 +575,14 @@ cor.test(ribo_rna_prot_12878$gm12878_rna_mean, log10(as.numeric(ribo_rna_prot_12
 #row.names(CDS_Len) <- CDS_IDs
 #CDS_Len <- CDS_Len[row.names(CDS_Len) %in% joint_count_ids,]
 
+
+plot.kohonen(absolute.som, property=ribo_mean, type = "property", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=absolute.som$codes[,1], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+
+plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
+plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+
+## Hexagonal plotting 
 grand_mean_rna <- apply (v3$E[,type=="RNA"], 1, median)
 grand_mean_rna  <- data.frame(HGNC=joint_count_ids, grand_mean_rna)
 grand_mean_ribo <- apply(v3$E[,type=="Ribo"], 1, median)
@@ -669,14 +677,6 @@ absolute.som <- som(abs.som.data.noNA, toroidal=T, grid=somgrid(xdim, ydim, "hex
 # abs.som.data.noNA -> Numeric Matrix, 4th column is ibaq.human
 prot_mean <-  by (data.frame(abs.som.data.noNA[,4]), absolute.som$unit.classif, FUN = colMeans)
 ribo_mean <- by (data.frame(abs.som.data.noNA[,1]), absolute.som$unit.classif, FUN = colMeans)
-
-plot.kohonen(absolute.som, property=ribo_mean, type = "property", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=absolute.som$codes[,1], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
-
-plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
-plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
-
-## Hexagonal plotting 
 # som.exp$unit.classif has the info about where each gene went
 # We also need some visually appealing colors
 ## Write function to apply function to each cell of SOM.
@@ -693,10 +693,6 @@ plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="proper
 plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation",contin=T,zlim=c(-1,1), palette.name=redblue_cols, ncolors=11)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> a8b91a07059c6719e54b73798979e6473e253fec
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,1],palette.name=redblue_cols, ncolors=11, contin=T, main="Ribosome Occupancy" )
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,2],palette.name=redblue_cols, ncolors=11, contin=T, main="RNA Expression" )
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],palette.name=redblue_cols, ncolors=11, contin=T, main="Translation Efficiency" )
@@ -832,20 +828,38 @@ hgnc_to_ensg_convert <- function(x) {
   list = list[seq(1, length(list), 2)]
   return (list)
 }
-#getIdTypes(david)
-background_list = hgnc_to_ensg_convert(row.names(v3))
-addList(david, background_list, idType="ENSEMBL_GENE_ID", listName="V3", listType="Background")
 
-# Across Ind RNA-Prot; RNA-RIBO
-high_across_ind_ribo_correlation = row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval<= pval_cutoff]
-high_ribo_cor_list = hgnc_to_ensg_convert(high_across_ind_ribo_correlation)
-addList(david, high_ribo_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboCorProt", listType="Gene")
+filter_by_fdr_fold_enrichment <- function (annot.chart, fdr.threshold, fold.enrichment) { 
+ filtered = annot.chart[annot.chart$Fold.Enrichment > fold.enrichment & annot.chart$FDR < fdr.threshold , ]
+ return (filtered)
+}
+
+# We need a better representation of the results
+# We can only set a p-val threshold; update the results with FDR cutoff
+# Then we should sort the results by fold enrichment
 
 #setCurrentSpecies(david, )
 getAllAnnotationCategoryNames(david)
+#getIdTypes(david)
 setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
-termCluster<-getClusterReport(david,type="Term")
-getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+
+background_list = hgnc_to_ensg_convert(row.names(v3))
+addList(david, background_list, idType="ENSEMBL_GENE_ID", listName="V3", listType="Background")
+
+# Across Ind RNA-Prot; RNA-RIBO -- There is not too much interesting enrichments here
+high_across_ind_ribo_correlation = row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval<= pval_cutoff]
+high_across_ind_rna_correlation = row.names(linfeng_protein_ribo_rna)[across_ind_rna_correlation_pval<= pval_cutoff]
+high_ribo_rna =row.names(linfeng_protein_ribo_rna)[across_ind_rna_correlation_pval<= pval_cutoff & across_ind_ribo_correlation_pval <= pval_cutoff]
+high_ribo_cor_list = hgnc_to_ensg_convert(high_across_ind_ribo_correlation)
+high_rna_cor_list = hgnc_to_ensg_convert(high_across_ind_rna_correlation)
+high_ribo_rna_list= hgnc_to_ensg_convert(high_ribo_rna)
+addList(david, high_ribo_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboCorProt", listType="Gene")
+addList(david, high_rna_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRNACorProt", listType="Gene")
+addList(david, high_ribo_rna_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboRNACorProt", listType="Gene")
+
+#termCluster<-getClusterReport(david,type="Term")
+AnnotCluster = getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+filter_by_fdr_fold_enrichment(AnnotCluster, .1, 2)
 
 ## Variation in expression between individuals
 # RNA/RIBO
@@ -858,6 +872,46 @@ addList(david, low_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="LowRN
 setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
 # setCurrentGeneListPosition(david, 1)
+
+## Differential Expression -- RNA/Ribo/TE => This should go with Bilal's RADIAL SETS
+# te_fit3 is the across individual difference in translation efficiency, ribo_fit2, rna_fit2 equivalent ones for ribo and rna
+# First set is genes differentially expressed at any level
+# te.diff.results -- lfc=1
+#results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=log2(1.5))
+#results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=log2(1.5))
+
+### Both up/down have interesting categories for enrichment. We can use the radial sets as a visualization and quote the GO enrichment in text
+te_down_list = hgnc_to_ensg_convert(names(apply(te.diff.results == -1 , 1 , any))[apply(te.diff.results == -1 , 1 , any)])
+te_up_list = hgnc_to_ensg_convert(names(apply(te.diff.results == 1 , 1 , any))[apply(te.diff.results == 1 , 1 , any)])
+te_any  = hgnc_to_ensg_convert(names(apply(te.diff.results != 0 , 1 , any))[apply(te.diff.results != 0  , 1 , any)])
+addList(david, te_down_list, idType="ENSEMBL_GENE_ID", listName="te_down_list", listType="Gene")
+addList(david, te_up_list, idType="ENSEMBL_GENE_ID", listName="te_up_list", listType="Gene")
+addList(david, te_any, idType="ENSEMBL_GENE_ID", listName="te_any", listType="Gene")
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+
+# Way too many genes are up/down in rna/ribo so we might have to do something more specific
+# One idea is to change to back to rna_any/ribo_any and ask if different degrees are enriched in something
+rna_down_list = hgnc_to_ensg_convert(names(apply(results.rna == -1 , 1 , any))[apply(results.rna == -1 , 1 , any)])
+rna_up_list = hgnc_to_ensg_convert(names(apply(results.rna == 1 , 1 , any))[apply(results.rna == 1 , 1 , any)])
+rna_any  = hgnc_to_ensg_convert(names(apply(results.rna != 0 , 1 , any))[apply(results.rna != 0  , 1 , any)])
+addList(david, rna_down_list, idType="ENSEMBL_GENE_ID", listName="rna_down_list", listType="Gene")
+addList(david, rna_up_list, idType="ENSEMBL_GENE_ID", listName="rna_up_list", listType="Gene")
+addList(david, rna_any, idType="ENSEMBL_GENE_ID", listName="rna_any", listType="Gene")
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+
+# Ribo-Down/ribo-any has slight enrichment for immune-related functions
+ribo_down_list = hgnc_to_ensg_convert(names(apply(results.ribo == -1 , 1 , any))[apply(results.ribo == -1 , 1 , any)])
+ribo_up_list = hgnc_to_ensg_convert(names(apply(results.ribo == 1 , 1 , any))[apply(results.ribo == 1 , 1 , any)])
+ribo_any  = hgnc_to_ensg_convert(names(apply(results.ribo != 0 , 1 , any))[apply(results.ribo != 0  , 1 , any)])
+addList(david, ribo_down_list, idType="ENSEMBL_GENE_ID", listName="ribo_down_list", listType="Gene")
+addList(david, ribo_up_list, idType="ENSEMBL_GENE_ID", listName="ribo_up_list", listType="Gene")
+addList(david, ribo_any, idType="ENSEMBL_GENE_ID", listName="ribo_any", listType="Gene")
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+
+## SOM enrichments -- We can do enrichment on each of the cells of the SOM or we can cluster the cells and enrichment on the cluster
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
