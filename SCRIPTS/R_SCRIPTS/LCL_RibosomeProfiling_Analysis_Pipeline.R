@@ -706,7 +706,7 @@ add.cluster.boundaries(absolute.som, abs.som.which.max)
 add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 3)$cluster)
 
 # Affinity propagation
-ap.cluster <- apcluster(negDistMat(r=2), absolute.som$codes,q=0)
+ap.cluster <- apcluster(negDistMat(r=2), absolute.som$codes, q=0.25)
 # ap.cluster@clusters == List of Clusters
 cluster.membership <- c()
 for (i in 1:length(ap.cluster@clusters)) { 
@@ -716,10 +716,13 @@ cluster.membership[ap.cluster@clusters[[i]]] <- i
 # Use plot.kohonen(absolute.som, type="classes", property=numericmatrix(absolute.som$codes))
 # Update function to introduce a more meaningful scaling for the pie chart
 # Update function to change sum(codes) > 1 to > 0
-colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
-plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Dark2")}, bgcol= brewer.pal(7,"Set2")[cluster.membership])
-absolute.som$codes[ap.cluster@exemplars, ]
 
+# Change colors for inside the piechars and cluster colors so they separate out much more nicely
+colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
+absolute.som$codes <- absolute.som$codes[,c(2,1,3,4)]
+plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Blues")}, bgcol= brewer.pal(length(ap.cluster@clusters),"YlOrRd")[cluster.membership])
+absolute.som$codes[ap.cluster@exemplars, ]
+aggregate(absolute.som$codes , by = list(cluster.membership), FUN=mean)
 #abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
 #plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
 
@@ -922,6 +925,32 @@ AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
 filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 
 ## SOM enrichments -- We can do enrichment on each of the cells of the SOM or we can cluster the cells and enrichment on the cluster
+# Absolute.som Enrichments
+# absolute.som$unit.classif -> Where each gene goes
+# cluster.membership -> Code clustering based on affinity propagation
+# row.names(ribo_rna_te_prot)[!apply(is.na(abs.som.data), 1, any)] -> Gene_Ids
+# Each cell enrichment
+abs.som.genes = row.names(ribo_rna_te_prot)[!apply(is.na(abs.som.data), 1, any)]
+background.list.abs.som = hgnc_to_ensg_convert(abs.som.genes )
+addList(david, background.list.abs.som, idType="ENSEMBL_GENE_ID", listName="background.list.abs.som", listType="Background")
+setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+for (i in 1:(absolute.som$grid$xdim *absolute.som$grid$ydim) ) { 
+unit_list = hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif == i ])
+addList(david, unit_list, idType="ENSEMBL_GENE_ID", listName=paste("UnitList", i, sep="_" ), listType="Gene")
+}
+
+# Enrichment by clustered Affinity Propagation
+for (i in 1:max(cluster.membership) ) { 
+units_in_cluster = c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == i]
+cluster_list = hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% units_in_cluster])
+addList(david, cluster_list, idType="ENSEMBL_GENE_ID", listName=paste("cluster_list", i, sep="_" ), listType="Gene")
+}
+
+# Need to decide how to look at these results
+#setCurrentGeneListPosition(david, POS)
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
