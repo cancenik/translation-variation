@@ -948,6 +948,7 @@ addList(david, cluster_list, idType="ENSEMBL_GENE_ID", listName=paste("cluster_l
 
 # Need to decide how to look at these results
 #setCurrentGeneListPosition(david, POS)
+setCurrentBackgroundPosition(david,2)
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
 filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 
