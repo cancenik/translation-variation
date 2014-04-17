@@ -1,0 +1,43 @@
+"Term" "FE" "FDR"
+"GO:0031145~anaphase-promoting complex-dependent proteasomal ubiquitin-dependent protein catabolic process" 3.18925831202046 1.36350526425133e-06
+"GO:0006091~generation of precursor metabolites and energy" 2.16806722689076 1.94715511492305e-06
+"GO:0043086~negative regulation of catalytic activity" 2.59426847662142 2.00448273535159e-06
+"GO:0031400~negative regulation of protein modification process" 2.76654411764706 3.14495105513402e-06
+"GO:0032269~negative regulation of cellular protein metabolic process" 2.5614296351452 3.23667224133573e-06
+"GO:0000502~proteasome complex" 3.12750421269425 3.01522954382349e-06
+"hsa03050:Proteasome" 3.0171568627451 3.35627404757233e-06
+"GO:0051248~negative regulation of protein metabolic process" 2.49818445896877 8.14067828702747e-06
+"GO:0051436~negative regulation of ubiquitin-protein ligase activity during mitotic cell cycle" 3.07928388746803 8.66949509958914e-06
+"GO:0051352~negative regulation of ligase activity" 3.07928388746803 8.66949509958914e-06
+"GO:0051444~negative regulation of ubiquitin-protein ligase activity" 3.07928388746803 8.66949509958914e-06
+"GO:0044092~negative regulation of molecular function" 2.39043309631545 1.01730827650748e-05
+"GO:0051439~regulation of ubiquitin-protein ligase activity during mitotic cell cycle" 2.99399759903962 1.0311909204308e-05
+"GO:0031397~negative regulation of protein ubiquitination" 2.93411764705882 1.91545364902623e-05
+"GO:0051438~regulation of ubiquitin-protein ligase activity" 2.87658592848904 3.47137228740024e-05
+"GO:0051340~regulation of ligase activity" 2.82126696832579 6.14728103753848e-05
+"GO:0051437~positive regulation of ubiquitin-protein ligase activity during mitotic cell cycle" 2.90613266583229 9.22937671621327e-05
+"GO:0051443~positive regulation of ubiquitin-protein ligase activity" 2.7875150060024 0.000286655836911898
+"GO:0051351~positive regulation of ligase activity" 2.73176470588235 0.000488184363167665
+"GO:0006096~glycolysis" 3.4327731092437 0.000507166634267087
+"GO:0048770~pigment granule" 2.69024186822352 0.000424485804007002
+"GO:0042470~melanosome" 2.69024186822352 0.000424485804007002
+"GO:0043161~proteasomal ubiquitin-dependent protein catabolic process" 2.45276292335116 0.000677589352815477
+"GO:0010498~proteasomal protein catabolic process" 2.45276292335116 0.000677589352815477
+"GO:0000377~RNA splicing, via transesterification reactions with bulged adenosine as nucleophile" 2.05934409161895 0.000685862084615074
+"GO:0000398~nuclear mRNA splicing, via spliceosome" 2.05934409161895 0.000685862084615074
+"GO:0000375~RNA splicing, via transesterification reactions" 2.05934409161895 0.000685862084615074
+"GO:0031396~regulation of protein ubiquitination" 2.52941176470588 0.000760485009976275
+"REACT_13635:Regulation of activated PAK-2p34 by proteasome mediated degradation" 2.41132913735653 0.000829574569150004
+"GO:0031399~regulation of protein modification process" 2.12144212523719 0.00271699180083296
+"GO:0006007~glucose catabolic process" 2.95098039215686 0.00310065489026456
+"GO:0031398~positive regulation of protein ubiquitination" 2.52941176470588 0.00336786998147431
+"GO:0019320~hexose catabolic process" 2.87122416534181 0.00552291730726573
+"REACT_6850:Cdc20:Phospho-APC/C mediated degradation of Cyclin A" 2.1633412745682 0.00412496533394036
+"GO:0051082~unfolded protein binding" 2.48651132261241 0.00831315856659742
+"GO:0005681~spliceosome" 2.12590952230307 0.00953862351962265
+"GO:0046365~monosaccharide catabolic process" 2.72398190045249 0.0160328129562903
+"GO:0031401~positive regulation of protein modification process" 2.25701357466063 0.0206019247301348
+"hsa00010:Glycolysis / Gluconeogenesis" 2.54549214226634 0.0218984512636133
+"GO:0046164~alcohol catabolic process" 2.59110473457676 0.0419511073840195
+"GO:0044275~cellular carbohydrate catabolic process" 2.59110473457676 0.0419511073840195
+"REACT_11045:Signaling by Wnt" 2.05890410958904 0.0352755863955778
