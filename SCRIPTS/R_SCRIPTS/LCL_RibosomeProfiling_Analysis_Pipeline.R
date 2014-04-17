@@ -933,10 +933,20 @@ filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 abs.som.genes = row.names(ribo_rna_te_prot)[!apply(is.na(abs.som.data), 1, any)]
 background.list.abs.som = hgnc_to_ensg_convert(abs.som.genes )
 addList(david, background.list.abs.som, idType="ENSEMBL_GENE_ID", listName="background.list.abs.som", listType="Background")
+
 setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+# No results except for 4 units
 for (i in 1:(absolute.som$grid$xdim *absolute.som$grid$ydim) ) { 
 unit_list = hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif == i ])
 addList(david, unit_list, idType="ENSEMBL_GENE_ID", listName=paste("UnitList", i, sep="_" ), listType="Gene")
+setCurrentBackgroundPosition(david,2)
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+  if (length(FilteredChart$Term) != 0L) { 
+    out.file = paste("Absolute.SOM.Unit", i, sep="_")
+    out.df = data.frame(Term=FilteredChart$Term, FE = FilteredChart$Fold.Enrichment, FDR= FilteredChart$FDR )  
+    write.table(out.df, file = paste('~/project/CORE_DATAFILES/GO_RESULTS/', out.file, sep=""),row.names=F)
+  }
 }
 
 # Enrichment by clustered Affinity Propagation
@@ -944,13 +954,18 @@ for (i in 1:max(cluster.membership) ) {
 units_in_cluster = c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == i]
 cluster_list = hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% units_in_cluster])
 addList(david, cluster_list, idType="ENSEMBL_GENE_ID", listName=paste("cluster_list", i, sep="_" ), listType="Gene")
+setCurrentBackgroundPosition(david,2)
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+  if (length(FilteredChart$Term) != 0L) { 
+    out.file = paste("Absolute.SOM.Cluster", i, sep="_")
+    out.df = data.frame(Term=FilteredChart$Term, FE = FilteredChart$Fold.Enrichment, FDR= FilteredChart$FDR )  
+    write.table(out.df, file = paste('~/project/CORE_DATAFILES/GO_RESULTS/', out.file, sep=""),row.names=F)    
+  }
 }
 
 # Need to decide how to look at these results
-#setCurrentGeneListPosition(david, POS)
-setCurrentBackgroundPosition(david,2)
-AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
-filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+#setCurrentGeneListPosition(david, 1)
 
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
