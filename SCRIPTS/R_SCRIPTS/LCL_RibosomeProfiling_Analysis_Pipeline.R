@@ -13,6 +13,10 @@ library("RDAVIDWebService")
 library("gplots")
 source('~/project/kohonen2/R/plot.kohonen.R')
 
+## Try to build the SOM using only the RNA and TE and see what happens to the correlations
+## Plot the ratios of the correlations or the highest correlation or type of the event
+## Do GO on these classes
+
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
 
@@ -786,7 +790,18 @@ if (floor(sqrt(total_cells.noNA/1.3333)) %% 2 == 0) {
 xdim.total.noNA = floor(total_cells.noNA/ydim.total.noNA + 0.5)
 
 # We can play with weights Increased weight to RNA, Ribo compared to TE - Change weights to increase quality of SOM
-som.exp = supersom(data =som.data, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
+#som.exp = supersom(data =som.data, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
+# plot(som.exp, type="codes")
+# plot(som.exp, type="quality")
+# plot(som.exp, type="mapping", pch=19, cex=.3)
+# plot(som.exp, type="changes")
+# plot(som.exp, type="counts")
+# plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation", palette.name=redblue_cols, contin=T,zlim=c(-1,1), ncolors=11)
+# plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
+# plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
+# plot.kohonen(som.exp, type="counts" )
+
+
 som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
 # Give proteins higher weight for tighter clustering
 som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
@@ -798,35 +813,56 @@ plot.kohonen(som.exp.prot, type="quality")
 mean(som.exp.prot$distances)
 plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
 
-# plot(som.exp, type="codes")
-# plot(som.exp, type="quality")
-# plot(som.exp, type="mapping", pch=19, cex=.3)
-# plot(som.exp, type="changes")
-# plot(som.exp, type="counts")
-
-
 # Calculate cor.estimate for each level grouped by unit.classif
 # X is passed as a dataframe to function
-cor_between_ind <- function (x) { 
- cors <- apply(x, 1, function(y){cor(y[1:14], y[15:28], use="pairwise.complete.obs", method="spearman")})
- return (median(cors, na.rm=T))
+gene_wise_cors <- function (mt1 , mt2) { 
+  if (nrow(mt1) != nrow(mt2) ) { 
+    stop ("Unequal rows")
+  } 
+  sapply(seq.int(nrow(mt1) ), 
+         function(k) {cor (mt1[k,], mt2[k,], use="pairwise.complete.obs", method="spearman") } )
+}
+across_ind_ribo_rna  = gene_wise_cors(som.exp.prot$data$ribo, som.exp.prot$data$rna)
+across_ind_ribo_prot  = gene_wise_cors(som.exp.prot$data$ribo, som.exp.prot$data$prot)
+across_ind_rna_prot  = gene_wise_cors(som.exp.prot$data$rna, som.exp.prot$data$prot)
+across_ind_te_prot  = gene_wise_cors(som.exp.prot$data$te, som.exp.prot$data$prot)
+
+#SOM, Unit wise correlations
+max_cor_unit = c()
+max_cor_unit_type = c()
+for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) { 
+  ribo_prot_unit = gene_wise_cors( som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ], 
+                                   som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  rna_prot_unit = gene_wise_cors( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
+                                   som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  te_prot_unit = gene_wise_cors( som.exp.prot$data$te[som.exp.prot$unit.classif == i, ], 
+                                   som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  max_cor_unit = c(max_cor_unit , max ( median (ribo_prot_unit), 
+                                        median (rna_prot_unit), 
+                                        median (te_prot_unit) )  )
+  max_cor_unit_type = c(max_cor_unit_type, which.max(c (median (ribo_prot_unit), 
+                                                        median (rna_prot_unit), 
+                                                        median (te_prot_unit) ) ))
 }
 
-# We can also do k-means on the meta-factors/codes and plot the k-means. This could be good for GO enrichment
-# It might make more sense to make these plots with the som that includes the protein levels
-ribo_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$ribo,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
-rna_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$rna,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
-te_prot_cor_in_som <- by(data.frame(cbind(som.exp$data$te,linfeng_te_match)), som.exp$unit.classif, FUN = cor_between_ind )
-median (ribo_prot_cor_in_som, na.rm=T)
-median(across_ind_ribo_correlation)
-median (rna_prot_cor_in_som, na.rm=T)
-median(across_ind_rna_correlation)
-median(te_prot_cor_in_som, na.rm=T)
-
-plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation", palette.name=redblue_cols, contin=T,zlim=c(-1,1), ncolors=11)
-plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
-plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
-plot.kohonen(som.exp, type="counts" )
+# Compared to random median correlation per unit is not much higher
+# However, there are many more units where the correlations are higher. 
+# > quantile(max_cor_unit)
+# 0%         25%         50%         75%        100% 
+# -0.04895105  0.20279720  0.29195804  0.37762238  0.70279720 
+# > quantile(tr)
+# 0%         25%         50%         75%        100% 
+# 0.006993007 0.209790210 0.307692308 0.461538462 0.842657343 
+# True data gives 
+# > table(max_cor_unit_type)
+# max_cor_unit_type
+# 1   2   3 
+# 92 148  26 
+# # Random Classification gives
+# > table(max_cor_unit_type)
+# max_cor_unit_type
+# 1   2   3 
+# 114 143   9 
 
 
 ### PATHWAY ENRICHMENT ANALYSIS WITH RDAVID
