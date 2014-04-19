@@ -11,6 +11,8 @@ library("plyr")
 library("apcluster")
 library("RDAVIDWebService")
 library("gplots")
+# Use for progress bars
+#library("tcltk")
 source('~/project/kohonen2/R/plot.kohonen.R')
 
 ## Try to build the SOM using only the RNA and TE and see what happens to the correlations
@@ -789,7 +791,6 @@ if (floor(sqrt(total_cells.noNA/1.3333)) %% 2 == 0) {
 }
 xdim.total.noNA = floor(total_cells.noNA/ydim.total.noNA + 0.5)
 
-# We can play with weights Increased weight to RNA, Ribo compared to TE - Change weights to increase quality of SOM
 #som.exp = supersom(data =som.data, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
 # plot(som.exp, type="codes")
 # plot(som.exp, type="quality")
@@ -802,8 +803,24 @@ xdim.total.noNA = floor(total_cells.noNA/ydim.total.noNA + 0.5)
 # plot.kohonen(som.exp, type="counts" )
 
 
-som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
-# Give proteins higher weight for tighter clustering
+som.exp.prot.noRibo = supersom(data =som.data.prot.noNA, whatmap = 2:4, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
+# Give proteins higher weight for tighter clustering -> Another rationale is colinearity between the expression measures
+# Given RNA and Ribo => TE is fixed. So, we should all gie the independent components 1/3 weight
+# mean_distance <- 1
+# iter = 100
+# pb <- tkProgressBar(title="Progress Bar", min = 0, max = iter, width=300)
+# for (i in 1:iter) { 
+#   set.seed(i)
+#   relative.som <- supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
+#   if (mean(relative.som$distances) < mean_distance) { 
+#     my_seed <- i
+#     mean_distance <- mean(relative.som$distances)
+#   }
+#   setTkProgressBar(pb, i, label=paste( round(i/iter*100, 0),"% done"))
+# }
+# close (pb)
+# Best in 100 seeds is 81
+set.seed(81)
 som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
 
 plot.kohonen(som.exp.prot, type="counts")
@@ -827,7 +844,7 @@ across_ind_ribo_prot  = gene_wise_cors(som.exp.prot$data$ribo, som.exp.prot$data
 across_ind_rna_prot  = gene_wise_cors(som.exp.prot$data$rna, som.exp.prot$data$prot)
 across_ind_te_prot  = gene_wise_cors(som.exp.prot$data$te, som.exp.prot$data$prot)
 
-#SOM, Unit wise correlations
+#SOM, Unit wise correlations -- We are looking at unit wise median correlation
 max_cor_unit = c()
 max_cor_unit_type = c()
 for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) { 
@@ -844,6 +861,12 @@ for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) {
                                                         median (rna_prot_unit), 
                                                         median (te_prot_unit) ) ))
 }
+plot.kohonen(som.exp.prot, property=max_cor_unit_type, type = "property", 
+             palette.name=redblue_cols, ncolors=3)
+plot.kohonen(som.exp.prot, property=max_cor_unit, type = "property", 
+             palette.name=function(x){brewer.pal(x, "Blues")}, ncolors=9, contin=T, zlim=c(min(max_cor_unit),1))
+plot.kohonen(som.exp.prot, type="counts")
+
 
 # Compared to random median correlation per unit is not much higher
 # However, there are many more units where the correlations are higher. 
