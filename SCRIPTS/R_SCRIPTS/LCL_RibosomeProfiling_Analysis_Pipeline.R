@@ -807,20 +807,20 @@ som.exp.prot.noRibo = supersom(data =som.data.prot.noNA, whatmap = 2:4, grid=som
 # Give proteins higher weight for tighter clustering -> Another rationale is colinearity between the expression measures
 # Given RNA and Ribo => TE is fixed. So, we should all gie the independent components 1/3 weight
 # mean_distance <- 1
-# iter = 100
-# pb <- tkProgressBar(title="Progress Bar", min = 0, max = iter, width=300)
-# for (i in 1:iter) { 
+# iter = 500
+# # pb <- tkProgressBar(title="Progress Bar", min = 0, max = iter, width=300)
+# for (i in 11:iter) { 
 #   set.seed(i)
 #   relative.som <- supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
 #   if (mean(relative.som$distances) < mean_distance) { 
 #     my_seed <- i
 #     mean_distance <- mean(relative.som$distances)
 #   }
-#   setTkProgressBar(pb, i, label=paste( round(i/iter*100, 0),"% done"))
-# }
+# #   setTkProgressBar(pb, i, label=paste( round(i/iter*100, 0),"% done"))
+#  }
 # close (pb)
-# Best in 100 seeds is 81
-set.seed(81)
+# Best in 500 seeds is 378
+set.seed(378)
 som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
 
 plot.kohonen(som.exp.prot, type="counts")
@@ -828,42 +828,72 @@ plot.kohonen(som.exp.prot, type="codes")
 plot.kohonen(som.exp.prot, type="changes")
 plot.kohonen(som.exp.prot, type="quality")
 mean(som.exp.prot$distances)
-plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
+# plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
 
 # Calculate cor.estimate for each level grouped by unit.classif
 # X is passed as a dataframe to function
 gene_wise_cors <- function (mt1 , mt2) { 
-  if (nrow(mt1) != nrow(mt2) ) { 
+  if ( !identical( nrow(mt1),nrow(mt2)) ) { 
     stop ("Unequal rows")
   } 
   sapply(seq.int(nrow(mt1) ), 
          function(k) {cor (mt1[k,], mt2[k,], use="pairwise.complete.obs", method="spearman") } )
+}
+gene_wise_cor_pvals <- function (mt1 , mt2) { 
+  if (!identical( nrow(mt1),nrow(mt2)) ) { 
+    stop ("Unequal rows")
+  } 
+  sapply(seq.int(nrow(mt1) ), 
+         function(k) { cor.test(mt1[k,], mt2[k,], use="pairwise.complete.obs", method="spearman")$p.value } )
 }
 across_ind_ribo_rna  = gene_wise_cors(som.exp.prot$data$ribo, som.exp.prot$data$rna)
 across_ind_ribo_prot  = gene_wise_cors(som.exp.prot$data$ribo, som.exp.prot$data$prot)
 across_ind_rna_prot  = gene_wise_cors(som.exp.prot$data$rna, som.exp.prot$data$prot)
 across_ind_te_prot  = gene_wise_cors(som.exp.prot$data$te, som.exp.prot$data$prot)
 
+across_ind_ribo_rna_pval  = gene_wise_cor_pvals(som.exp.prot$data$ribo, som.exp.prot$data$rna)
+across_ind_ribo_prot_pval  = gene_wise_cor_pvals(som.exp.prot$data$ribo, som.exp.prot$data$prot)
+across_ind_rna_prot_pval  = gene_wise_cor_pvals(som.exp.prot$data$rna, som.exp.prot$data$prot)
+across_ind_te_prot_pval  = gene_wise_cor_pvals(som.exp.prot$data$te, som.exp.prot$data$prot)
+
+
 #SOM, Unit wise correlations -- We are looking at unit wise median correlation
 max_cor_unit = c()
 max_cor_unit_type = c()
+min_cor_pval_unit = c()
 for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) { 
+  if ( identical(nrow(som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ]), NULL ) ) { 
+    max_cor_unit = c(max_cor_unit, 0)
+    max_cor_unit_type = c(max_cor_unit_type,  -1) 
+    min_cor_pval_unit = c(min_cor_pval_unit , 1)
+    next
+  }
   ribo_prot_unit = gene_wise_cors( som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ], 
                                    som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
   rna_prot_unit = gene_wise_cors( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
                                    som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
   te_prot_unit = gene_wise_cors( som.exp.prot$data$te[som.exp.prot$unit.classif == i, ], 
                                    som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  ribo_prot_unit_pval = gene_wise_cor_pvals( som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ], 
+                                   som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  rna_prot_unit_pval  = gene_wise_cor_pvals( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
+                                  som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  te_prot_unit_pval  = gene_wise_cor_pvals( som.exp.prot$data$te[som.exp.prot$unit.classif == i, ], 
+                                 som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  
   max_cor_unit = c(max_cor_unit , max ( median (ribo_prot_unit), 
                                         median (rna_prot_unit), 
                                         median (te_prot_unit) )  )
   max_cor_unit_type = c(max_cor_unit_type, which.max(c (median (ribo_prot_unit), 
                                                         median (rna_prot_unit), 
                                                         median (te_prot_unit) ) ))
+  min_cor_pval_unit = c(min_cor_pval_unit, min(ribo_prot_unit_pval, rna_prot_unit_pval, te_prot_unit_pval))
 }
 plot.kohonen(som.exp.prot, property=max_cor_unit_type, type = "property", 
-             palette.name=redblue_cols, ncolors=3)
+             palette.name=redblue_cols, ncolors=4)
 plot.kohonen(som.exp.prot, property=max_cor_unit, type = "property", 
+             palette.name=function(x){brewer.pal(x, "Blues")}, ncolors=9, contin=T, zlim=c(min(max_cor_unit),1))
+plot.kohonen(som.exp.prot, property=p.adjust(min_cor_pval_unit), type = "property", 
              palette.name=function(x){brewer.pal(x, "Blues")}, ncolors=9, contin=T, zlim=c(min(max_cor_unit),1))
 plot.kohonen(som.exp.prot, type="counts")
 
