@@ -828,6 +828,15 @@ plot.kohonen(som.exp.prot, type="codes")
 plot.kohonen(som.exp.prot, type="changes")
 plot.kohonen(som.exp.prot, type="quality")
 mean(som.exp.prot$distances)
+ap.cluster.relative <- apcluster(negDistMat(r=2), 
+                                 cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$te, som.exp.prot$codes$prot), 
+                                 q=0)
+# ap.cluster@clusters == List of Clusters
+cluster.membership.relative <- c()
+for (i in 1:length(ap.cluster.relative@clusters)) { 
+  cluster.membership.relative[ap.cluster.relative@clusters[[i]]] <- i
+}
+
 # plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
 
 # Calculate cor.estimate for each level grouped by unit.classif
@@ -941,12 +950,14 @@ for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) {
 plot.kohonen(som.exp.prot, property=max_cor_unit_type, type = "property", 
              palette.name=redblue_cols, ncolors=4, main = "Highest Correlated Expression Value")
 plot.kohonen(som.exp.prot, property=max_cor_unit, type = "property", 
-             palette.name=function(x){brewer.pal(x, "Blues")}, ncolors=9, contin=T, 
+             palette.name=redblue, ncolors=100, contin=T, 
              zlim=c(-1,1), main = "Spearman Correlation")
 plot.kohonen(som.exp.prot, property=p.adjust(min_cor_pval_unit, method="holm"), type = "property", 
              palette.name=function(x){rev(brewer.pal(x, "Blues"))}, ncolors=9,
              contin=T, main = "Holm's Adjusted Meta P-value")
 plot.kohonen(som.exp.prot, type="counts")
+plot.kohonen(som.exp.prot, property=cluster.membership.relative, type="property", 
+             palette.name=redblue_cols, ncolors= max(cluster.membership.relative))
 
 
 # Compared to random median correlation per unit is not much higher
