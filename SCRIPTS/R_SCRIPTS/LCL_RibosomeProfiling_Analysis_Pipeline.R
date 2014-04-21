@@ -859,42 +859,93 @@ across_ind_te_prot_pval  = gene_wise_cor_pvals(som.exp.prot$data$te, som.exp.pro
 
 #SOM, Unit wise correlations -- We are looking at unit wise median correlation
 max_cor_unit = c()
-max_cor_unit_type = c()
+min_cor_pval_unit_type = c()
 min_cor_pval_unit = c()
+float_comparison_with_epsilon = function (x, y, eps)  { 
+  return (x + eps > y & x-eps < y)
+}
+# Adapted from the wiki page
+Fisher.test <- function(p) {
+  Xsq <- -2*sum(log(p))
+  p.val <- 1-pchisq(Xsq, df = 2*length(p))
+  return(p.val)
+}
+Correlation_Meta <- function (v) { 
+ z.r = log((1+v) / (1-v) )  / 2
+ ave.z.r = mean (z.r)
+ return ( (exp(2*ave.z.r) -1) / (exp(2*ave.z.r) +1) )
+}
+# First determine the min-pval then update the rest
+## NOT CLEAR WHAT to DO WITH P_VALs
+## THE MEDIAN OF PVAL DOESNT MAKE SENSE. 
+# Current strategy is to calculate pvals first
+# Then we find the values closes to the median pval 
+# Then we find the corresponding units and take the median of their correlations
+# Maybe better is to combine p-values with Fisher's method?
+tol = 1e-5
 for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) { 
   if ( identical(nrow(som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ]), NULL ) ) { 
     max_cor_unit = c(max_cor_unit, 0)
-    max_cor_unit_type = c(max_cor_unit_type,  -1) 
+    min_cor_pval_unit_type = c(min_cor_pval_unit_type,  -1) 
     min_cor_pval_unit = c(min_cor_pval_unit , 1)
     next
   }
+  rna_prot_unit = gene_wise_cors( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
+                                  som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
   ribo_prot_unit = gene_wise_cors( som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ], 
                                    som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  rna_prot_unit = gene_wise_cors( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
-                                   som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
   te_prot_unit = gene_wise_cors( som.exp.prot$data$te[som.exp.prot$unit.classif == i, ], 
-                                   som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  ribo_prot_unit_pval = gene_wise_cor_pvals( som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ], 
-                                   som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  rna_prot_unit_pval  = gene_wise_cor_pvals( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
-                                  som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  te_prot_unit_pval  = gene_wise_cor_pvals( som.exp.prot$data$te[som.exp.prot$unit.classif == i, ], 
                                  som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  
-  max_cor_unit = c(max_cor_unit , max ( median (ribo_prot_unit), 
-                                        median (rna_prot_unit), 
-                                        median (te_prot_unit) )  )
-  max_cor_unit_type = c(max_cor_unit_type, which.max(c (median (ribo_prot_unit), 
-                                                        median (rna_prot_unit), 
-                                                        median (te_prot_unit) ) ))
-  min_cor_pval_unit = c(min_cor_pval_unit, min(ribo_prot_unit_pval, rna_prot_unit_pval, te_prot_unit_pval))
+  ribo_prot_unit_pval = gene_wise_cor_pvals( som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ], 
+                                             som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  rna_prot_unit_pval  = gene_wise_cor_pvals( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
+                                             som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  te_prot_unit_pval  = gene_wise_cor_pvals( som.exp.prot$data$te[som.exp.prot$unit.classif == i, ], 
+                                            som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  min_cor_pval_unit = c(min_cor_pval_unit, 
+                        min( Fisher.test (rna_prot_unit_pval), Fisher.test (ribo_prot_unit_pval),  Fisher.test (te_prot_unit_pval)))
+  min_cor_pval_unit_type = c(min_cor_pval_unit_type,
+                             which.min( c(Fisher.test (rna_prot_unit_pval), Fisher.test (ribo_prot_unit_pval),  Fisher.test (te_prot_unit_pval))))
+
+  # The pval closest to median can be of opposite sign
+#   min_cor_pval_unit = c(min_cor_pval_unit, 
+#                         min( median(rna_prot_unit_pval), median(ribo_prot_unit_pval),  median(te_prot_unit_pval)))
+#   min_cor_pval_unit_type = c(min_cor_pval_unit_type, 
+#                              which.min( c(median(rna_prot_unit_pval), median(ribo_prot_unit_pval),  median(te_prot_unit_pval) )))
+  if (min_cor_pval_unit_type[i] == 1 ) { 
+#     abs.diff = abs(rna_prot_unit_pval -  min_cor_pval_unit[i])
+#     closest.pval = which (float_comparison_with_epsilon (abs.diff, min(abs.diff), tol) )
+#     max_cor_unit = c(max_cor_unit , median(rna_prot_unit[closest.pval]) )
+    max_cor_unit = c(max_cor_unit , Correlation_Meta(rna_prot_unit) )
+  }
+  else if (min_cor_pval_unit_type[i] == 2 ) { 
+#     abs.diff = abs(ribo_prot_unit_pval -  min_cor_pval_unit[i])    
+#     closest.pval = which (float_comparison_with_epsilon (abs.diff, min(abs.diff), tol) )
+#     max_cor_unit = c(max_cor_unit , median(ribo_prot_unit[closest.pval]) )
+    max_cor_unit = c(max_cor_unit , Correlation_Meta(ribo_prot_unit) )
+    
+  }
+  else if (min_cor_pval_unit_type[i] == 3 ) { 
+#     abs.diff = abs(te_prot_unit_pval -  min_cor_pval_unit[i])
+#     closest.pval = which (float_comparison_with_epsilon (abs.diff, min(abs.diff), tol) )
+#     max_cor_unit = c(max_cor_unit , median(te_prot_unit[closest.pval]) )
+    max_cor_unit = c(max_cor_unit , Correlation_Meta(te_prot_unit) )
+    
+  }
+  else { 
+    stop("Incorrect Type")
+  }
+#  max_cor_unit = c(max_cor_unit , median(rna_prot_unit) )
 }
+
 plot.kohonen(som.exp.prot, property=max_cor_unit_type, type = "property", 
-             palette.name=redblue_cols, ncolors=4)
+             palette.name=redblue_cols, ncolors=4, main = "Highest Correlated Expression Value")
 plot.kohonen(som.exp.prot, property=max_cor_unit, type = "property", 
-             palette.name=function(x){brewer.pal(x, "Blues")}, ncolors=9, contin=T, zlim=c(min(max_cor_unit),1))
-plot.kohonen(som.exp.prot, property=p.adjust(min_cor_pval_unit), type = "property", 
-             palette.name=function(x){brewer.pal(x, "Blues")}, ncolors=9, contin=T, zlim=c(min(max_cor_unit),1))
+             palette.name=function(x){brewer.pal(x, "Blues")}, ncolors=9, contin=T, 
+             zlim=c(-1,1), main = "Spearman Correlation")
+plot.kohonen(som.exp.prot, property=p.adjust(min_cor_pval_unit, method="holm"), type = "property", 
+             palette.name=function(x){rev(brewer.pal(x, "Blues"))}, ncolors=9,
+             contin=T, main = "Holm's Adjusted Meta P-value")
 plot.kohonen(som.exp.prot, type="counts")
 
 
