@@ -1141,6 +1141,33 @@ for (i in 1:(som.exp.prot$grid$xdim *som.exp.prot$grid$ydim) ) {
 }
 
 # Relative SOM Enrichment grouped by best correlating feature
+table(min_cor_pval_unit_type[which(p.adjust(min_cor_pval_unit) < 0.05)])
+rna_cor = c()
+ribo_cor = c()
+te_cor = c()
+for ( i in which(p.adjust(min_cor_pval_unit) < 0.05)) { 
+ if (min_cor_pval_unit_type[i] == 1) { 
+   rna_cor = c(rna_cor, 
+               hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] ) ) 
+ }
+ else if (min_cor_pval_unit_type[i] == 2) { 
+   ribo_cor = c(ribo_cor, 
+               hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] ) )             
+ }
+ else if (min_cor_pval_unit_type[i] == 3) { 
+   te_cor = c(te_cor, 
+              hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] ) )            
+ }
+}
+length(ribo_cor)
+length(rna_cor)
+length(te_cor)
+addList(david, rna_cor, idType="ENSEMBL_GENE_ID", listName="rna_cor", listType="Gene")
+addList(david, ribo_cor, idType="ENSEMBL_GENE_ID", listName="ribo_cor", listType="Gene")
+addList(david, te_cor, idType="ENSEMBL_GENE_ID", listName="te_cor", listType="Gene")
+setCurrentBackgroundPosition(david,2)
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
