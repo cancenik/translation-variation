@@ -701,15 +701,15 @@ plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=r
 # Use plot.kohonen(absolute.som, type="classes", property=numericmatrix(absolute.som$codes))
 # Update function to introduce a more meaningful scaling for the pie chart
 # Update function to change sum(codes) > 1 to > 0
-colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
-plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Dark2")}, bgcol= brewer.pal(7,"Set2")[cluster.membership])
+#colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
+#plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Dark2")}, bgcol= brewer.pal(7,"Set2")[cluster.membership])
 #abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
 #plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
 
 # We can add cluster boundaries by k-means
 # kmeans(absolute.som$codes, 12)$cluster
-add.cluster.boundaries(absolute.som, abs.som.which.max)
-add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 3)$cluster)
+#add.cluster.boundaries(absolute.som, abs.som.which.max)
+#add.cluster.boundaries(absolute.som,kmeans(absolute.som$codes, 3)$cluster)
 
 # Affinity propagation
 ap.cluster <- apcluster(negDistMat(r=2), absolute.som$codes, q=0.25)
@@ -828,14 +828,6 @@ plot.kohonen(som.exp.prot, type="codes")
 plot.kohonen(som.exp.prot, type="changes")
 plot.kohonen(som.exp.prot, type="quality")
 mean(som.exp.prot$distances)
-ap.cluster.relative <- apcluster(negDistMat(r=2), 
-                                 cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$te, som.exp.prot$codes$prot), 
-                                 q=0)
-# ap.cluster@clusters == List of Clusters
-cluster.membership.relative <- c()
-for (i in 1:length(ap.cluster.relative@clusters)) { 
-  cluster.membership.relative[ap.cluster.relative@clusters[[i]]] <- i
-}
 
 # plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
 
@@ -947,7 +939,7 @@ for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) {
 #  max_cor_unit = c(max_cor_unit , median(rna_prot_unit) )
 }
 
-plot.kohonen(som.exp.prot, property=max_cor_unit_type, type = "property", 
+plot.kohonen(som.exp.prot, property=min_cor_pval_unit_type, type = "property", 
              palette.name=redblue_cols, ncolors=4, main = "Highest Correlated Expression Value")
 plot.kohonen(som.exp.prot, property=max_cor_unit, type = "property", 
              palette.name=redblue, ncolors=100, contin=T, 
@@ -956,9 +948,6 @@ plot.kohonen(som.exp.prot, property=p.adjust(min_cor_pval_unit, method="holm"), 
              palette.name=function(x){rev(brewer.pal(x, "Blues"))}, ncolors=9,
              contin=T, main = "Holm's Adjusted Meta P-value")
 plot.kohonen(som.exp.prot, type="counts")
-plot.kohonen(som.exp.prot, property=cluster.membership.relative, type="property", 
-             palette.name=redblue_cols, ncolors= max(cluster.membership.relative))
-
 
 # Compared to random median correlation per unit is not much higher
 # However, there are many more units where the correlations are higher. 
@@ -1141,11 +1130,13 @@ for (i in 1:(som.exp.prot$grid$xdim *som.exp.prot$grid$ydim) ) {
 }
 
 # Relative SOM Enrichment grouped by best correlating feature
-table(min_cor_pval_unit_type[which(p.adjust(min_cor_pval_unit) < 0.05)])
+# Here we took a cumulative approach. We can also do a clustering or unit-wise approach
+pval_threshold = 0.05
+table(min_cor_pval_unit_type[which(p.adjust(min_cor_pval_unit) < pval_threshold)])
 rna_cor = c()
 ribo_cor = c()
 te_cor = c()
-for ( i in which(p.adjust(min_cor_pval_unit) < 0.05)) { 
+for ( i in which(p.adjust(min_cor_pval_unit) < pval_threshold)) { 
  if (min_cor_pval_unit_type[i] == 1) { 
    rna_cor = c(rna_cor, 
                hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] ) ) 
@@ -1168,6 +1159,24 @@ addList(david, te_cor, idType="ENSEMBL_GENE_ID", listName="te_cor", listType="Ge
 setCurrentBackgroundPosition(david,2)
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
 FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+FilteredChart$Term
+
+significantly_correlated_rnacells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$te, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 1),] 
+significantly_correlated_ribocells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$te, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2),] 
+
+ap.cluster.relative.rna = apcluster(negDistMat(r=2), significantly_correlated_rnacells)
+ap.cluster.relateive.ribo = apcluster(negDistMat(r=2), significantly_correlated_ribocells)
+
+for (j in 1: length(ap.cluster.relative.rna@clusters) ) {
+  rna_unit_j =  which(p.adjust(min_cor_pval_unit) < pval_threshold & 
+                        min_cor_pval_unit_type == 1)[ap.cluster.relative.rna@clusters[[j]]]
+}
+
+for (j in 1:length(ap.cluster.relative.ribo@clusters) ) { 
+  ribo_unit_j =  which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2)
+  
+}
+
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
