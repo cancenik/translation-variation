@@ -1118,6 +1118,29 @@ FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 # Need to decide how to look at these results
 #setCurrentGeneListPosition(david, 1)
 
+### RELATIVE SOM ENRICHMENT
+# som.exp.prot$unit.classif
+# min_cor_pval_unit_type
+# min_cor_pval_unit
+# max_cor_unit
+# row.names(som.exp.prot$data$ribo)
+relative.som.background = hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo))
+addList(david, relative.som.background, idType="ENSEMBL_GENE_ID", listName="relative.som.background", listType="Background")
+# Relative Som Each Unit - Enrichment
+for (i in 1:(som.exp.prot$grid$xdim *som.exp.prot$grid$ydim) ) { 
+  unit_list = hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] )
+  addList(david, unit_list, idType="ENSEMBL_GENE_ID", listName=paste("RelativeSOMUnitList", i, sep="_" ), listType="Gene")
+  setCurrentBackgroundPosition(david,2)
+  AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+  FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+  if (length(FilteredChart$Term) != 0L) { 
+    out.file = paste("Relative.SOM.Unit", i, sep="_")
+    out.df = data.frame(Term=FilteredChart$Term, FE = FilteredChart$Fold.Enrichment, FDR= FilteredChart$FDR )  
+    write.table(out.df, file = paste('~/project/CORE_DATAFILES/GO_RESULTS/', out.file, sep=""),row.names=F)
+  }
+}
+
+# Relative SOM Enrichment grouped by best correlating feature
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
