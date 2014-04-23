@@ -1165,16 +1165,35 @@ significantly_correlated_rnacells <- cbind(som.exp.prot$codes$rna,som.exp.prot$c
 significantly_correlated_ribocells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$te, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2),] 
 
 ap.cluster.relative.rna = apcluster(negDistMat(r=2), significantly_correlated_rnacells)
-ap.cluster.relateive.ribo = apcluster(negDistMat(r=2), significantly_correlated_ribocells)
+ap.cluster.relative.ribo = apcluster(negDistMat(r=2), significantly_correlated_ribocells)
 
 for (j in 1: length(ap.cluster.relative.rna@clusters) ) {
   rna_unit_j =  which(p.adjust(min_cor_pval_unit) < pval_threshold & 
-                        min_cor_pval_unit_type == 1)[ap.cluster.relative.rna@clusters[[j]]]
+                        min_cor_pval_unit_type == 1)[ap.cluster.relative.rna@clusters[[j]]]  
+  cluster_j = hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[which(som.exp.prot$unit.classif %in% rna_unit_j) ])            
+  addList(david, cluster_j, idType="ENSEMBL_GENE_ID", listName=paste("rna_unit",j, sep="_"), listType="Gene")
+  setCurrentBackgroundPosition(david,2)
+  AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+  FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+  if (length(FilteredChart$Term) != 0L) { 
+    out.file = paste("Relative.SOM.RNACluster", j, sep="_")
+    out.df = data.frame(Term=FilteredChart$Term, FE = FilteredChart$Fold.Enrichment, FDR= FilteredChart$FDR )  
+    write.table(out.df, file = paste('~/project/CORE_DATAFILES/GO_RESULTS/', out.file, sep=""),row.names=F)
+  }
 }
 
 for (j in 1:length(ap.cluster.relative.ribo@clusters) ) { 
   ribo_unit_j =  which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2)
-  
+  cluster_j = hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[which(som.exp.prot$unit.classif %in% ribo_unit_j) ])            
+  addList(david, cluster_j, idType="ENSEMBL_GENE_ID", listName=paste("ribo_unit",j, sep="_"), listType="Gene")
+  setCurrentBackgroundPosition(david,2)
+  AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+  FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+  if (length(FilteredChart$Term) != 0L) { 
+    out.file = paste("Relative.SOM.RiboCluster", j, sep="_")
+    out.df = data.frame(Term=FilteredChart$Term, FE = FilteredChart$Fold.Enrichment, FDR= FilteredChart$FDR )  
+    write.table(out.df, file = paste('~/project/CORE_DATAFILES/GO_RESULTS/', out.file, sep=""),row.names=F)
+  }
 }
 
 
