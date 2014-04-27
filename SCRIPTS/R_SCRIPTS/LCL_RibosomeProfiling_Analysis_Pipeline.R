@@ -726,7 +726,9 @@ cluster.membership[ap.cluster@clusters[[i]]] <- i
 # Change colors for inside the piechars and cluster colors so they separate out much more nicely
 colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
 absolute.som$codes <- absolute.som$codes[,c(2,1,3,4)]
+pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterColored.pdf", width=12, height=8)
 plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Blues")}, bgcol= brewer.pal(length(ap.cluster@clusters),"YlOrRd")[cluster.membership])
+dev.off()
 absolute.som$codes[ap.cluster@exemplars, ]
 aggregate(absolute.som$codes , by = list(cluster.membership), FUN=mean)
 #abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
@@ -773,10 +775,15 @@ dropRows <- !apply(is.na(prot.quantiles[,-dropCols]), 1, any)
   
 som.data = list (  ribo= ribo.quantiles[dropRows, -dropCols] , rna = rna.quantiles[dropRows, -dropCols] ,te = te.quantiles[dropRows, -dropCols])
 som.data.prot = list ( ribo= ribo.quantiles , rna = rna.quantiles ,te = te.quantiles, prot=prot.quantiles)
-som.data.prot.noNA = list ( ribo= ribo.quantiles[dropRows, -dropCols] , rna = rna.quantiles[dropRows, -dropCols] ,te = te.quantiles[dropRows, -dropCols], prot=prot.quantiles[dropRows, -dropCols])
+som.data.prot.noNA = list ( Ribosome_Occupancy= ribo.quantiles[dropRows, -dropCols] , 
+                            RNA_Expression = rna.quantiles[dropRows, -dropCols] ,
+                            Translation_Efficiency = te.quantiles[dropRows, -dropCols], 
+                            Protein_Expression=prot.quantiles[dropRows, -dropCols])
   
 #total_cells <- floor(sqrt(length(som.data.prot)/2) * sqrt (dim(som.data.prot$ribo)[1] * dim(som.data.prot$ribo)[2]))
-total_cells.noNA <- floor(sqrt(length(som.data.prot.noNA)/2) * sqrt (dim(som.data.prot.noNA$ribo)[1] * dim(som.data.prot.noNA$ribo)[2]))
+total_cells.noNA <- floor(sqrt(length(som.data.prot.noNA)/2) * 
+                            sqrt (dim(som.data.prot.noNA$Ribosome_Occupancy)[1] * 
+                                    dim(som.data.prot.noNA$Ribosome_Occupancy)[2]))
 # if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
 #   ydim.total = floor(sqrt(total_cells/1.3333))
 # } else { 
@@ -821,13 +828,16 @@ som.exp.prot.noRibo = supersom(data =som.data.prot.noNA, whatmap = 2:4, grid=som
 # close (pb)
 # Best in 500 seeds is 378
 set.seed(378)
-som.exp.prot = supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
+som.exp.prot = supersom(data = som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
 
 plot.kohonen(som.exp.prot, type="counts")
-plot.kohonen(som.exp.prot, type="codes")
 plot.kohonen(som.exp.prot, type="changes")
 plot.kohonen(som.exp.prot, type="quality")
 mean(som.exp.prot$distances)
+pdf(file= "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSomCodes.pdf", width=8.5, height=11)
+par(mfrow = c(2, 2))
+plot.kohonen(som.exp.prot, type="codes")
+dev.off()
 
 # plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
 
