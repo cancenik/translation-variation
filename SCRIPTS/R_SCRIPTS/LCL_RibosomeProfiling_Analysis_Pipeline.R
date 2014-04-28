@@ -223,19 +223,98 @@ row.names(joint_expression_common) <- joint_count_ids
 
 ##### ANALYSIS REQUIRING JOINT RNA-RIBOSEQ WITH REPLICATES
 ### COMPARING VARIATION IN THE EXPRESSION VALUES
-# Alternative much simpler approach is to use ratio of CVs
-# It is unclear if CV makes sense as the relationship between Var Mean is different
-# It might make more sense to multiply by the associated weights
-weighted_sd <- function (y) { 
-  return ( sd(y[,2]*y[,4]) )
+# Improved method using weighted coefficient of variation
+
+# weighted_coef_var is a function to be applied to limma object with E and weights
+weighted_coef_var <- function(x)  { 
+#  wt_cv = c()
+  wt_cv_unbiased = c()
+  for (i in 1:dim(x$E)[1]) { 
+    wt_mean = weighted.mean(x$E[i,] , x$weights[i,] )
+    # Weighted sample variance --biased estimator
+#    wt_var = sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) / sum(x$weights[i,])
+    # Weighted sample variance -- unbiased estimator
+    wt_var_unbiased = (sum(x$weights[i,]) * (sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) ) ) / 
+      (sum(x$weights[i,])^2 - sum(x$weights[i,]^2) ) 
+#   wt_cv = c(wt_cv, sqrt(wt_var) / wt_mean)
+    wt_cv_unbiased = c(wt_cv_unbiased, sqrt(wt_var_unbiased) / wt_mean)    
+  }
+#  return (wt_cv)
+  return (wt_cv_unbiased)
 }
-# We can add a permutation scheme here to get p-values on these differences
+
+# Given limma object calculates weighted mean and weighted weights
+
+weighted_mean_limma <- function(x)  { 
+  wt_mean = c()
+  for (i in 1:dim(x$E)[1]) { 
+    wt_mean = c(wt_mean, weighted.mean(x$E[i,] , x$weights[i,] ))
+  }
+  return (wt_mean)
+}
+
+weighted_weight_limma <- function(x)  { 
+  wt_weights =c()
+  for (i in 1:dim(x$E)[1]) { 
+    wt_weights = c(wt_weights, weighted.mean(x$weights[i,], x$weights[i,]))
+  }
+  return (wt_weights)
+}
+
+#coef_var_median
+wt_cvs_ribo = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="Ribo"])),
+                     nrow = nrow(joint_expression_common[,type_common=="Ribo"]) ) )
+colnames(wt_cvs_ribo) <- unique(sample_labels_joint_common[type_common=="Ribo"])
+
+wt_means_ribo = wt_cvs_ribo
+wt_weights_ribo = wt_cvs_ribo
+
+for (j in unique(sample_labels_joint_common[type_common=="Ribo"]) ){ 
+  cols <- which(sample_labels_joint_common[type_common=="Ribo"] == j)
+  wt_cvs_ribo[[j]] = weighted_coef_var(joint_expression_common[,type_common=="Ribo"][,cols])
+  wt_means_ribo[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="Ribo"][,cols])
+  wt_weights_ribo[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="Ribo"][,cols])
+}
+
+wt_cvs_rna = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="RNA"])),
+                                nrow = nrow(joint_expression_common[,type_common=="RNA"]) ) )
+colnames(wt_cvs_rna) <- unique(sample_labels_joint_common[type_common=="RNA"])
+wt_means_rna = wt_cvs_rna
+wt_weights_rna = wt_cvs_rna
+
+for (j in unique(sample_labels_joint_common[type_common=="RNA"]) ){ 
+  cols <- which(sample_labels_joint_common[type_common=="RNA"] == j)
+  wt_cvs_rna[[j]] = weighted_coef_var(joint_expression_common[,type_common=="RNA"][,cols])
+  wt_means_rna[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="RNA"][,cols])
+  wt_weights_rna[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="RNA"][,cols])
+  
+}
+
+median_ribo_cv <- apply(wt_cvs_ribo, 1, median)
+median_rna_cv <- apply(wt_cvs_rna, 1, median)
+hist(median_ribo_cv, 50)
+hist(median_rna_cv, 50)
+
+# NEED TO MAKE SURE THAT THESE REMAINING SECTIONS WORK: 
+per_ind_ribo_cv = weighted_coef_var(list(E =  wt_means_ribo, weights = wt_weights_ribo))
+per_ind_rna_cv = weighted_coef_var(list(E = wt_means_rna, weights= wt_weights_rna))
+
+
+# Median_[ribo/rna]_cv is our estimated technical noise
+# For interindividual cv: Take weighed mean of expression and weights for each individual
+# Then use these to calculated weighted cv
+
+  
 # There doesn't seem to be any significant association between expression and the cv ratios as expected
+# We can add a permutation scheme here to get p-values on these differences
 # The easiest permutation scheme is to permute type_common to generate new RNA, Ribo Classification
 # Run through existing code and compare the actual difference in CV witht the permutation p-value
 # We might rely on nominal p-value threshold for selecting significant ones
 # type_common will be modified making sure that each individual is preserved as in sample_labels_joint_common
 # Loop over unique(sample_labels_joint_common)
+weighted_sd <- function (y) { 
+  return ( sd(y[,2]*y[,4]) )
+}
 
 rna_replicate_mean <- apply (joint_expression_common$E[,type_common=="RNA"], 1, function(x) {
 aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
@@ -256,6 +335,7 @@ rna_cv_between_individuals <- as.numeric(lapply(rna_replicate_mean_weights, weig
 ribo_cv_between_individuals <- as.numeric(lapply(ribo_replicate_mean_weights, weighted_sd))
 
 # Calculate median CV of replicate CVs
+# THIS SHOULD BE SWITCHED WITH WEIGHTED.SD/ WEIGHTED.MEAN AND THEN TAKE THE MEDIAN
 rna_replicatecvs <- apply (joint_expression_common$E[,type_common=="RNA"]*joint_expression_common$weights[,type_common=="RNA"], 1, function(x) {
   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), sd)  
 } )
