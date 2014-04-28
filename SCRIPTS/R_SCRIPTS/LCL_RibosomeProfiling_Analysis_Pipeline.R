@@ -228,6 +228,7 @@ row.names(joint_expression_common) <- joint_count_ids
 # weighted_coef_var is a function to be applied to limma object with E and weights
 weighted_coef_var <- function(x)  { 
 #  wt_cv = c()
+#  pb <- tkProgressBar(title="Progress Bar", min = 0, max = dim(x$E)[1], width=300)
   wt_cv_unbiased = c()
   for (i in 1:dim(x$E)[1]) { 
     wt_mean = weighted.mean(x$E[i,] , x$weights[i,] )
@@ -238,8 +239,10 @@ weighted_coef_var <- function(x)  {
       (sum(x$weights[i,])^2 - sum(x$weights[i,]^2) ) 
 #   wt_cv = c(wt_cv, sqrt(wt_var) / wt_mean)
     wt_cv_unbiased = c(wt_cv_unbiased, sqrt(wt_var_unbiased) / wt_mean)    
+#  setTkProgressBar(pb, i, label=paste( round(i/dim(x$E)[1]*100, 0),"% done"))
   }
 #  return (wt_cv)
+#  close (pb)
   return (wt_cv_unbiased)
 }
 
@@ -298,6 +301,11 @@ hist(median_rna_cv, 50)
 # NEED TO MAKE SURE THAT THESE REMAINING SECTIONS WORK: 
 per_ind_ribo_cv = weighted_coef_var(list(E =  wt_means_ribo, weights = wt_weights_ribo))
 per_ind_rna_cv = weighted_coef_var(list(E = wt_means_rna, weights= wt_weights_rna))
+hist(per_ind_ribo_cv, 50)
+hist(per_ind_rna_cv, 50)
+
+hist(per_ind_ribo_cv / median_ribo_cv, 50)
+hist(per_ind_rna_cv / median_rna_cv, 50)
 
 
 # Median_[ribo/rna]_cv is our estimated technical noise
