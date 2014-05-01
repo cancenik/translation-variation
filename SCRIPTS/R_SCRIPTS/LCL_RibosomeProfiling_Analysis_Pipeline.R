@@ -301,12 +301,23 @@ hist(median_rna_cv, 50)
 # NEED TO MAKE SURE THAT THESE REMAINING SECTIONS WORK: 
 per_ind_ribo_cv = weighted_coef_var(list(E =  wt_means_ribo, weights = wt_weights_ribo))
 per_ind_rna_cv = weighted_coef_var(list(E = wt_means_rna, weights= wt_weights_rna))
-hist(per_ind_ribo_cv, 50)
-hist(per_ind_rna_cv, 50)
+hist(per_ind_ribo_cv[per_ind_ribo_cv < 1], 50)
+hist(per_ind_rna_cv[per_ind_rna_cv>0 & per_ind_rna_cv < 1], 50)
 
-hist(per_ind_ribo_cv / median_ribo_cv, 50)
-hist(per_ind_rna_cv / median_rna_cv, 50)
+inter_ind_cv_to_technical_ribo = per_ind_ribo_cv / median_ribo_cv
+inter_ind_cv_to_technical_rna = per_ind_rna_cv / median_rna_cv
+hist(inter_ind_cv_to_technical_ribo[inter_ind_cv_to_technical_ribo < 10], 50)
+hist(inter_ind_cv_to_technical_rna[inter_ind_cv_to_technical_rna > 0 &inter_ind_cv_to_technical_rna < 10], 50)
 
+ratio_of_inter_ind_cv <- inter_ind_cv_to_technical_rna/inter_ind_cv_to_technical_ribo
+# which(ratio_of_inter_ind_cv < 0 )
+# [1] 3251 3297 3790 5269 8037
+# which(ratio_of_inter_ind_cv> 5)
+# [1]  932 1067 1442 1571 2752 3347 3523 4289 5005 5551 6233 7818 8616 9185
+# which(ratio_of_inter_ind_cv> 10)
+# [1]  932 1067 5551 8616
+
+hist(ratio_of_inter_ind_cv[ratio_of_inter_ind_cv > 0 & ratio_of_inter_ind_cv < 5], 50 )
 
 # Median_[ribo/rna]_cv is our estimated technical noise
 # For interindividual cv: Take weighed mean of expression and weights for each individual
@@ -1710,26 +1721,54 @@ output_clusters <- function (k, data_original, hc, names)
 
 ### DIFFERENCE IN VARIATION
 ### THIS APPROACH IS COMMENTED OUT
+
+# Test for difference in variance per gene across individuals
+# Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
+# Test statistic is the difference between F values, significance is by permutation testing
+# Need to think about issues with respect to degrees of freedom associated with the calculated F-value
+
+joint_expression_matrix <- joint_expression_common$E
+#gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
+sample_id_all <- paste(sample_labels_joint_common, type_common, sep = "_")
+
+rna_ribo_mean_diff <- apply(joint_expression_common$E, 1, function(x) {mean(x[1:49] - mean(x[50:80]))} ) 
+ribo_F = c()
+rna_F = c()
+for ( i in 1:nrow(joint_expression_common$E)) { 
+  ribo_F = c(ribo_F, 
+summary(aov(joint_expression_common$E[i,type_common=="Ribo"] ~ as.factor(sample_id_all[50:80]), 
+            weights= joint_expression_common$weights[i,type_common=="Ribo"] ))[[1]]$Pr[1] )
+
+rna_F = c(rna_F, 
+           summary(aov(joint_expression_common$E[i,type_common=="RNA"] ~ as.factor(sample_id_all[1:49]), 
+                       weights= joint_expression_common$weights[i,type_common=="RNA"] ))[[1]]$Pr[1] )
+  
+}
+
+ribo_polyA = c()
+rna_polyA = c()
+for ( i in 1:nrow(joint_expression_common$E)) { 
+  ribo_polyA = c(ribo_polyA, 
+             summary(aov(joint_expression_common$E[i,c(50,51,54:57, 74:80)] ~ as.factor(sample_id_all[c(50,51,54:57, 74:80)]), 
+                         weights= joint_expression_common$weights[i,c(50,51,54:57, 74:80)] ))[[1]]$Pr[1] )
+  
+  rna_polyA = c(rna_polyA, 
+            summary(aov(joint_expression_common$E[i,1:18] ~ as.factor(sample_id_all[1:18]), 
+                        weights= joint_expression_common$weights[i,1:18] ))[[1]]$Pr[1] )
+  
+}
+
+ribo_F_corrected = p.adjust(ribo_F, method="holm")
+rna_F_corrected = p.adjust(rna_F, method = "holm")
+length(which (ribo_F_corrected < 0.05))
+length(which (rna_F_corrected < 0.05))
+length(which (rna_F_corrected < 0.05 & ribo_F_corrected < 0.05))
+
 # 
-# # Test for difference in variance per gene across individuals
-# # Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
-# # Test statistic is the difference between F values, significance is by permutation testing
-# # Need to think about issues with respect to degrees of freedom associated with the calculated F-value
-# 
-# #joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")
-# #joint_expression_matrix <- joint_expression_matrix[,-1]
-# joint_expression_matrix <- joint_expression_common$E
-# #gene_names_joint_expression_matrix <- merge(v$E[,replicate_present][,sample_labels[replicate_present] %in% sample_id[replicate_present_rnaseq]], v2$E[,replicate_present_rnaseq][,sample_id[replicate_present_rnaseq] %in% sample_labels[replicate_present]], by="row.names")[,1]
-# #sample_id_all <- unlist(strsplit(colnames(joint_expression_matrix), split= "_"))
-# #sample_id_all <- sample_id_all[grep("GM", sample_id_all)]
-# sample_id_all <- sample_labels_joint_common
-# sample_id_all[1:51] <- paste(sample_id_all[1:51], "RNA", sep="_")
-# sample_id_all[52:84] <- paste(sample_id_all[52:84], "Ribosome_Profiling", sep="_")
 # 
 # # GO over each gene. Calculate F-value for ribo and rna separately
 # # One issue is that mean diff is highly correlated with p-value.
 # # The higher the mean diff, the higher the p-value
-# Mean_diff <- apply(joint_expression_matrix, 1, function(x) {mean(x[1:52] - mean(x[53:84]))} ) 
 # joint_expression_matrix_mean_subtracted <- t(apply(joint_expression_matrix, 1, function(x) {c(x[1:52]-mean(x[1:52]), x[53:84]-mean(x[53:84])  )}))
 # F_diff <- apply(joint_expression_matrix_mean_subtracted, 1, function (x) { 
 #   (summary (aov(x[52:84] ~ as.factor(sample_id_all[52:84])))[[1]]$F[1] ) - (summary(aov(x[1:51] ~ as.factor(sample_id_all[1:51])))[[1]]$F[1])
@@ -1796,8 +1835,8 @@ output_clusters <- function (k, data_original, hc, names)
 #   p1 <- min (length(which( perm_values > F_diff[i] ) ) /10000 , length(which( perm_values < F_diff[i] ) ) /10000 )
 #   F_diff_pval[i] <-  2*p1  
 # }
-#####################################
-# END OF OLD VARIATION ANALYSIS
+# ####################################
+# #END OF OLD VARIATION ANALYSIS
 
 
 # Calculate correlation between APPRIS USAGE AND TRANSLATION
