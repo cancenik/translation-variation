@@ -230,19 +230,38 @@ row.names(joint_expression_common) <- joint_count_ids
 sample_id_all <- paste(sample_labels_joint_common, type_common, sep = "_")
 rna_ribo_mean_diff <- apply(joint_expression_common$E, 1, function(x) {mean(x[1:49] - mean(x[50:80]))} ) 
 
+# We should test the effect of unbalanced design: 
+# Idea is subsample libraries so that there are 2 of each 
+# table(as.factor(sample_id_all[1:49]))
+# table(as.factor(sample_id_all[50:80]))
+rna_cols_to_select = c()
+ribo_cols_to_select = c()
+for (l in levels(as.factor(sample_id_all[1:49])) ) { 
+  rna_cols_to_select= c( rna_cols_to_select, 
+                         sample (which(as.factor(sample_id_all[1:49]) == l) , 2, replace=F) )
+}
+for (l in levels(as.factor(sample_id_all[50:80])) ) { 
+  ribo_cols_to_select= c( ribo_cols_to_select, 
+                         49 + sample (which(as.factor(sample_id_all[50:80]) == l) , 2, replace=F) )
+}
+table(sample_id_all[rna_cols_to_select])
+table(sample_id_all[ribo_cols_to_select])
+
 # We can use eta2 as measure of effect size SS-W/SS-TOTAL
 ribo_F = c()
 ribo_eta2 = c()
 rna_F = c()
 rna_eta2 = c()
+rna_cols_to_select = 1:49
+ribo_cols_to_select = 50:80
 for ( i in 1:nrow(joint_expression_common$E)) { 
   # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
-  tmp_ribo = summary(aov(joint_expression_common$E[i,type_common=="Ribo"] ~ as.factor(sample_id_all[50:80]), 
-                         weights= joint_expression_common$weights[i,type_common=="Ribo"] ))[[1]]
+  tmp_ribo = summary(aov(joint_expression_common$E[i,ribo_cols_to_select] ~ as.factor(sample_id_all[ribo_cols_to_select]), 
+                         weights= joint_expression_common$weights[i,ribo_cols_to_select] ))[[1]]
   ribo_F = c(ribo_F, tmp_ribo$Pr[1] ) 
   ribo_eta2 = c(ribo_eta2, tmp_ribo[1,2]/ sum(tmp_ribo[,2]) )
-  tmp_rna =  summary(aov(joint_expression_common$E[i,type_common=="RNA"] ~ as.factor(sample_id_all[1:49]), 
-                         weights= joint_expression_common$weights[i,type_common=="RNA"] ))[[1]] 
+  tmp_rna =  summary(aov(joint_expression_common$E[i,rna_cols_to_select] ~ as.factor(sample_id_all[rna_cols_to_select]), 
+                         weights= joint_expression_common$weights[i,rna_cols_to_select] ))[[1]] 
   rna_F = c(rna_F, tmp_rna$Pr[1] ) 
   rna_eta2 = c(rna_eta2,tmp_rna[1,2]/ sum(tmp_rna[,2]) )
 }
