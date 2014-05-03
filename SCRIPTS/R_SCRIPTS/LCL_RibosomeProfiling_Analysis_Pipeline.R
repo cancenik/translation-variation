@@ -230,15 +230,21 @@ row.names(joint_expression_common) <- joint_count_ids
 sample_id_all <- paste(sample_labels_joint_common, type_common, sep = "_")
 rna_ribo_mean_diff <- apply(joint_expression_common$E, 1, function(x) {mean(x[1:49] - mean(x[50:80]))} ) 
 
+# We can use eta2 as measure of effect size SS-W/SS-TOTAL
 ribo_F = c()
+ribo_eta2 = c()
 rna_F = c()
+rna_eta2 = c()
 for ( i in 1:nrow(joint_expression_common$E)) { 
-  ribo_F = c(ribo_F, 
-             summary(aov(joint_expression_common$E[i,type_common=="Ribo"] ~ as.factor(sample_id_all[50:80]), 
-                         weights= joint_expression_common$weights[i,type_common=="Ribo"] ))[[1]]$Pr[1] )
-  rna_F = c(rna_F, 
-            summary(aov(joint_expression_common$E[i,type_common=="RNA"] ~ as.factor(sample_id_all[1:49]), 
-                        weights= joint_expression_common$weights[i,type_common=="RNA"] ))[[1]]$Pr[1] ) 
+  # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
+  tmp_ribo = summary(aov(joint_expression_common$E[i,type_common=="Ribo"] ~ as.factor(sample_id_all[50:80]), 
+                         weights= joint_expression_common$weights[i,type_common=="Ribo"] ))[[1]]
+  ribo_F = c(ribo_F, tmp_ribo$Pr[1] ) 
+  ribo_eta2 = c(ribo_eta2, tmp_ribo[1,2]/ sum(tmp_ribo[,2]) )
+  tmp_rna =  summary(aov(joint_expression_common$E[i,type_common=="RNA"] ~ as.factor(sample_id_all[1:49]), 
+                         weights= joint_expression_common$weights[i,type_common=="RNA"] ))[[1]] 
+  rna_F = c(rna_F, tmp_rna$Pr[1] ) 
+  rna_eta2 = c(rna_eta2,tmp_rna[1,2]/ sum(tmp_rna[,2]) )
 }
 
 # # To test whether sources of data increases across individual variance
@@ -259,9 +265,14 @@ for ( i in 1:nrow(joint_expression_common$E)) {
 
 ribo_F_corrected = p.adjust(ribo_F, method="holm")
 rna_F_corrected = p.adjust(rna_F, method = "holm")
-length(which (ribo_F_corrected < 0.05))
-length(which (rna_F_corrected < 0.05))
-length(which (rna_F_corrected < 0.05 & ribo_F_corrected < 0.05))
+ribo_sig = which (ribo_F_corrected < 0.05)
+rna_sig = which (rna_F_corrected < 0.05)
+joint_sig = which (rna_F_corrected < 0.05 & ribo_F_corrected < 0.05)
+length(ribo_sig)
+length(rna_sig)
+length(joint_sig)
+plot(rna_eta2, rna_F_corrected, cex = .2, pch = 19)
+plot(ribo_eta2, ribo_F_corrected, cex = .2, pch = 19)
 
 
 ### THIS APPROACH BASED ON CVs or SIMPLE RATIOS IS COMMENTED OUT
@@ -1172,6 +1183,23 @@ AnnotCluster = getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
 filter_by_fdr_fold_enrichment(AnnotCluster, .1, 2)
 
 ## Variation in expression between individuals
+# NEW_VARIATION ANALYSIS WITH F_VALUES
+ribo_sig_names <- hgnc_to_ensg_convert( row.names(v3)[ribo_sig] ) 
+rna_sig_names = hgnc_to_ensg_convert( row.names(v3)[rna_sig] )
+joint_sig_names = hgnc_to_ensg_convert( row.names(v3)[joint_sig] )
+
+
+addList(david, ribo_sig_names, idType="ENSEMBL_GENE_ID", listName="ribo_sig_names", listType="Gene")
+addList(david, rna_sig_names, idType="ENSEMBL_GENE_ID", listName="rna_sig_names", listType="Gene")
+addList(david, joint_sig_names, idType="ENSEMBL_GENE_ID", listName="joint_sig_names", listType="Gene")
+addList(david, setdiff(rna_sig_names, joint_sig_names), idType="ENSEMBL_GENE_ID", listName="rnaonly_sig_names", listType="Gene")
+addList(david, setdiff(ribo_sig_names, joint_sig_names), idType="ENSEMBL_GENE_ID", listName="riboonly_sig_names", listType="Gene")
+
+setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+setCurrentBackgroundPosition(david,2)
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
+filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+
 # RNA/RIBO
 high_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv > 2)]
 low_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv < .5)]
@@ -1181,6 +1209,8 @@ addList(david, high_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="High
 addList(david, low_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="LowRNARiboVariation", listType="Gene")
 setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
+filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+
 # setCurrentGeneListPosition(david, 1)
 
 ## Differential Expression -- RNA/Ribo/TE => This should go with Bilal's RADIAL SETS
