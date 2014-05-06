@@ -14,6 +14,9 @@ library("gplots")
 # Use for progress bars
 #library("tcltk")
 source('~/project/kohonen2/R/plot.kohonen.R')
+#library(nlme)
+library("lme4")
+library("RLRsim")
 
 ## Try to build the SOM using only the RNA and TE and see what happens to the correlations
 ## Plot the ratios of the correlations or the highest correlation or type of the event
@@ -224,6 +227,43 @@ row.names(joint_expression_common) <- joint_count_ids
 ##### ANALYSIS REQUIRING JOINT RNA-RIBOSEQ WITH REPLICATES
 ### COMPARING VARIATION IN THE EXPRESSION VALUES
 
+# Alternative approach is to use a random effects model
+# Test for significance of the random effects with ‘RLRsim’ package
+#mA<-lme(distance ~ Sex , random = ~ 1| Subject,
+#        data = Orthodont, method = "ML")
+#m0<-lm(distance ~ Sex, data = Orthodont)
+# summary(mA)
+# summary(m0)
+# exactLRT(m = mA, m0 = m0)
+rna_cols_to_select = 1:49
+ribo_cols_to_select = 50:80
+random_effect_stat_rna = c()
+random_effect_stat_ribo = c()
+random_effect_p_val_rna = c()
+random_effect_p_val_ribo = c()
+# The p-value is fragile for low number of similuations so increased to 500k
+# This section is quite computationally intensive
+# We estimate that this will take ~12h
+for ( i in 1:nrow(joint_expression_common$E)) { 
+  # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
+  mA_ribo = lmer(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[ribo_cols_to_select])), 
+                         weights= joint_expression_common$weights[i,ribo_cols_to_select], REML=F)
+  m0_ribo = lm(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 , 
+                 weights= joint_expression_common$weights[i,ribo_cols_to_select] )
+  tmp_ribo = exactLRT(m = mA_ribo, m0 = m0_ribo, nsim=500000)
+  random_effect_p_val_ribo = c(random_effect_p_val_ribo, tmp_ribo$p.value)
+  random_effect_stat_ribo = c(random_effect_stat_ribo, tmp_ribo$statistic)
+  
+  mA_rna =  lmer(joint_expression_common$E[i,rna_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[rna_cols_to_select])) , 
+                weights= joint_expression_common$weights[i,rna_cols_to_select], REML=F )  
+  m0_rna =  lm(joint_expression_common$E[i,rna_cols_to_select] ~ 1 , 
+                weights= joint_expression_common$weights[i,rna_cols_to_select] )  
+  tmp_rna = exactLRT(m = mA_rna, m0 = m0_rna, nsim=500000)
+  random_effect_p_val_rna = c(random_effect_p_val_rna, tmp_rna$p.value)
+  random_effect_stat_rna = c(random_effect_stat_rna, tmp_rna$statistic)      
+}
+
+
 # Test for difference in variance per gene across individuals
 # Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
 # Calculate F-test p-value and compare joint significance or separate significance
@@ -232,6 +272,8 @@ rna_ribo_mean_diff <- apply(joint_expression_common$E, 1, function(x) {mean(x[1:
 
 # We should test the effect of unbalanced design: 
 # Idea is subsample libraries so that there are 2 of each 
+# Test robustness to sampling
+# The p-values are highly unstable based on the sampling
 # table(as.factor(sample_id_all[1:49]))
 # table(as.factor(sample_id_all[50:80]))
 rna_cols_to_select = c()
@@ -261,10 +303,21 @@ for ( i in 1:nrow(joint_expression_common$E)) {
   ribo_F = c(ribo_F, tmp_ribo$Pr[1] ) 
   ribo_eta2 = c(ribo_eta2, tmp_ribo[1,2]/ sum(tmp_ribo[,2]) )
   tmp_rna =  summary(aov(joint_expression_common$E[i,rna_cols_to_select] ~ as.factor(sample_id_all[rna_cols_to_select]), 
-                         weights= joint_expression_common$weights[i,rna_cols_to_select] ))[[1]] 
+                         weights= joint_expression_common$weights[i,rna_cols_to_select] ))[[1]]   
   rna_F = c(rna_F, tmp_rna$Pr[1] ) 
-  rna_eta2 = c(rna_eta2,tmp_rna[1,2]/ sum(tmp_rna[,2]) )
+  rna_eta2 = c(rna_eta2,tmp_rna[1,2]/ sum(tmp_rna[,2]) )                 
 }
+
+ribo_F_corrected = p.adjust(ribo_F, method="holm")
+rna_F_corrected = p.adjust(rna_F, method = "holm")
+ribo_sig = which (ribo_F_corrected < 0.05)
+rna_sig = which (rna_F_corrected < 0.05)
+joint_sig = which (rna_F_corrected < 0.05 & ribo_F_corrected < 0.05)
+length(ribo_sig)
+length(rna_sig)
+length(joint_sig)
+plot(rna_eta2, rna_F_corrected, cex = .2, pch = 19)
+plot(ribo_eta2, ribo_F_corrected, cex = .2, pch = 19)
 
 # # To test whether sources of data increases across individual variance
 # # Simple test is to select only polyA_RNA individuals and equivalents in Ribo
@@ -282,16 +335,7 @@ for ( i in 1:nrow(joint_expression_common$E)) {
 #   
 # }
 
-ribo_F_corrected = p.adjust(ribo_F, method="holm")
-rna_F_corrected = p.adjust(rna_F, method = "holm")
-ribo_sig = which (ribo_F_corrected < 0.05)
-rna_sig = which (rna_F_corrected < 0.05)
-joint_sig = which (rna_F_corrected < 0.05 & ribo_F_corrected < 0.05)
-length(ribo_sig)
-length(rna_sig)
-length(joint_sig)
-plot(rna_eta2, rna_F_corrected, cex = .2, pch = 19)
-plot(ribo_eta2, ribo_F_corrected, cex = .2, pch = 19)
+
 
 
 ### THIS APPROACH BASED ON CVs or SIMPLE RATIOS IS COMMENTED OUT
