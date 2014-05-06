@@ -226,6 +226,12 @@ row.names(joint_expression_common) <- joint_count_ids
 
 ##### ANALYSIS REQUIRING JOINT RNA-RIBOSEQ WITH REPLICATES
 ### COMPARING VARIATION IN THE EXPRESSION VALUES
+# Test for difference in variance per gene across individuals
+# Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
+# Calculate F-test p-value and compare joint significance or separate significance
+sample_id_all <- paste(sample_labels_joint_common, type_common, sep = "_")
+rna_ribo_mean_diff <- apply(joint_expression_common$E, 1, function(x) {mean(x[1:49] - mean(x[50:80]))} ) 
+
 
 # Alternative approach is to use a random effects model
 # Test for significance of the random effects with ‘RLRsim’ package
@@ -273,13 +279,18 @@ for ( i in 1:nrow(joint_expression_common$E)) {
   random_effect_stat_rna = c(random_effect_stat_rna, tmp_rna$statistic)      
   }
 }
-
-
-# Test for difference in variance per gene across individuals
-# Partition sum of squares to estimate between individual variance take out variance component due to rep to rep variance
-# Calculate F-test p-value and compare joint significance or separate significance
-sample_id_all <- paste(sample_labels_joint_common, type_common, sep = "_")
-rna_ribo_mean_diff <- apply(joint_expression_common$E, 1, function(x) {mean(x[1:49] - mean(x[50:80]))} ) 
+save (random_effect_p_val_rna,random_effect_stat_rna, 
+      random_effect_stat_ribo, random_effect_p_val_ribo, 
+      file= paste(data_dir , "Random_Effect_Model_stats_RiboRNA", sep = "" ) )
+hist(p.adjust(random_effect_p_val_rna, method = "holm"))
+hist(p.adjust(random_effect_p_val_ribo, method = "holm"))
+ribo_sig_random = which (p.adjust(random_effect_p_val_ribo, method = "holm") < 0.05)
+rna_sig_random = which (p.adjust(random_effect_p_val_rna, method = "holm") < 0.05)
+joint_sig_random = which (p.adjust(random_effect_p_val_rna, method = "holm") < 0.05 & 
+                            p.adjust(random_effect_p_val_ribo, method = "holm") < 0.05)
+length(ribo_sig_random)
+length(rna_sig_random)
+length(joint_sig_random)
 
 # We should test the effect of unbalanced design: 
 # Idea is subsample libraries so that there are 2 of each 
