@@ -250,17 +250,28 @@ for ( i in 1:nrow(joint_expression_common$E)) {
                          weights= joint_expression_common$weights[i,ribo_cols_to_select], REML=F)
   m0_ribo = lm(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 , 
                  weights= joint_expression_common$weights[i,ribo_cols_to_select] )
+  if(getME(mA_ribo, "theta") < 1e-5 ) {
+    random_effect_p_val_ribo = c(random_effect_p_val_ribo,1)
+    random_effect_stat_ribo = c(random_effect_stat_ribo, 0)
+  }
+  else {
   tmp_ribo = exactLRT(m = mA_ribo, m0 = m0_ribo, nsim=500000)
   random_effect_p_val_ribo = c(random_effect_p_val_ribo, tmp_ribo$p.value)
   random_effect_stat_ribo = c(random_effect_stat_ribo, tmp_ribo$statistic)
-  
+  }
   mA_rna =  lmer(joint_expression_common$E[i,rna_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[rna_cols_to_select])) , 
                 weights= joint_expression_common$weights[i,rna_cols_to_select], REML=F )  
   m0_rna =  lm(joint_expression_common$E[i,rna_cols_to_select] ~ 1 , 
                 weights= joint_expression_common$weights[i,rna_cols_to_select] )  
+  if(getME(mA_rna, "theta") < 1e-5 ) {
+    random_effect_p_val_rna = c(random_effect_p_val_rna, 1)
+    random_effect_stat_rna = c(random_effect_stat_rna, 0)      
+  }
+  else {
   tmp_rna = exactLRT(m = mA_rna, m0 = m0_rna, nsim=500000)
   random_effect_p_val_rna = c(random_effect_p_val_rna, tmp_rna$p.value)
   random_effect_stat_rna = c(random_effect_stat_rna, tmp_rna$statistic)      
+  }
 }
 
 
