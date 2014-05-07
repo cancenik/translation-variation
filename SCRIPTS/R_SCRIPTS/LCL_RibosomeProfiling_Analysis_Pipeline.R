@@ -282,6 +282,7 @@ for ( i in 1:nrow(joint_expression_common$E)) {
 save (random_effect_p_val_rna,random_effect_stat_rna, 
       random_effect_stat_ribo, random_effect_p_val_ribo, 
       file= paste(data_dir , "Random_Effect_Model_stats_RiboRNA", sep = "" ) )
+load(file= paste(data_dir , "Random_Effect_Model_stats_RiboRNA", sep = "" ) )
 hist(p.adjust(random_effect_p_val_rna, method = "holm"))
 hist(p.adjust(random_effect_p_val_ribo, method = "holm"))
 ribo_sig_random = which (p.adjust(random_effect_p_val_ribo, method = "holm") < 0.05)
@@ -340,6 +341,9 @@ length(rna_sig)
 length(joint_sig)
 plot(rna_eta2, rna_F_corrected, cex = .2, pch = 19)
 plot(ribo_eta2, ribo_F_corrected, cex = .2, pch = 19)
+
+plot(p.adjust(random_effect_p_val_ribo, method = "holm") , ribo_F_corrected, pch = 19, cex=.2)
+plot(p.adjust(random_effect_p_val_rna, method = "holm") , rna_F_corrected, pch = 19, cex=.2)
 
 # # To test whether sources of data increases across individual variance
 # # Simple test is to select only polyA_RNA individuals and equivalents in Ribo
@@ -1269,9 +1273,9 @@ filter_by_fdr_fold_enrichment(AnnotCluster, .1, 2)
 
 ## Variation in expression between individuals
 # NEW_VARIATION ANALYSIS WITH F_VALUES
-ribo_sig_names <- hgnc_to_ensg_convert( row.names(v3)[ribo_sig] ) 
-rna_sig_names = hgnc_to_ensg_convert( row.names(v3)[rna_sig] )
-joint_sig_names = hgnc_to_ensg_convert( row.names(v3)[joint_sig] )
+ribo_sig_names <- hgnc_to_ensg_convert( row.names(v3)[ribo_sig_random] ) 
+rna_sig_names = hgnc_to_ensg_convert( row.names(v3)[rna_sig_random] )
+joint_sig_names = hgnc_to_ensg_convert( row.names(v3)[joint_sig_random] )
 
 
 addList(david, ribo_sig_names, idType="ENSEMBL_GENE_ID", listName="ribo_sig_names", listType="Gene")
