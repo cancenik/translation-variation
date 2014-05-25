@@ -292,7 +292,10 @@ joint_sig_random = which (p.adjust(random_effect_p_val_rna, method = "holm") < 0
 length(ribo_sig_random)
 length(rna_sig_random)
 length(joint_sig_random)
-
+random_effect_df = data.frame (ID = hgnc_to_ensg_convert(row.names(v3)), 
+    RNA_Stat=random_effect_stat_rna, RNA_P = p.adjust(random_effect_p_val_rna, method = "holm"),
+    RIBO_Stat=random_effect_stat_ribo, RIBO_P = p.adjust(random_effect_p_val_ribo, method = "holm"))
+write.table(random_effect_df, file = paste(data_dir , "Random_Effect_Model_stats_DF_Table.txt", sep = "" ), row.names=F )
 # We should test the effect of unbalanced design: 
 # Idea is subsample libraries so that there are 2 of each 
 # Test robustness to sampling
@@ -1026,6 +1029,39 @@ som.data.prot.noNA = list ( Ribosome_Occupancy= ribo.quantiles[dropRows, -dropCo
                             RNA_Expression = rna.quantiles[dropRows, -dropCols] ,
                             Translation_Efficiency = te.quantiles[dropRows, -dropCols], 
                             Protein_Expression=prot.quantiles[dropRows, -dropCols])
+
+# Another version of the SuperSOM is using linfeng_protein_ribo_rna
+# Sample IDs => sample_labels_joint_prot
+# Types_of_Data => Type_Prot
+# rna_replicate_mean_prot; ribo_replicate_mean_prot: Lists 
+# rna_in_prot <- as.character(rna_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
+# ribo_in_prot <- as.character(ribo_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
+
+# Create num mat with each individual specific data
+rna.num.mat = matrix(nrow=length(rna_replicate_mean_prot) , ncol = 27)
+ribo.num.mat = matrix ( nrow = length(ribo_replicate_mean_prot), ncol = 28)
+for (i in 1:length(rna_replicate_mean_prot)) { 
+  rna.num.mat[i, ] = rna_replicate_mean_prot[[i]]$x[rna_in_prot]
+}
+for (i in 1:length(rna_replicate_mean_prot)) { 
+  ribo.num.mat[i, ] = ribo_replicate_mean_prot[[i]]$x[ribo_in_prot]
+}
+colnames( rna.num.mat) = as.character (rna_replicate_mean_prot[[i]]$Group.1[rna_in_prot] ) 
+colnames( ribo.num.mat) = as.character (ribo_replicate_mean_prot[[i]]$Group.1[ribo_in_prot] ) 
+
+# Ribo and Prot has one extra col
+dropProt = c(23)
+ribo.num.mat  = ribo.num.mat[,-dropProt]
+prot.num.mat = matrix(as.numeric(as.matrix(linfeng_protein_ribo_rna[,type_prot=="Prot"])),ncol=28)
+prot.num.mat = prot.num.mat[, -dropProt]
+rna.full.quantiles = matrix(ecdf(rna.num.mat)(rna.num.mat), ncol = 27 )
+ribo.full.quantiles = matrix(ecdf(ribo.num.mat)(ribo.num.mat), ncol = 27 )
+prot.full.quantile = matrix( ecdf (prot.num.mat)(prot.num.mat), ncol = 27)
+
+supersom.fullrna.ribo.prot = list ( 
+  ribo= ribo.full.quantiles , rna = rna.full.quantiles , prot=prot.full.quantile)
+
+
   
 #total_cells <- floor(sqrt(length(som.data.prot)/2) * sqrt (dim(som.data.prot$ribo)[1] * dim(som.data.prot$ribo)[2]))
 total_cells.noNA <- floor(sqrt(length(som.data.prot.noNA)/2) * 
@@ -1056,6 +1092,20 @@ xdim.total.noNA = floor(total_cells.noNA/ydim.total.noNA + 0.5)
 # plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
 # plot.kohonen(som.exp, type="counts" )
 
+# We can update the xdim - ydim
+total_cells.full <- floor(sqrt(length(supersom.fullrna.ribo.prot)/2) * 
+                            sqrt (dim(supersom.fullrna.ribo.prot$prot)[1] * 
+                                    dim(supersom.fullrna.ribo.prot$prot)[2]))
+
+if (floor(sqrt(total_cells.full/1.3333)) %% 2 == 0) { 
+  ydim.total.full = floor(sqrt(total_cells.full/1.3333))
+} else { 
+  ydim.total.full = floor(sqrt(total_cells.full/1.3333)) + 1
+}
+xdim.total.full = floor(total_cells.full/ydim.total.full + 0.5)
+
+supersom.full_sample = supersom (data = supersom.fullrna.ribo.prot, 
+grid=somgrid ( xdim.total.full, ydim.total.full, "hexagonal"), toroidal=T, contin = T)
 
 som.exp.prot.noRibo = supersom(data =som.data.prot.noNA, whatmap = 2:4, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
 # Give proteins higher weight for tighter clustering -> Another rationale is colinearity between the expression measures
@@ -1286,8 +1336,9 @@ addList(david, setdiff(ribo_sig_names, joint_sig_names), idType="ENSEMBL_GENE_ID
 
 setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
 setCurrentBackgroundPosition(david,2)
+setCurrentGeneListPosition(david, 2)
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
-filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)$Term
 
 # RNA/RIBO
 high_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv > 2)]
