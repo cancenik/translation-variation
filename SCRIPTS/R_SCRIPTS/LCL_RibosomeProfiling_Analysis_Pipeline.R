@@ -22,6 +22,17 @@ library("RLRsim")
 ## Plot the ratios of the correlations or the highest correlation or type of the event
 ## Do GO on these classes
 
+## Across individual many genes show no variation at all at RNA, or Ribo
+# These might affect the interpretation of across individual correlation interpretation
+# One idea is to consider only the set of transcripts that exhibit non-zero across individual variance
+# Another strategy is to plot across individual variance for genes in cell. 
+# Then compare this with cell-wise correlation coefficients. 
+# Huge boost in signal when using joint_sig_random subset. 60% significant correlated
+# Median correlation is .6 + 
+# However, number of transcripts is too low. Better idea is to use unioun of rna_sig, ribo_sig
+
+
+
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
 
@@ -675,6 +686,12 @@ as.numeric(apply(abs(te.diff.results), 2, sum))
 ## ANALYSIS ON ALL DATA INCLUDING RNA-RIBO IRRESPECTIVE OF REPLICATION
 # Comparing across Individual Correlation to Linfeng's proteomics
 # ensg_hgnc
+
+# We can subset the set of transcripts with respect to non-zero inter-individual variation
+# Variation in both RNA and Ribo is in joint_sig_random
+# Variation in either
+sig_ribo_rna_random = union(rna_sig_random, ribo_sig_random)
+
 linfeng_common <- colnames(linfeng_protein) %in% unique(sample_labels_joint)
 linfeng_protein_common <- linfeng_protein[,linfeng_common]
 linfeng_protein_common <- merge(linfeng_protein_common, ensg_hgnc, by.x="row.names", by.y="ENSG")
@@ -683,6 +700,12 @@ linfeng_protein_common <- merge(linfeng_protein_common, ensg_hgnc, by.x="row.nam
 number_NAs <- 1
 linfeng_protein_na <- linfeng_protein_common[apply(is.na(linfeng_protein_common), 1, sum) < number_NAs, ]
 linfeng_protein_ribo_rna <- merge (v3$E, linfeng_protein_na, by.x="row.names", by.y="HGNC")
+linfeng_protein_ribo_rna_nonzero_variance <- 
+  merge (v3$E[sig_ribo_rna_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
+
+## SWITCHED TO USING THE NONZERO VARIANCE SET
+linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_nonzero_variance
+
 row.names(linfeng_protein_ribo_rna) <- linfeng_protein_ribo_rna[,1]
 linfeng_protein_ribo_rna <- linfeng_protein_ribo_rna[,-c(1,135)]
 type_prot <- c(type, rep("Prot", dim(linfeng_protein_ribo_rna)[2] - length(type)))
@@ -727,8 +750,8 @@ length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
 median(across_ind_rna_correlation)
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
-# FDR ~ 25%
-pval_cutoff <- 0.0001
+# FDR ~ 25% ; For Non-zero variation %10 FDR is 0.0002
+pval_cutoff <- 0.0002
 color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
 color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
 color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 3
@@ -1106,6 +1129,7 @@ xdim.total.full = floor(total_cells.full/ydim.total.full + 0.5)
 
 supersom.full_sample = supersom (data = supersom.fullrna.ribo.prot, 
 grid=somgrid ( xdim.total.full, ydim.total.full, "hexagonal"), toroidal=T, contin = T)
+plot.kohonen (supersom.full_sample, type = "changes")
 
 som.exp.prot.noRibo = supersom(data =som.data.prot.noNA, whatmap = 2:4, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
 # Give proteins higher weight for tighter clustering -> Another rationale is colinearity between the expression measures
