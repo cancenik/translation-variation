@@ -1,0 +1,42 @@
+# species: Homo sapiens
+# support: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+# associations retrieved on: 2014-05-23 08:42:48-04
+# gofunc built on: 2013-10-27 21:51:15.890197-04
+# gene associations file: ftp://ftp.geneontology.org/pub/go/gene-associations/gene_association.goa_human.gz
+#   revision: 0
+#   downloaded on: 2013-10-27 16:13:44-04
+# GO DAG files from: http://archive.geneontology.org/latest-full/go_201310-assocdb-tables.tar.gz
+#   downloaded on: 2013-10-17 16:47:31-04
+# translation required: yes
+# translation info:
+#   authority: ensembl
+#     synergizer db built on: 2012-02-05 16:36:50.758813-05
+#     synergizer db built from: Ensembl Genes 65 / Ensembl Metazoa Genes 12 / Ensembl Plants Genes 10
+#   namespace: ensembl_gene_id
+#   coverage: 99.6%
+# size of "genespace": 9651
+# number of attributes: 14476
+# NOTE: these associations have been restricted to the genes included
+# in the user-supplied gene space.
+# NOTE: the last record consists of all the entities in the
+# "genespace" that are not associated with any attribute (for
+# the requested support).
+# Original number of entities in query: 72
+# Number of entities in query: 72
+# Total number of entities: 9651
+# Total number of attributes: 14476
+# Original total number of attributes: 17521
+# Translation required: yes
+# Translation coverage: 0.995851
+# Mode: ordered
+# Number of simulations: 1000
+# Adjusted P-value cutoff: 0.05
+# Over/under: over
+# Evidence codes: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+OVERREPRESENTED ATTRIBUTES
+N	M	X	LOD	P	P_adj	attrib ID	attrib name
+2	10	3	3.27652938286814	2.89750383443878e-06	0.049	GO:0032252	secretory granule localization
+3	10	23	2.34049570409657	1.4035747418346e-06	0.024	GO:0045576	mast cell activation
+8	13	712	1.29224549194349	7.78911598345554e-07	0.012	GO:0006955	immune response
+18	65	716	0.695140185081336	6.75533823707406e-07	0.009	GO:0005794	Golgi apparatus
+23	71	1059	0.60144347135378	9.91135609937659e-07	0.017	GO:0070887	cellular response to chemical stimulus
