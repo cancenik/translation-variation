@@ -18,9 +18,6 @@ source('~/project/kohonen2/R/plot.kohonen.R')
 library("lme4")
 library("RLRsim")
 
-## Try to build the SOM using only the RNA and TE and see what happens to the correlations
-## Plot the ratios of the correlations or the highest correlation or type of the event
-## Do GO on these classes
 
 ## Across individual many genes show no variation at all at RNA, or Ribo
 # These might affect the interpretation of across individual correlation interpretation
@@ -1299,6 +1296,49 @@ plot.kohonen(som.exp.prot, type="counts")
 # 1   2   3 
 # 114 143   9 
 
+
+### GO ENRICHMENT 
+# Visualization idea for FuncAssociate GO. 
+# Generate term-term kappa statistic similarity matrix. 
+# Use cytoscape to visualize and color or size by LOD/p-value
+# kappa statistic for GO to Gene matrix
+
+# We use funcassociate to generate results
+# We then use kappa_statistic_GO_network.pl to process the results
+# The output from R is going to formatted and opened in Cytoscape 
+# WE will use the node attributes as the LOD enrichment
+# We will define edge similarity with kappa statistic
+go_dag_joint = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/JointIDs_funcassociate_results.tsv_Kappa_Network.sif'
+go_dag_ribo = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/Ribo_Only_funcassociate_results.tsv_Kappa_Network.sif'
+go_dag_rna = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/RNA_Only_funcassociate_results.tsv_Kappa_Network.sif'
+
+go_dag = read.table(go_dag_joint, header=T)
+go_dag = read.table(go_dag_ribo, header=T)
+go_dag = read.table(go_dag_rna, header=T)
+
+# Calculates kappa similarity between two binary vectors 
+calculate_kappa <- function (a1, a2) { 
+  Pr_a = sum (!xor(a1,a2)) / length(a1)
+  a1_1 = sum(a1) / length(a1)
+  a2_1 = sum(a2) /length(a2)
+  Pr_e = a1_1 * a2_1 + (1-a1_1) * (1-a2_1)
+  kappa = (Pr_a - Pr_e) / (1-Pr_e)
+  return (signif(kappa, 2) ) 
+}
+
+
+first_kappas <- c()
+for ( i in 1:dim(go_dag)[1]) { 
+  for ( j in 1:dim(go_dag)[1]) { 
+    first_kappas = c(first_kappas, 
+                     paste(go_dag[i, 1], go_dag[j, 1],
+                           calculate_kappa (go_dag[i, 2:dim(go_dag)[2]], go_dag[j, 2:dim(go_dag)[2]] ), sep="\t"  ) 
+    ) 
+  }
+}
+#write(first_kappas, file = paste(go_dag_joint, "modified", sep="_"))
+#write(first_kappas, file = paste(go_dag_ribo, "modified", sep="_"))
+write(first_kappas, file = paste(go_dag_rna, "modified", sep="_"))
 
 ### PATHWAY ENRICHMENT ANALYSIS WITH RDAVID
 david<-DAVIDWebService$new(email="ccenik@stanford.edu")
