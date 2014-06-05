@@ -18,17 +18,7 @@ source('~/project/kohonen2/R/plot.kohonen.R')
 library("lme4")
 library("RLRsim")
 
-
-## Across individual many genes show no variation at all at RNA, or Ribo
-# These might affect the interpretation of across individual correlation interpretation
-# One idea is to consider only the set of transcripts that exhibit non-zero across individual variance
-# Another strategy is to plot across individual variance for genes in cell. 
-# Then compare this with cell-wise correlation coefficients. 
-# Huge boost in signal when using joint_sig_random subset. 60% significant correlated
-# Median correlation is .6 + 
-# However, number of transcripts is too low. Better idea is to use unioun of rna_sig, ribo_sig
-
-
+# v3$E[sig_ribo_rna_random,]
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
@@ -304,57 +294,7 @@ random_effect_df = data.frame (ID = hgnc_to_ensg_convert(row.names(v3)),
     RNA_Stat=random_effect_stat_rna, RNA_P = p.adjust(random_effect_p_val_rna, method = "holm"),
     RIBO_Stat=random_effect_stat_ribo, RIBO_P = p.adjust(random_effect_p_val_ribo, method = "holm"))
 write.table(random_effect_df, file = paste(data_dir , "Random_Effect_Model_stats_DF_Table.txt", sep = "" ), row.names=F )
-# We should test the effect of unbalanced design: 
-# Idea is subsample libraries so that there are 2 of each 
-# Test robustness to sampling
-# The p-values are highly unstable based on the sampling
-# table(as.factor(sample_id_all[1:49]))
-# table(as.factor(sample_id_all[50:80]))
-rna_cols_to_select = c()
-ribo_cols_to_select = c()
-for (l in levels(as.factor(sample_id_all[1:49])) ) { 
-  rna_cols_to_select= c( rna_cols_to_select, 
-                         sample (which(as.factor(sample_id_all[1:49]) == l) , 2, replace=F) )
-}
-for (l in levels(as.factor(sample_id_all[50:80])) ) { 
-  ribo_cols_to_select= c( ribo_cols_to_select, 
-                         49 + sample (which(as.factor(sample_id_all[50:80]) == l) , 2, replace=F) )
-}
-table(sample_id_all[rna_cols_to_select])
-table(sample_id_all[ribo_cols_to_select])
 
-# We can use eta2 as measure of effect size SS-W/SS-TOTAL
-ribo_F = c()
-ribo_eta2 = c()
-rna_F = c()
-rna_eta2 = c()
-rna_cols_to_select = 1:49
-ribo_cols_to_select = 50:80
-for ( i in 1:nrow(joint_expression_common$E)) { 
-  # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
-  tmp_ribo = summary(aov(joint_expression_common$E[i,ribo_cols_to_select] ~ as.factor(sample_id_all[ribo_cols_to_select]), 
-                         weights= joint_expression_common$weights[i,ribo_cols_to_select] ))[[1]]
-  ribo_F = c(ribo_F, tmp_ribo$Pr[1] ) 
-  ribo_eta2 = c(ribo_eta2, tmp_ribo[1,2]/ sum(tmp_ribo[,2]) )
-  tmp_rna =  summary(aov(joint_expression_common$E[i,rna_cols_to_select] ~ as.factor(sample_id_all[rna_cols_to_select]), 
-                         weights= joint_expression_common$weights[i,rna_cols_to_select] ))[[1]]   
-  rna_F = c(rna_F, tmp_rna$Pr[1] ) 
-  rna_eta2 = c(rna_eta2,tmp_rna[1,2]/ sum(tmp_rna[,2]) )                 
-}
-
-ribo_F_corrected = p.adjust(ribo_F, method="holm")
-rna_F_corrected = p.adjust(rna_F, method = "holm")
-ribo_sig = which (ribo_F_corrected < 0.05)
-rna_sig = which (rna_F_corrected < 0.05)
-joint_sig = which (rna_F_corrected < 0.05 & ribo_F_corrected < 0.05)
-length(ribo_sig)
-length(rna_sig)
-length(joint_sig)
-plot(rna_eta2, rna_F_corrected, cex = .2, pch = 19)
-plot(ribo_eta2, ribo_F_corrected, cex = .2, pch = 19)
-
-plot(p.adjust(random_effect_p_val_ribo, method = "holm") , ribo_F_corrected, pch = 19, cex=.2)
-plot(p.adjust(random_effect_p_val_rna, method = "holm") , rna_F_corrected, pch = 19, cex=.2)
 
 # # To test whether sources of data increases across individual variance
 # # Simple test is to select only polyA_RNA individuals and equivalents in Ribo
@@ -374,172 +314,6 @@ plot(p.adjust(random_effect_p_val_rna, method = "holm") , rna_F_corrected, pch =
 
 
 
-
-### THIS APPROACH BASED ON CVs or SIMPLE RATIOS IS COMMENTED OUT
-# # Improved method using weighted coefficient of variation
-# 
-# # weighted_coef_var is a function to be applied to limma object with E and weights
-# weighted_coef_var <- function(x)  { 
-# #  wt_cv = c()
-# #  pb <- tkProgressBar(title="Progress Bar", min = 0, max = dim(x$E)[1], width=300)
-#   wt_cv_unbiased = c()
-#   for (i in 1:dim(x$E)[1]) { 
-#     wt_mean = weighted.mean(x$E[i,] , x$weights[i,] )
-#     # Weighted sample variance --biased estimator
-# #    wt_var = sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) / sum(x$weights[i,])
-#     # Weighted sample variance -- unbiased estimator
-#     wt_var_unbiased = (sum(x$weights[i,]) * (sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) ) ) / 
-#       (sum(x$weights[i,])^2 - sum(x$weights[i,]^2) ) 
-# #   wt_cv = c(wt_cv, sqrt(wt_var) / wt_mean)
-#     wt_cv_unbiased = c(wt_cv_unbiased, sqrt(wt_var_unbiased) / wt_mean)    
-# #  setTkProgressBar(pb, i, label=paste( round(i/dim(x$E)[1]*100, 0),"% done"))
-#   }
-# #  return (wt_cv)
-# #  close (pb)
-#   return (wt_cv_unbiased)
-# }
-# 
-# # Given limma object calculates weighted mean and weighted weights
-# 
-# weighted_mean_limma <- function(x)  { 
-#   wt_mean = c()
-#   for (i in 1:dim(x$E)[1]) { 
-#     wt_mean = c(wt_mean, weighted.mean(x$E[i,] , x$weights[i,] ))
-#   }
-#   return (wt_mean)
-# }
-# 
-# weighted_weight_limma <- function(x)  { 
-#   wt_weights =c()
-#   for (i in 1:dim(x$E)[1]) { 
-#     wt_weights = c(wt_weights, weighted.mean(x$weights[i,], x$weights[i,]))
-#   }
-#   return (wt_weights)
-# }
-# 
-# #coef_var_median
-# wt_cvs_ribo = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="Ribo"])),
-#                      nrow = nrow(joint_expression_common[,type_common=="Ribo"]) ) )
-# colnames(wt_cvs_ribo) <- unique(sample_labels_joint_common[type_common=="Ribo"])
-# 
-# wt_means_ribo = wt_cvs_ribo
-# wt_weights_ribo = wt_cvs_ribo
-# 
-# for (j in unique(sample_labels_joint_common[type_common=="Ribo"]) ){ 
-#   cols <- which(sample_labels_joint_common[type_common=="Ribo"] == j)
-#   wt_cvs_ribo[[j]] = weighted_coef_var(joint_expression_common[,type_common=="Ribo"][,cols])
-#   wt_means_ribo[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="Ribo"][,cols])
-#   wt_weights_ribo[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="Ribo"][,cols])
-# }
-# 
-# wt_cvs_rna = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="RNA"])),
-#                                 nrow = nrow(joint_expression_common[,type_common=="RNA"]) ) )
-# colnames(wt_cvs_rna) <- unique(sample_labels_joint_common[type_common=="RNA"])
-# wt_means_rna = wt_cvs_rna
-# wt_weights_rna = wt_cvs_rna
-# 
-# for (j in unique(sample_labels_joint_common[type_common=="RNA"]) ){ 
-#   cols <- which(sample_labels_joint_common[type_common=="RNA"] == j)
-#   wt_cvs_rna[[j]] = weighted_coef_var(joint_expression_common[,type_common=="RNA"][,cols])
-#   wt_means_rna[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="RNA"][,cols])
-#   wt_weights_rna[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="RNA"][,cols])
-#   
-# }
-# 
-# median_ribo_cv <- apply(wt_cvs_ribo, 1, median)
-# median_rna_cv <- apply(wt_cvs_rna, 1, median)
-# hist(median_ribo_cv, 50)
-# hist(median_rna_cv, 50)
-# 
-# # NEED TO MAKE SURE THAT THESE REMAINING SECTIONS WORK: 
-# per_ind_ribo_cv = weighted_coef_var(list(E =  wt_means_ribo, weights = wt_weights_ribo))
-# per_ind_rna_cv = weighted_coef_var(list(E = wt_means_rna, weights= wt_weights_rna))
-# hist(per_ind_ribo_cv[per_ind_ribo_cv < 1], 50)
-# hist(per_ind_rna_cv[per_ind_rna_cv>0 & per_ind_rna_cv < 1], 50)
-# 
-# inter_ind_cv_to_technical_ribo = per_ind_ribo_cv / median_ribo_cv
-# inter_ind_cv_to_technical_rna = per_ind_rna_cv / median_rna_cv
-# hist(inter_ind_cv_to_technical_ribo[inter_ind_cv_to_technical_ribo < 10], 50)
-# hist(inter_ind_cv_to_technical_rna[inter_ind_cv_to_technical_rna > 0 &inter_ind_cv_to_technical_rna < 10], 50)
-# 
-# ratio_of_inter_ind_cv <- inter_ind_cv_to_technical_rna/inter_ind_cv_to_technical_ribo
-# # which(ratio_of_inter_ind_cv < 0 )
-# # [1] 3251 3297 3790 5269 8037
-# # which(ratio_of_inter_ind_cv> 5)
-# # [1]  932 1067 1442 1571 2752 3347 3523 4289 5005 5551 6233 7818 8616 9185
-# # which(ratio_of_inter_ind_cv> 10)
-# # [1]  932 1067 5551 8616
-# 
-# hist(ratio_of_inter_ind_cv[ratio_of_inter_ind_cv > 0 & ratio_of_inter_ind_cv < 5], 50 )
-# 
-# # Median_[ribo/rna]_cv is our estimated technical noise
-# # For interindividual cv: Take weighed mean of expression and weights for each individual
-# # Then use these to calculated weighted cv
-# 
-#   
-# # There doesn't seem to be any significant association between expression and the cv ratios as expected
-# # We can add a permutation scheme here to get p-values on these differences
-# # The easiest permutation scheme is to permute type_common to generate new RNA, Ribo Classification
-# # Run through existing code and compare the actual difference in CV witht the permutation p-value
-# # We might rely on nominal p-value threshold for selecting significant ones
-# # type_common will be modified making sure that each individual is preserved as in sample_labels_joint_common
-# # Loop over unique(sample_labels_joint_common)
-# weighted_sd <- function (y) { 
-#   return ( sd(y[,2]*y[,4]) )
-# }
-# 
-# rna_replicate_mean <- apply (joint_expression_common$E[,type_common=="RNA"], 1, function(x) {
-# aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
-# } )
-# ribo_replicate_mean <- apply (joint_expression_common$E[,type_common=="Ribo"], 1, function(x) {
-#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
-# } )
-# rna_replicate_weight_mean <- apply (joint_expression_common$weights[,type_common=="RNA"], 1, function(x) {
-#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
-# } )
-# ribo_replicate_weight_mean <- apply (joint_expression_common$weights[,type_common=="Ribo"], 1, function(x) {
-#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
-# } )
-# rna_replicate_mean_weights <- mapply(cbind, rna_replicate_mean, rna_replicate_weight_mean, SIMPLIFY=F)
-# ribo_replicate_mean_weights <- mapply(cbind, ribo_replicate_mean, rna_replicate_weight_mean, SIMPLIFY=F)
-# 
-# rna_cv_between_individuals <- as.numeric(lapply(rna_replicate_mean_weights, weighted_sd))
-# ribo_cv_between_individuals <- as.numeric(lapply(ribo_replicate_mean_weights, weighted_sd))
-# 
-# # Calculate median CV of replicate CVs
-# # THIS SHOULD BE SWITCHED WITH WEIGHTED.SD/ WEIGHTED.MEAN AND THEN TAKE THE MEDIAN
-# rna_replicatecvs <- apply (joint_expression_common$E[,type_common=="RNA"]*joint_expression_common$weights[,type_common=="RNA"], 1, function(x) {
-#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), sd)  
-# } )
-# ribo_replicatecvs <- apply (joint_expression_common$E[,type_common=="Ribo"]*joint_expression_common$weights[,type_common=="Ribo"], 1, function(x) {
-#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), sd)  
-# } )
-# 
-# rna_repcv_median <- as.numeric(lapply(rna_replicatecvs, function(z){median(z$x)}))
-# ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x)}))
-# 
-# rnacv <- (rna_cv_between_individuals/rna_repcv_median) 
-# ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
-# 
-# #pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=5, height=5)
-# #99% of the dataset is less than 8; so limit xlim to 0_to_8
-# # We changed number of breaks so that the number of breaks in x-axis is similar
-# hist(rnacv, 100, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
-# #dev.off()
-# #pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=5, height=5)
-# hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
-# #dev.off()
-# 
-# #low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
-# #names(rna_replicate_mean_weights)
-# length(which(rnacv/ribocv > 2))
-# length(which(rnacv/ribocv < .5))
-# sorted_cvs <- sort(rnacv/ribocv , index.return=T)
-# #write.table(row.names(joint_expression_common)[sorted_cvs$ix], file = "~/project/CORE_DATAFILES/Sorted_InterIndividualCV_RNA_to_Ribo.txt", row.names=F)
-# 
-# p1 <- hist(rnacv/ribocv, 100 )
-# plot(p1, col=rgb(0,0,1,1/4),  tck=.02, xlab="RNA Expression to Ribosome Occupancy Ratio", main="Between/ Within Individual CV", ylim=c(0,500))
-# abline(v=1, lwd=3)
 
 
 ############################################################
@@ -688,6 +462,7 @@ as.numeric(apply(abs(te.diff.results), 2, sum))
 # Variation in both RNA and Ribo is in joint_sig_random
 # Variation in either
 sig_ribo_rna_random = union(rna_sig_random, ribo_sig_random)
+sig_ribo_rna_random_strict = intersect(rna_sig_random, ribo_sig_random)
 
 linfeng_common <- colnames(linfeng_protein) %in% unique(sample_labels_joint)
 linfeng_protein_common <- linfeng_protein[,linfeng_common]
@@ -745,16 +520,25 @@ for (i in 1:length(ribo_replicate_mean_prot)) {
 
 length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
+# 0.38; Strict 0.65
 median(across_ind_rna_correlation)
+# 0.42; Strict 0.67
+ks.test (across_ind_ribo_correlation, across_ind_rna_correlation )
+# p= 0.03; Strict p= 0.61
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
-# FDR ~ 25% ; For Non-zero variation %10 FDR is 0.0002
+# FDR ~ 20% 0.0004 ; For Non-zero variation %10 FDR is 0.0002
 pval_cutoff <- 0.0002
 color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
 color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
 color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 3
 plot(across_ind_ribo_correlation, across_ind_rna_correlation, pch=19, cex=.65, tck=.02, col=c("Black", "Red", "Blue", "Gold")[as.factor(color_by_pval)], 
-     xlab="Between Individual Ribosome Occupancy-Protein Expression Correlation", ylab = "Between Individual RNA-Protein Expression Correlation")
+     xlab="Between Individual Ribosome Occupancy-Protein Expression Correlation", ylab = "Between Individual RNA-Protein Expression Correlation", 
+     xlim= c(-0.5,.95), ylim = c(-0.5,.95) )
 cor.test(across_ind_ribo_correlation, across_ind_rna_correlation)
+# Cor 0.61; p < 2.2e-16; Doesn't change for strict
+# Strict sense FDR ~25% p=0.013 from rna. 
+# length(color_by_pval) = 87
+# 8/87 = 9% non-significant
 #### ADD FISHER'S TEST FOR ENRICHMENT -- Huge Enrichment for Both correlating significantly
 fmat <- matrix(nrow=2, ncol=2)
 fmat[1,1] = length(which(across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff))
@@ -762,6 +546,7 @@ fmat[1,2] =  length(which(across_ind_ribo_correlation_pval < pval_cutoff & acros
 fmat[2,1] = length(which(across_ind_ribo_correlation_pval > pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff))
 fmat[2,2] = length(which(across_ind_ribo_correlation_pval > pval_cutoff & across_ind_rna_correlation_pval > pval_cutoff))
 fisher.test(fmat)
+# Odds ratio 14.7; p< 2.2e-16 ; Doesn't change for strict 
 
 # Remove one column which is not shared
 ribo_replicate_mean_rna <- lapply(ribo_replicate_mean_prot, function(x){x <- x[-24,]})
@@ -773,14 +558,14 @@ p2 <- hist(across_ind_rna_correlation,40)
 p3 <- hist(across_ind_rna_ribo, 40)
 # Try adding separate histograms
 #pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations.pdf", width=9, height=6.5)
-#pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Separate.pdf", width=4, height=11)
-#par(mfrow = c(3, 1))
-plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
-plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
+pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Separate.pdf", width=4, height=11)
+par(mfrow = c(3, 1))
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="Ribosome Occupancy-Protein Level")
+plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="RNA Expression-Protein Level")
 #     add=T)
-plot(p3, col=rgb(0,1,0,1/4), xlim=c(-1,1),xlab="Spearman Correlation Coefficient", main="Correlation Coefficient Distribution")
+plot(p3, col=rgb(0,1,0,1/4), xlim=c(-1,1),ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="RNA Expression-Ribosome Occupancy")
 #     add=T)
-#dev.off()
+dev.off()
 legend(.4,170,c("RNA Expression-\nProtein Expression", "Ribosome Occupancy-\nProtein Expression", "RNA Expression-\nRibosome Occupancy"), 
        yjust =0.5, x.intersp=0.2, y.intersp=1.5,bty="n", border="white", fill=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4), rgb(0,1,0,1/4)), cex=.9)
 #dev.off()
@@ -1329,7 +1114,7 @@ calculate_kappa <- function (a1, a2) {
 
 first_kappas <- c()
 for ( i in 1:dim(go_dag)[1]) { 
-  for ( j in 1:dim(go_dag)[1]) { 
+  for ( j in (i+1):dim(go_dag)[1]) { 
     first_kappas = c(first_kappas, 
                      paste(go_dag[i, 1], go_dag[j, 1],
                            calculate_kappa (go_dag[i, 2:dim(go_dag)[2]], go_dag[j, 2:dim(go_dag)[2]] ), sep="\t"  ) 
@@ -1338,7 +1123,7 @@ for ( i in 1:dim(go_dag)[1]) {
 }
 #write(first_kappas, file = paste(go_dag_joint, "modified", sep="_"))
 #write(first_kappas, file = paste(go_dag_ribo, "modified", sep="_"))
-write(first_kappas, file = paste(go_dag_rna, "modified", sep="_"))
+#write(first_kappas, file = paste(go_dag_rna, "modified", sep="_"))
 
 ### PATHWAY ENRICHMENT ANALYSIS WITH RDAVID
 david<-DAVIDWebService$new(email="ccenik@stanford.edu")
@@ -2292,3 +2077,224 @@ norm_hc_rep <- hclust (norm_dd_rep)
 # diff_wrna <- rna.quantiles[singleNARows, -dropCols] - prot.quantiles[singleNARows,-dropCols]
 # diff_betweenpred_and_random <-abs(diff_in_pred) - abs(diff_wrandom)
 # diff_betweenpred_and_rna <- abs(diff_in_pred) - abs(diff_wrna)
+
+
+
+############UNUSED ACROSS INDIVIDUAL VARIATION ANALYSIS
+# # We should test the effect of unbalanced design: 
+# # Idea is subsample libraries so that there are 2 of each 
+# # Test robustness to sampling
+# # The p-values are highly unstable based on the sampling
+# # table(as.factor(sample_id_all[1:49]))
+# # table(as.factor(sample_id_all[50:80]))
+# rna_cols_to_select = c()
+# ribo_cols_to_select = c()
+# for (l in levels(as.factor(sample_id_all[1:49])) ) { 
+#   rna_cols_to_select= c( rna_cols_to_select, 
+#                          sample (which(as.factor(sample_id_all[1:49]) == l) , 2, replace=F) )
+# }
+# for (l in levels(as.factor(sample_id_all[50:80])) ) { 
+#   ribo_cols_to_select= c( ribo_cols_to_select, 
+#                          49 + sample (which(as.factor(sample_id_all[50:80]) == l) , 2, replace=F) )
+# }
+# table(sample_id_all[rna_cols_to_select])
+# table(sample_id_all[ribo_cols_to_select])
+# 
+# # We can use eta2 as measure of effect size SS-W/SS-TOTAL
+# ribo_F = c()
+# ribo_eta2 = c()
+# rna_F = c()
+# rna_eta2 = c()
+# rna_cols_to_select = 1:49
+# ribo_cols_to_select = 50:80
+# for ( i in 1:nrow(joint_expression_common$E)) { 
+#   # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
+#   tmp_ribo = summary(aov(joint_expression_common$E[i,ribo_cols_to_select] ~ as.factor(sample_id_all[ribo_cols_to_select]), 
+#                          weights= joint_expression_common$weights[i,ribo_cols_to_select] ))[[1]]
+#   ribo_F = c(ribo_F, tmp_ribo$Pr[1] ) 
+#   ribo_eta2 = c(ribo_eta2, tmp_ribo[1,2]/ sum(tmp_ribo[,2]) )
+#   tmp_rna =  summary(aov(joint_expression_common$E[i,rna_cols_to_select] ~ as.factor(sample_id_all[rna_cols_to_select]), 
+#                          weights= joint_expression_common$weights[i,rna_cols_to_select] ))[[1]]   
+#   rna_F = c(rna_F, tmp_rna$Pr[1] ) 
+#   rna_eta2 = c(rna_eta2,tmp_rna[1,2]/ sum(tmp_rna[,2]) )                 
+# }
+# 
+# ribo_F_corrected = p.adjust(ribo_F, method="holm")
+# rna_F_corrected = p.adjust(rna_F, method = "holm")
+# ribo_sig = which (ribo_F_corrected < 0.05)
+# rna_sig = which (rna_F_corrected < 0.05)
+# joint_sig = which (rna_F_corrected < 0.05 & ribo_F_corrected < 0.05)
+# length(ribo_sig)
+# length(rna_sig)
+# length(joint_sig)
+# plot(rna_eta2, rna_F_corrected, cex = .2, pch = 19)
+# plot(ribo_eta2, ribo_F_corrected, cex = .2, pch = 19)
+
+### THIS APPROACH BASED ON CVs or SIMPLE RATIOS IS COMMENTED OUT
+# # Improved method using weighted coefficient of variation
+# 
+# # weighted_coef_var is a function to be applied to limma object with E and weights
+# weighted_coef_var <- function(x)  { 
+# #  wt_cv = c()
+# #  pb <- tkProgressBar(title="Progress Bar", min = 0, max = dim(x$E)[1], width=300)
+#   wt_cv_unbiased = c()
+#   for (i in 1:dim(x$E)[1]) { 
+#     wt_mean = weighted.mean(x$E[i,] , x$weights[i,] )
+#     # Weighted sample variance --biased estimator
+# #    wt_var = sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) / sum(x$weights[i,])
+#     # Weighted sample variance -- unbiased estimator
+#     wt_var_unbiased = (sum(x$weights[i,]) * (sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) ) ) / 
+#       (sum(x$weights[i,])^2 - sum(x$weights[i,]^2) ) 
+# #   wt_cv = c(wt_cv, sqrt(wt_var) / wt_mean)
+#     wt_cv_unbiased = c(wt_cv_unbiased, sqrt(wt_var_unbiased) / wt_mean)    
+# #  setTkProgressBar(pb, i, label=paste( round(i/dim(x$E)[1]*100, 0),"% done"))
+#   }
+# #  return (wt_cv)
+# #  close (pb)
+#   return (wt_cv_unbiased)
+# }
+# 
+# # Given limma object calculates weighted mean and weighted weights
+# 
+# weighted_mean_limma <- function(x)  { 
+#   wt_mean = c()
+#   for (i in 1:dim(x$E)[1]) { 
+#     wt_mean = c(wt_mean, weighted.mean(x$E[i,] , x$weights[i,] ))
+#   }
+#   return (wt_mean)
+# }
+# 
+# weighted_weight_limma <- function(x)  { 
+#   wt_weights =c()
+#   for (i in 1:dim(x$E)[1]) { 
+#     wt_weights = c(wt_weights, weighted.mean(x$weights[i,], x$weights[i,]))
+#   }
+#   return (wt_weights)
+# }
+# 
+# #coef_var_median
+# wt_cvs_ribo = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="Ribo"])),
+#                      nrow = nrow(joint_expression_common[,type_common=="Ribo"]) ) )
+# colnames(wt_cvs_ribo) <- unique(sample_labels_joint_common[type_common=="Ribo"])
+# 
+# wt_means_ribo = wt_cvs_ribo
+# wt_weights_ribo = wt_cvs_ribo
+# 
+# for (j in unique(sample_labels_joint_common[type_common=="Ribo"]) ){ 
+#   cols <- which(sample_labels_joint_common[type_common=="Ribo"] == j)
+#   wt_cvs_ribo[[j]] = weighted_coef_var(joint_expression_common[,type_common=="Ribo"][,cols])
+#   wt_means_ribo[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="Ribo"][,cols])
+#   wt_weights_ribo[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="Ribo"][,cols])
+# }
+# 
+# wt_cvs_rna = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="RNA"])),
+#                                 nrow = nrow(joint_expression_common[,type_common=="RNA"]) ) )
+# colnames(wt_cvs_rna) <- unique(sample_labels_joint_common[type_common=="RNA"])
+# wt_means_rna = wt_cvs_rna
+# wt_weights_rna = wt_cvs_rna
+# 
+# for (j in unique(sample_labels_joint_common[type_common=="RNA"]) ){ 
+#   cols <- which(sample_labels_joint_common[type_common=="RNA"] == j)
+#   wt_cvs_rna[[j]] = weighted_coef_var(joint_expression_common[,type_common=="RNA"][,cols])
+#   wt_means_rna[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="RNA"][,cols])
+#   wt_weights_rna[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="RNA"][,cols])
+#   
+# }
+# 
+# median_ribo_cv <- apply(wt_cvs_ribo, 1, median)
+# median_rna_cv <- apply(wt_cvs_rna, 1, median)
+# hist(median_ribo_cv, 50)
+# hist(median_rna_cv, 50)
+# 
+# # NEED TO MAKE SURE THAT THESE REMAINING SECTIONS WORK: 
+# per_ind_ribo_cv = weighted_coef_var(list(E =  wt_means_ribo, weights = wt_weights_ribo))
+# per_ind_rna_cv = weighted_coef_var(list(E = wt_means_rna, weights= wt_weights_rna))
+# hist(per_ind_ribo_cv[per_ind_ribo_cv < 1], 50)
+# hist(per_ind_rna_cv[per_ind_rna_cv>0 & per_ind_rna_cv < 1], 50)
+# 
+# inter_ind_cv_to_technical_ribo = per_ind_ribo_cv / median_ribo_cv
+# inter_ind_cv_to_technical_rna = per_ind_rna_cv / median_rna_cv
+# hist(inter_ind_cv_to_technical_ribo[inter_ind_cv_to_technical_ribo < 10], 50)
+# hist(inter_ind_cv_to_technical_rna[inter_ind_cv_to_technical_rna > 0 &inter_ind_cv_to_technical_rna < 10], 50)
+# 
+# ratio_of_inter_ind_cv <- inter_ind_cv_to_technical_rna/inter_ind_cv_to_technical_ribo
+# # which(ratio_of_inter_ind_cv < 0 )
+# # [1] 3251 3297 3790 5269 8037
+# # which(ratio_of_inter_ind_cv> 5)
+# # [1]  932 1067 1442 1571 2752 3347 3523 4289 5005 5551 6233 7818 8616 9185
+# # which(ratio_of_inter_ind_cv> 10)
+# # [1]  932 1067 5551 8616
+# 
+# hist(ratio_of_inter_ind_cv[ratio_of_inter_ind_cv > 0 & ratio_of_inter_ind_cv < 5], 50 )
+# 
+# # Median_[ribo/rna]_cv is our estimated technical noise
+# # For interindividual cv: Take weighed mean of expression and weights for each individual
+# # Then use these to calculated weighted cv
+# 
+#   
+# # There doesn't seem to be any significant association between expression and the cv ratios as expected
+# # We can add a permutation scheme here to get p-values on these differences
+# # The easiest permutation scheme is to permute type_common to generate new RNA, Ribo Classification
+# # Run through existing code and compare the actual difference in CV witht the permutation p-value
+# # We might rely on nominal p-value threshold for selecting significant ones
+# # type_common will be modified making sure that each individual is preserved as in sample_labels_joint_common
+# # Loop over unique(sample_labels_joint_common)
+# weighted_sd <- function (y) { 
+#   return ( sd(y[,2]*y[,4]) )
+# }
+# 
+# rna_replicate_mean <- apply (joint_expression_common$E[,type_common=="RNA"], 1, function(x) {
+# aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
+# } )
+# ribo_replicate_mean <- apply (joint_expression_common$E[,type_common=="Ribo"], 1, function(x) {
+#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
+# } )
+# rna_replicate_weight_mean <- apply (joint_expression_common$weights[,type_common=="RNA"], 1, function(x) {
+#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), mean)  
+# } )
+# ribo_replicate_weight_mean <- apply (joint_expression_common$weights[,type_common=="Ribo"], 1, function(x) {
+#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), mean)  
+# } )
+# rna_replicate_mean_weights <- mapply(cbind, rna_replicate_mean, rna_replicate_weight_mean, SIMPLIFY=F)
+# ribo_replicate_mean_weights <- mapply(cbind, ribo_replicate_mean, rna_replicate_weight_mean, SIMPLIFY=F)
+# 
+# rna_cv_between_individuals <- as.numeric(lapply(rna_replicate_mean_weights, weighted_sd))
+# ribo_cv_between_individuals <- as.numeric(lapply(ribo_replicate_mean_weights, weighted_sd))
+# 
+# # Calculate median CV of replicate CVs
+# # THIS SHOULD BE SWITCHED WITH WEIGHTED.SD/ WEIGHTED.MEAN AND THEN TAKE THE MEDIAN
+# rna_replicatecvs <- apply (joint_expression_common$E[,type_common=="RNA"]*joint_expression_common$weights[,type_common=="RNA"], 1, function(x) {
+#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="RNA"])), sd)  
+# } )
+# ribo_replicatecvs <- apply (joint_expression_common$E[,type_common=="Ribo"]*joint_expression_common$weights[,type_common=="Ribo"], 1, function(x) {
+#   aggregate(x, by= list(as.factor(sample_labels_joint_common[type_common=="Ribo"])), sd)  
+# } )
+# 
+# rna_repcv_median <- as.numeric(lapply(rna_replicatecvs, function(z){median(z$x)}))
+# ribo_repcv_median <- as.numeric(lapply(ribo_replicatecvs, function(z){median(z$x)}))
+# 
+# rnacv <- (rna_cv_between_individuals/rna_repcv_median) 
+# ribocv <- (ribo_cv_between_individuals/ribo_repcv_median)
+# 
+# #pdf(file = "~/Google_Drive/Manuscript Figures/RNA_Between_Individual_Variance.pdf", width=5, height=5)
+# #99% of the dataset is less than 8; so limit xlim to 0_to_8
+# # We changed number of breaks so that the number of breaks in x-axis is similar
+# hist(rnacv, 100, main= "RNA Expression", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
+# #dev.off()
+# #pdf(file = "~/Google_Drive/Manuscript Figures/Ribo_Between_Individual_Variance.pdf", width=5, height=5)
+# hist(ribocv, 200 , main= "Ribosome Occupancy", xlab = "Between/ Within Individual Coefficient of Variation", xlim=c(0,8))
+# #dev.off()
+# 
+# #low_sig_to_noise <- which( rnacv < 1 & ribocv < 1)
+# #names(rna_replicate_mean_weights)
+# length(which(rnacv/ribocv > 2))
+# length(which(rnacv/ribocv < .5))
+# sorted_cvs <- sort(rnacv/ribocv , index.return=T)
+# #write.table(row.names(joint_expression_common)[sorted_cvs$ix], file = "~/project/CORE_DATAFILES/Sorted_InterIndividualCV_RNA_to_Ribo.txt", row.names=F)
+# 
+# p1 <- hist(rnacv/ribocv, 100 )
+# plot(p1, col=rgb(0,0,1,1/4),  tck=.02, xlab="RNA Expression to Ribosome Occupancy Ratio", main="Between/ Within Individual CV", ylim=c(0,500))
+# abline(v=1, lwd=3)
+
+# plot(p.adjust(random_effect_p_val_ribo, method = "holm") , ribo_F_corrected, pch = 19, cex=.2)
+# plot(p.adjust(random_effect_p_val_rna, method = "holm") , rna_F_corrected, pch = 19, cex=.2)
