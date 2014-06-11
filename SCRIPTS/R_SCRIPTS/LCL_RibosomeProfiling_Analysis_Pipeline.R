@@ -17,6 +17,7 @@ source('~/project/kohonen2/R/plot.kohonen.R')
 #library(nlme)
 library("lme4")
 library("RLRsim")
+library ("VennDiagram")
 
 # v3$E[sig_ribo_rna_random,]
 
@@ -290,10 +291,24 @@ joint_sig_random = which (p.adjust(random_effect_p_val_rna, method = "holm") < 0
 length(ribo_sig_random)
 length(rna_sig_random)
 length(joint_sig_random)
+length (random_effect_p_val_ribo )
 random_effect_df = data.frame (ID = hgnc_to_ensg_convert(row.names(v3)), 
     RNA_Stat=random_effect_stat_rna, RNA_P = p.adjust(random_effect_p_val_rna, method = "holm"),
     RIBO_Stat=random_effect_stat_ribo, RIBO_P = p.adjust(random_effect_p_val_ribo, method = "holm"))
 write.table(random_effect_df, file = paste(data_dir , "Random_Effect_Model_stats_DF_Table.txt", sep = "" ), row.names=F )
+
+## VENN DIAGRAM REPRESENTATION
+venn.mixed <- venn.diagram(
+  x = list (
+    Ribosome_Ocuppancy = ribo_sig_random,
+    RNA_Expression = rna_sig_random
+  ),
+  filename = NULL
+);
+
+pdf("Variation_Mixed_Model_Venn.pdf");
+grid.draw(venn.mixed);
+dev.off();
 
 
 # # To test whether sources of data increases across individual variance
