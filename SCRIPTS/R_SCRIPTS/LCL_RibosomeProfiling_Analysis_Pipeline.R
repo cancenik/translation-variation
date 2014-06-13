@@ -19,8 +19,6 @@ library("lme4")
 library("RLRsim")
 library ("VennDiagram")
 
-# v3$E[sig_ribo_rna_random,]
-
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
 
@@ -234,12 +232,7 @@ rna_ribo_mean_diff <- apply(joint_expression_common$E, 1, function(x) {mean(x[1:
 
 # Alternative approach is to use a random effects model
 # Test for significance of the random effects with ‘RLRsim’ package
-#mA<-lme(distance ~ Sex , random = ~ 1| Subject,
-#        data = Orthodont, method = "ML")
-#m0<-lm(distance ~ Sex, data = Orthodont)
-# summary(mA)
-# summary(m0)
-# exactLRT(m = mA, m0 = m0)
+
 rna_cols_to_select = 1:49
 ribo_cols_to_select = 50:80
 random_effect_stat_rna = c()
@@ -249,38 +242,40 @@ random_effect_p_val_ribo = c()
 # The p-value is fragile for low number of similuations so increased to 500k
 # This section is quite computationally intensive
 # We estimate that this will take ~12h
-for ( i in 1:nrow(joint_expression_common$E)) { 
-  # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
-  mA_ribo = lmer(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[ribo_cols_to_select])), 
-                         weights= joint_expression_common$weights[i,ribo_cols_to_select], REML=F)
-  m0_ribo = lm(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 , 
-                 weights= joint_expression_common$weights[i,ribo_cols_to_select] )
-  if(getME(mA_ribo, "theta") < 1e-5 ) {
-    random_effect_p_val_ribo = c(random_effect_p_val_ribo,1)
-    random_effect_stat_ribo = c(random_effect_stat_ribo, 0)
-  }
-  else {
-  tmp_ribo = exactLRT(m = mA_ribo, m0 = m0_ribo, nsim=500000)
-  random_effect_p_val_ribo = c(random_effect_p_val_ribo, tmp_ribo$p.value)
-  random_effect_stat_ribo = c(random_effect_stat_ribo, tmp_ribo$statistic)
-  }
-  mA_rna =  lmer(joint_expression_common$E[i,rna_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[rna_cols_to_select])) , 
-                weights= joint_expression_common$weights[i,rna_cols_to_select], REML=F )  
-  m0_rna =  lm(joint_expression_common$E[i,rna_cols_to_select] ~ 1 , 
-                weights= joint_expression_common$weights[i,rna_cols_to_select] )  
-  if(getME(mA_rna, "theta") < 1e-5 ) {
-    random_effect_p_val_rna = c(random_effect_p_val_rna, 1)
-    random_effect_stat_rna = c(random_effect_stat_rna, 0)      
-  }
-  else {
-  tmp_rna = exactLRT(m = mA_rna, m0 = m0_rna, nsim=500000)
-  random_effect_p_val_rna = c(random_effect_p_val_rna, tmp_rna$p.value)
-  random_effect_stat_rna = c(random_effect_stat_rna, tmp_rna$statistic)      
-  }
-}
-save (random_effect_p_val_rna,random_effect_stat_rna, 
-      random_effect_stat_ribo, random_effect_p_val_ribo, 
-      file= paste(data_dir , "Random_Effect_Model_stats_RiboRNA", sep = "" ) )
+
+# # THIS WAS RUN ONCE AND RESULTS STORED
+# for ( i in 1:nrow(joint_expression_common$E)) { 
+#   # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
+#   mA_ribo = lmer(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[ribo_cols_to_select])), 
+#                          weights= joint_expression_common$weights[i,ribo_cols_to_select], REML=F)
+#   m0_ribo = lm(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 , 
+#                  weights= joint_expression_common$weights[i,ribo_cols_to_select] )
+#   if(getME(mA_ribo, "theta") < 1e-5 ) {
+#     random_effect_p_val_ribo = c(random_effect_p_val_ribo,1)
+#     random_effect_stat_ribo = c(random_effect_stat_ribo, 0)
+#   }
+#   else {
+#   tmp_ribo = exactLRT(m = mA_ribo, m0 = m0_ribo, nsim=500000)
+#   random_effect_p_val_ribo = c(random_effect_p_val_ribo, tmp_ribo$p.value)
+#   random_effect_stat_ribo = c(random_effect_stat_ribo, tmp_ribo$statistic)
+#   }
+#   mA_rna =  lmer(joint_expression_common$E[i,rna_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[rna_cols_to_select])) , 
+#                 weights= joint_expression_common$weights[i,rna_cols_to_select], REML=F )  
+#   m0_rna =  lm(joint_expression_common$E[i,rna_cols_to_select] ~ 1 , 
+#                 weights= joint_expression_common$weights[i,rna_cols_to_select] )  
+#   if(getME(mA_rna, "theta") < 1e-5 ) {
+#     random_effect_p_val_rna = c(random_effect_p_val_rna, 1)
+#     random_effect_stat_rna = c(random_effect_stat_rna, 0)      
+#   }
+#   else {
+#   tmp_rna = exactLRT(m = mA_rna, m0 = m0_rna, nsim=500000)
+#   random_effect_p_val_rna = c(random_effect_p_val_rna, tmp_rna$p.value)
+#   random_effect_stat_rna = c(random_effect_stat_rna, tmp_rna$statistic)      
+#   }
+# }
+# save (random_effect_p_val_rna,random_effect_stat_rna, 
+#       random_effect_stat_ribo, random_effect_p_val_ribo, 
+#       file= paste(data_dir , "Random_Effect_Model_stats_RiboRNA", sep = "" ) )
 load(file= paste(data_dir , "Random_Effect_Model_stats_RiboRNA", sep = "" ) )
 hist(p.adjust(random_effect_p_val_rna, method = "holm"))
 hist(p.adjust(random_effect_p_val_ribo, method = "holm"))
@@ -295,7 +290,7 @@ length (random_effect_p_val_ribo )
 random_effect_df = data.frame (ID = hgnc_to_ensg_convert(row.names(v3)), 
     RNA_Stat=random_effect_stat_rna, RNA_P = p.adjust(random_effect_p_val_rna, method = "holm"),
     RIBO_Stat=random_effect_stat_ribo, RIBO_P = p.adjust(random_effect_p_val_ribo, method = "holm"))
-write.table(random_effect_df, file = paste(data_dir , "Random_Effect_Model_stats_DF_Table.txt", sep = "" ), row.names=F )
+# write.table(random_effect_df, file = paste(data_dir , "Random_Effect_Model_stats_DF_Table.txt", sep = "" ), row.names=F )
 
 ## VENN DIAGRAM REPRESENTATION
 venn.mixed <- venn.diagram(
@@ -306,29 +301,9 @@ venn.mixed <- venn.diagram(
   filename = NULL
 );
 
-pdf("Variation_Mixed_Model_Venn.pdf");
+#pdf("Variation_Mixed_Model_Venn.pdf");
 grid.draw(venn.mixed);
-dev.off();
-
-
-# # To test whether sources of data increases across individual variance
-# # Simple test is to select only polyA_RNA individuals and equivalents in Ribo
-# # The results are consistent
-# ribo_polyA = c()
-# rna_polyA = c()
-# for ( i in 1:nrow(joint_expression_common$E)) { 
-#   ribo_polyA = c(ribo_polyA, 
-#              summary(aov(joint_expression_common$E[i,c(50,51,54:57, 74:80)] ~ as.factor(sample_id_all[c(50,51,54:57, 74:80)]), 
-#                          weights= joint_expression_common$weights[i,c(50,51,54:57, 74:80)] ))[[1]]$Pr[1] )
-#   
-#   rna_polyA = c(rna_polyA, 
-#             summary(aov(joint_expression_common$E[i,1:18] ~ as.factor(sample_id_all[1:18]), 
-#                         weights= joint_expression_common$weights[i,1:18] ))[[1]]$Pr[1] )
-#   
-# }
-
-
-
+#dev.off();
 
 
 ############################################################
@@ -767,11 +742,6 @@ plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],pa
 plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
 plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
 
-# We can plot a pie-chart version. Convert codebook ribo, rna, te to quantile
-# Use plot.kohonen(absolute.som, type="classes", property=numericmatrix(absolute.som$codes))
-# Update function to introduce a more meaningful scaling for the pie chart
-# Update function to change sum(codes) > 1 to > 0
-#colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
 #plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Dark2")}, bgcol= brewer.pal(7,"Set2")[cluster.membership])
 #abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
 #plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
@@ -813,151 +783,59 @@ heatmap(ap.cluster)
 #plot(ap.cluster.full, absolute.som$data)
 #heatmap(ap.cluster.full)
 
-# One version is te, rna, ribo logFCs with Linfeng's proteomics. This is a 4x14x9000 matrix
 
 # superSOM Data Structure is a list of matrices including Linfeng Proteomics with NAs -> This will use individuals in the plot.
 # We can also do a general one with just absolute ribo,rna, te, and absolute SILAC amounts (Here SILAC can be coded as a classification parameter for BDF)
 # Following Xie, Boyle, et al. The grid is hexagonal, toroid
 # Total number of cells, sqrt(DATA_TYPE/2) x sqrt (genes x individuals )
-linfeng_prot_common_with_te <-  colnames(linfeng_protein) %in% colnames(te_fit3$coefficients)
-linfeng_te_columns <- linfeng_protein[,linfeng_prot_common_with_te]
-class(linfeng_te_columns) <- "numeric"
-linfeng_te_match <- cbind ( linfeng_te_columns[,1], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,2:5], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,6:12])
-colnames(linfeng_te_match) <- sort(colnames(te_fit3$coefficients))
-linfeng_te_match <- merge(linfeng_te_match, ensg_hgnc, by.x="row.names", by.y="ENSG")
-# joint_count_ids is the same as row.names(v3); Pad the data with NAs when there is no proteomics
-linfeng_te_match <- merge (data.frame(HGNC=joint_count_ids), linfeng_te_match, by="HGNC", all.x=T)
-row.names(linfeng_te_match) <- linfeng_te_match[,1]
-linfeng_te_match <- linfeng_te_match[,-c(1,2)]
 
-# Simplifies the colnames; no order problems
-colnames(ribo_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
-colnames(rna_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
-te_matrix = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix]
-# The easiest way for interpretation is using quantized data
-ribo.quantiles = matrix(ecdf(ribo_fit2$coefficients)(ribo_fit2$coefficients), ncol = 14, dimnames = list(rownames(ribo_fit2$coefficients), colnames(ribo_fit2$coefficients)))
-rna.quantiles = matrix(ecdf(rna_fit2$coefficients)(rna_fit2$coefficients), ncol = 14, dimnames = list(rownames(rna_fit2$coefficients), colnames(rna_fit2$coefficients)))
-te.quantiles = matrix(ecdf(te_matrix)(te_matrix), ncol = 14, dimnames = list(rownames(te_matrix), colnames(te_matrix)))
-prot.quantiles = matrix(ecdf(as.matrix(linfeng_te_match))(as.matrix(linfeng_te_match)), ncol = 14, dimnames = list(rownames(linfeng_te_match), colnames(linfeng_te_match)))
-dropCols <- c(2,7)
-dropRows <- !apply(is.na(prot.quantiles[,-dropCols]), 1, any)
-#singleNARows <- which(apply(is.na(prot.quantiles[,-dropCols]),1, sum) == 1)
-  
-som.data = list (  ribo= ribo.quantiles[dropRows, -dropCols] , rna = rna.quantiles[dropRows, -dropCols] ,te = te.quantiles[dropRows, -dropCols])
-som.data.prot = list ( ribo= ribo.quantiles , rna = rna.quantiles ,te = te.quantiles, prot=prot.quantiles)
-som.data.prot.noNA = list ( Ribosome_Occupancy= ribo.quantiles[dropRows, -dropCols] , 
-                            RNA_Expression = rna.quantiles[dropRows, -dropCols] ,
-                            Translation_Efficiency = te.quantiles[dropRows, -dropCols], 
-                            Protein_Expression=prot.quantiles[dropRows, -dropCols])
+# ACROSS INDIVIDUAL SOM SHOULD FOLLOW ACROSS INDIVIDUAL CORRELATION DATA
+ribo_replicate_mean_rna_prot <- unlist(lapply(ribo_replicate_mean_prot, function(x){x <- x[-c(3,17,24),-1]}) )
+rna_replicate_mean_prot_ribo <- unlist(lapply(rna_replicate_mean_prot, function(x){x <- x[-c(3,17),-1]}))
+dim(ribo_replicate_mean_rna_prot) = c(27, 562)
+dim(rna_replicate_mean_prot_ribo) = c(27, 562)
+ribo_replicate_mean_rna_prot = t(ribo_replicate_mean_rna_prot)
+rna_replicate_mean_prot_ribo = t(rna_replicate_mean_prot_ribo)
+col_order = rna_replicate_mean_prot[[1]]$Group.1[-c(3,17)]
+sample_labels_joint_prot[type_prot=="Prot"]
+# Extra Colum is GM19139 == 22
+prot_exp_rna_ribo = linfeng_protein_ribo_rna[,type_prot=="Prot"][,-22]
+prot_exp_rna_ribo= matrix(as.numeric(as.matrix(prot_exp_rna_ribo)), ncol = 27)
+across_individual_supersom_nonzero_variance_data = list(
+  rna = matrix(ecdf(rna_replicate_mean_prot_ribo)(rna_replicate_mean_prot_ribo), ncol=27),
+  ribo= matrix(ecdf(ribo_replicate_mean_rna_prot)(ribo_replicate_mean_rna_prot), ncol=27),
+  prot = matrix(ecdf(prot_exp_rna_ribo)(prot_exp_rna_ribo), ncol=27)
+  )
+total_cells.nonzerovar_individuals <- 
+floor(sqrt(length(across_individual_supersom_nonzero_variance_data)/2) * 
+      sqrt (dim(across_individual_supersom_nonzero_variance_data$rna)[1] * 
+      dim(across_individual_supersom_nonzero_variance_data$rna)[2]))
 
-# Another version of the SuperSOM is using linfeng_protein_ribo_rna
-# Sample IDs => sample_labels_joint_prot
-# Types_of_Data => Type_Prot
-# rna_replicate_mean_prot; ribo_replicate_mean_prot: Lists 
-# rna_in_prot <- as.character(rna_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
-# ribo_in_prot <- as.character(ribo_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
-
-# Create num mat with each individual specific data
-rna.num.mat = matrix(nrow=length(rna_replicate_mean_prot) , ncol = 27)
-ribo.num.mat = matrix ( nrow = length(ribo_replicate_mean_prot), ncol = 28)
-for (i in 1:length(rna_replicate_mean_prot)) { 
-  rna.num.mat[i, ] = rna_replicate_mean_prot[[i]]$x[rna_in_prot]
-}
-for (i in 1:length(rna_replicate_mean_prot)) { 
-  ribo.num.mat[i, ] = ribo_replicate_mean_prot[[i]]$x[ribo_in_prot]
-}
-colnames( rna.num.mat) = as.character (rna_replicate_mean_prot[[i]]$Group.1[rna_in_prot] ) 
-colnames( ribo.num.mat) = as.character (ribo_replicate_mean_prot[[i]]$Group.1[ribo_in_prot] ) 
-
-# Ribo and Prot has one extra col
-dropProt = c(23)
-ribo.num.mat  = ribo.num.mat[,-dropProt]
-prot.num.mat = matrix(as.numeric(as.matrix(linfeng_protein_ribo_rna[,type_prot=="Prot"])),ncol=28)
-prot.num.mat = prot.num.mat[, -dropProt]
-rna.full.quantiles = matrix(ecdf(rna.num.mat)(rna.num.mat), ncol = 27 )
-ribo.full.quantiles = matrix(ecdf(ribo.num.mat)(ribo.num.mat), ncol = 27 )
-prot.full.quantile = matrix( ecdf (prot.num.mat)(prot.num.mat), ncol = 27)
-
-supersom.fullrna.ribo.prot = list ( 
-  ribo= ribo.full.quantiles , rna = rna.full.quantiles , prot=prot.full.quantile)
-
-
-  
-#total_cells <- floor(sqrt(length(som.data.prot)/2) * sqrt (dim(som.data.prot$ribo)[1] * dim(som.data.prot$ribo)[2]))
-total_cells.noNA <- floor(sqrt(length(som.data.prot.noNA)/2) * 
-                            sqrt (dim(som.data.prot.noNA$Ribosome_Occupancy)[1] * 
-                                    dim(som.data.prot.noNA$Ribosome_Occupancy)[2]))
-# if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
-#   ydim.total = floor(sqrt(total_cells/1.3333))
-# } else { 
-#   ydim.total = floor(sqrt(total_cells/1.3333)) + 1
-# }
-# xdim.total = floor(total_cells/ydim.total + 0.5)
-
-if (floor(sqrt(total_cells.noNA/1.3333)) %% 2 == 0) { 
-  ydim.total.noNA = floor(sqrt(total_cells.noNA/1.3333))
+if (floor(sqrt(total_cells.nonzerovar_individuals/1.3333)) %% 2 == 0) { 
+  ydim.ind = floor(sqrt(total_cells.nonzerovar_individuals/1.3333))
 } else { 
-  ydim.total.noNA = floor(sqrt(total_cells.noNA/1.3333)) + 1
+  ydim.ind = floor(sqrt(total_cells.nonzerovar_individuals/1.3333)) + 1
 }
-xdim.total.noNA = floor(total_cells.noNA/ydim.total.noNA + 0.5)
+xdim.ind = floor(total_cells.nonzerovar_individuals/ydim.ind + 0.5)
 
-#som.exp = supersom(data =som.data, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
-# plot(som.exp, type="codes")
-# plot(som.exp, type="quality")
-# plot(som.exp, type="mapping", pch=19, cex=.3)
-# plot(som.exp, type="changes")
-# plot(som.exp, type="counts")
-# plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation", palette.name=redblue_cols, contin=T,zlim=c(-1,1), ncolors=11)
-# plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
-# plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
-# plot.kohonen(som.exp, type="counts" )
-
-# We can update the xdim - ydim
-total_cells.full <- floor(sqrt(length(supersom.fullrna.ribo.prot)/2) * 
-                            sqrt (dim(supersom.fullrna.ribo.prot$prot)[1] * 
-                                    dim(supersom.fullrna.ribo.prot$prot)[2]))
-
-if (floor(sqrt(total_cells.full/1.3333)) %% 2 == 0) { 
-  ydim.total.full = floor(sqrt(total_cells.full/1.3333))
-} else { 
-  ydim.total.full = floor(sqrt(total_cells.full/1.3333)) + 1
+mean_distance <- 1
+for (i in 1:100) { 
+   set.seed(i)
+   supersom.nonzero.ind = supersom (data = across_individual_supersom_nonzero_variance_data, 
+                                    grid=somgrid ( xdim.ind, ydim.ind, "hexagonal"), 
+                                    toroidal=T, contin = T)
+   
+  if (mean(supersom.nonzero.ind$distances) < mean_distance) { 
+     my_seed <- i
+     mean_distance <- mean(supersom.nonzero.ind$distances)
+   }
 }
-xdim.total.full = floor(total_cells.full/ydim.total.full + 0.5)
-
-supersom.full_sample = supersom (data = supersom.fullrna.ribo.prot, 
-grid=somgrid ( xdim.total.full, ydim.total.full, "hexagonal"), toroidal=T, contin = T)
-plot.kohonen (supersom.full_sample, type = "changes")
-
-som.exp.prot.noRibo = supersom(data =som.data.prot.noNA, whatmap = 2:4, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
-# Give proteins higher weight for tighter clustering -> Another rationale is colinearity between the expression measures
-# Given RNA and Ribo => TE is fixed. So, we should all gie the independent components 1/3 weight
-# mean_distance <- 1
-# iter = 500
-# # pb <- tkProgressBar(title="Progress Bar", min = 0, max = iter, width=300)
-# for (i in 11:iter) { 
-#   set.seed(i)
-#   relative.som <- supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
-#   if (mean(relative.som$distances) < mean_distance) { 
-#     my_seed <- i
-#     mean_distance <- mean(relative.som$distances)
-#   }
-# #   setTkProgressBar(pb, i, label=paste( round(i/iter*100, 0),"% done"))
-#  }
-# close (pb)
-# Best in 500 seeds is 378
-set.seed(378)
-som.exp.prot = supersom(data = som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
-
-plot.kohonen(som.exp.prot, type="counts")
-plot.kohonen(som.exp.prot, type="changes")
-plot.kohonen(som.exp.prot, type="quality")
-mean(som.exp.prot$distances)
-pdf(file= "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSomCodes.pdf", width=8.5, height=11)
-par(mfrow = c(2, 2))
-plot.kohonen(som.exp.prot, type="codes")
-dev.off()
-
-# plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
+set.seed(61)
+supersom.nonzero.ind = supersom (data = across_individual_supersom_nonzero_variance_data, 
+                                 grid=somgrid ( xdim.ind, ydim.ind, "hexagonal"), 
+                                 toroidal=T, contin = T)
+plot.kohonen (supersom.nonzero.ind, type = "changes")
+########
 
 # Calculate cor.estimate for each level grouped by unit.classif
 # X is passed as a dataframe to function
@@ -968,28 +846,31 @@ gene_wise_cors <- function (mt1 , mt2) {
   sapply(seq.int(nrow(mt1) ), 
          function(k) {cor (mt1[k,], mt2[k,], use="pairwise.complete.obs", method="spearman") } )
 }
+
+# Change pval calculation testing to one-sided "greater
 gene_wise_cor_pvals <- function (mt1 , mt2) { 
   if (!identical( nrow(mt1),nrow(mt2)) ) { 
     stop ("Unequal rows")
   } 
   sapply(seq.int(nrow(mt1) ), 
-         function(k) { cor.test(mt1[k,], mt2[k,], use="pairwise.complete.obs", method="spearman")$p.value } )
+         function(k) { cor.test(mt1[k,], mt2[k,], 
+                      use="pairwise.complete.obs", method="spearman", alternative="g")$p.value } )
 }
-across_ind_ribo_rna  = gene_wise_cors(som.exp.prot$data$ribo, som.exp.prot$data$rna)
-across_ind_ribo_prot  = gene_wise_cors(som.exp.prot$data$ribo, som.exp.prot$data$prot)
-across_ind_rna_prot  = gene_wise_cors(som.exp.prot$data$rna, som.exp.prot$data$prot)
-across_ind_te_prot  = gene_wise_cors(som.exp.prot$data$te, som.exp.prot$data$prot)
 
-across_ind_ribo_rna_pval  = gene_wise_cor_pvals(som.exp.prot$data$ribo, som.exp.prot$data$rna)
-across_ind_ribo_prot_pval  = gene_wise_cor_pvals(som.exp.prot$data$ribo, som.exp.prot$data$prot)
-across_ind_rna_prot_pval  = gene_wise_cor_pvals(som.exp.prot$data$rna, som.exp.prot$data$prot)
-across_ind_te_prot_pval  = gene_wise_cor_pvals(som.exp.prot$data$te, som.exp.prot$data$prot)
+across_ind_ribo_rna  = gene_wise_cors(supersom.nonzero.ind$data$ribo, supersom.nonzero.ind$data$rna)
+across_ind_ribo_prot  = gene_wise_cors(supersom.nonzero.ind$data$ribo, supersom.nonzero.ind$data$prot)
+across_ind_rna_prot  = gene_wise_cors(supersom.nonzero.ind$data$rna, supersom.nonzero.ind$data$prot)
+
+# across_ind_ribo_rna_pval  = gene_wise_cor_pvals(supersom.nonzero.ind$data$ribo, supersom.nonzero.ind$data$rna)
+# across_ind_ribo_prot_pval  = gene_wise_cor_pvals(supersom.nonzero.ind$data$ribo, supersom.nonzero.ind$data$prot)
+# across_ind_rna_prot_pval  = gene_wise_cor_pvals(supersom.nonzero.ind$data$rna, supersom.nonzero.ind$data$prot)
 
 
 #SOM, Unit wise correlations -- We are looking at unit wise median correlation
 max_cor_unit = c()
 min_cor_pval_unit_type = c()
 min_cor_pval_unit = c()
+cor_diff = c()
 float_comparison_with_epsilon = function (x, y, eps)  { 
   return (x + eps > y & x-eps < y)
 }
@@ -1005,6 +886,9 @@ Correlation_Meta <- function (v) {
  return ( (exp(2*ave.z.r) -1) / (exp(2*ave.z.r) +1) )
 }
 # First determine the min-pval then update the rest
+# Finding the Fisher aggregate p-val and then deciding on that has the problem that 
+# some negative correlations are highly significant and skew the highest correlation
+
 ## NOT CLEAR WHAT to DO WITH P_VALs
 ## THE MEDIAN OF PVAL DOESNT MAKE SENSE. 
 # Current strategy is to calculate pvals first
@@ -1012,29 +896,26 @@ Correlation_Meta <- function (v) {
 # Then we find the corresponding units and take the median of their correlations
 # Maybe better is to combine p-values with Fisher's method?
 tol = 1e-5
-for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) { 
-  if ( identical(nrow(som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ]), NULL ) ) { 
+for ( i in 1: (supersom.nonzero.ind$grid$xdim * supersom.nonzero.ind$grid$ydim)) { 
+  if ( identical(nrow(supersom.nonzero.ind$data$ribo[supersom.nonzero.ind$unit.classif == i, ]), NULL ) ) { 
     max_cor_unit = c(max_cor_unit, 0)
     min_cor_pval_unit_type = c(min_cor_pval_unit_type,  -1) 
     min_cor_pval_unit = c(min_cor_pval_unit , 1)
+    cor_diff = c(cor_diff , 0 ) 
     next
   }
-  rna_prot_unit = gene_wise_cors( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
-                                  som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  ribo_prot_unit = gene_wise_cors( som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ], 
-                                   som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  te_prot_unit = gene_wise_cors( som.exp.prot$data$te[som.exp.prot$unit.classif == i, ], 
-                                 som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  ribo_prot_unit_pval = gene_wise_cor_pvals( som.exp.prot$data$ribo[som.exp.prot$unit.classif == i, ], 
-                                             som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  rna_prot_unit_pval  = gene_wise_cor_pvals( som.exp.prot$data$rna[som.exp.prot$unit.classif == i, ], 
-                                             som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
-  te_prot_unit_pval  = gene_wise_cor_pvals( som.exp.prot$data$te[som.exp.prot$unit.classif == i, ], 
-                                            som.exp.prot$data$prot[som.exp.prot$unit.classif == i, ])
+  rna_prot_unit = gene_wise_cors( supersom.nonzero.ind$data$rna[supersom.nonzero.ind$unit.classif == i, ], 
+                                  supersom.nonzero.ind$data$prot[supersom.nonzero.ind$unit.classif == i, ])
+  ribo_prot_unit = gene_wise_cors( supersom.nonzero.ind$data$ribo[supersom.nonzero.ind$unit.classif == i, ], 
+                                   supersom.nonzero.ind$data$prot[supersom.nonzero.ind$unit.classif == i, ])
+  ribo_prot_unit_pval = gene_wise_cor_pvals( supersom.nonzero.ind$data$ribo[supersom.nonzero.ind$unit.classif == i, ], 
+                                             supersom.nonzero.ind$data$prot[supersom.nonzero.ind$unit.classif == i, ])
+  rna_prot_unit_pval  = gene_wise_cor_pvals( supersom.nonzero.ind$data$rna[supersom.nonzero.ind$unit.classif == i, ], 
+                                             supersom.nonzero.ind$data$prot[supersom.nonzero.ind$unit.classif == i, ])
   min_cor_pval_unit = c(min_cor_pval_unit, 
-                        min( Fisher.test (rna_prot_unit_pval), Fisher.test (ribo_prot_unit_pval),  Fisher.test (te_prot_unit_pval)))
+                        min( Fisher.test (rna_prot_unit_pval), Fisher.test (ribo_prot_unit_pval)))
   min_cor_pval_unit_type = c(min_cor_pval_unit_type,
-                             which.min( c(Fisher.test (rna_prot_unit_pval), Fisher.test (ribo_prot_unit_pval),  Fisher.test (te_prot_unit_pval))))
+                             which.min( c(Fisher.test (rna_prot_unit_pval), Fisher.test (ribo_prot_unit_pval))))
 
   # The pval closest to median can be of opposite sign
 #   min_cor_pval_unit = c(min_cor_pval_unit, 
@@ -1046,19 +927,14 @@ for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) {
 #     closest.pval = which (float_comparison_with_epsilon (abs.diff, min(abs.diff), tol) )
 #     max_cor_unit = c(max_cor_unit , median(rna_prot_unit[closest.pval]) )
     max_cor_unit = c(max_cor_unit , Correlation_Meta(rna_prot_unit) )
+    cor_diff = c(cor_diff , Correlation_Meta(rna_prot_unit) - Correlation_Meta(ribo_prot_unit) )
   }
   else if (min_cor_pval_unit_type[i] == 2 ) { 
 #     abs.diff = abs(ribo_prot_unit_pval -  min_cor_pval_unit[i])    
 #     closest.pval = which (float_comparison_with_epsilon (abs.diff, min(abs.diff), tol) )
 #     max_cor_unit = c(max_cor_unit , median(ribo_prot_unit[closest.pval]) )
     max_cor_unit = c(max_cor_unit , Correlation_Meta(ribo_prot_unit) )
-    
-  }
-  else if (min_cor_pval_unit_type[i] == 3 ) { 
-#     abs.diff = abs(te_prot_unit_pval -  min_cor_pval_unit[i])
-#     closest.pval = which (float_comparison_with_epsilon (abs.diff, min(abs.diff), tol) )
-#     max_cor_unit = c(max_cor_unit , median(te_prot_unit[closest.pval]) )
-    max_cor_unit = c(max_cor_unit , Correlation_Meta(te_prot_unit) )
+    cor_diff = c(cor_diff , Correlation_Meta(ribo_prot_unit) - Correlation_Meta(rna_prot_unit) )
     
   }
   else { 
@@ -1066,17 +942,39 @@ for ( i in 1: (som.exp.prot$grid$xdim * som.exp.prot$grid$ydim)) {
   }
 #  max_cor_unit = c(max_cor_unit , median(rna_prot_unit) )
 }
-
-plot.kohonen(som.exp.prot, property=min_cor_pval_unit_type, type = "property", 
-             palette.name=redblue_cols, ncolors=4, main = "Highest Correlated Expression Value")
-plot.kohonen(som.exp.prot, property=max_cor_unit, type = "property", 
-             palette.name=redblue, ncolors=100, contin=T, 
+#pdf(file="~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSOM.pdf", width=4, height=10.5)
+#par(mfrow = c(3, 1))
+pal <- function (x) {return( c("white", "#B300FF", "#F7FF00"))}
+plot.kohonen(supersom.nonzero.ind, property=min_cor_pval_unit_type, type = "property", 
+             palette.name=pal, ncolors=3, main = "Highest Correlated Expression Value")
+plot.kohonen(supersom.nonzero.ind, property=max_cor_unit, type = "property", 
+             palette.name=redblue, ncolors=50, contin=T, 
              zlim=c(-1,1), main = "Spearman Correlation")
-plot.kohonen(som.exp.prot, property=p.adjust(min_cor_pval_unit, method="holm"), type = "property", 
-             palette.name=function(x){rev(brewer.pal(x, "Blues"))}, ncolors=9,
+plot.kohonen(supersom.nonzero.ind, property=p.adjust(min_cor_pval_unit, method="holm"), type = "property", 
+             palette.name=function(x){colorpanel(x,'red', 'white')}, ncolors=50,
              contin=T, main = "Holm's Adjusted Meta P-value")
-plot.kohonen(som.exp.prot, type="counts")
 
+cor_diff[cor_diff < 0] = 0
+# Grey > .35; Can modify by changing bgcolors in property plot
+plot.kohonen(supersom.nonzero.ind, property=cor_diff, type = "property", 
+             palette.name=function(x){colorpanel(x,'white', 'red')}, ncolors=50, contin=T, 
+             zlim=c(0,.35), main = "Spearman Correlation Difference")
+#dev.off()
+
+# Plot spearman cor diff > .2 ; adjusted p < .05
+high_diff = which(cor_diff > .2)
+high_diff = high_diff[p.adjust ( min_cor_pval_unit, method = "holm")[high_diff] < .05]
+cor_diff_sigs = rep (0,times=length(cor_diff))
+cor_diff_sigs[high_diff] = 1
+plot.kohonen(supersom.nonzero.ind, property=cor_diff_sigs, type = "property", 
+             palette.name=function(x){colorpanel(x,'white', 'red')}, ncolors=2, 
+             main= "Significant Correlation Difference")
+
+plot.kohonen(supersom.nonzero.ind, type="counts", palette.name=function(x){colorpanel(x, 'white', 'red')}, ncolors=20)
+pdf(file="~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSOM_Codes.pdf", width=4, height=10.5)
+par(mfrow = c(3, 1))
+plot.kohonen(supersom.nonzero.ind)
+dev.off()
 # Compared to random median correlation per unit is not much higher
 # However, there are many more units where the correlations are higher. 
 # > quantile(max_cor_unit)
@@ -1204,19 +1102,6 @@ setCurrentGeneListPosition(david, 2)
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
 filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)$Term
 
-# RNA/RIBO
-high_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv > 2)]
-low_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv < .5)]
-high_rna_ribo_variation = hgnc_to_ensg_convert(high_rna_ribo_variation)
-low_rna_ribo_variation = hgnc_to_ensg_convert(low_rna_ribo_variation)
-addList(david, high_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="HighRNARiboVariation", listType="Gene")
-addList(david, low_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="LowRNARiboVariation", listType="Gene")
-setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
-AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
-filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
-
-# setCurrentGeneListPosition(david, 1)
-
 ## Differential Expression -- RNA/Ribo/TE => This should go with Bilal's RADIAL SETS
 # te_fit3 is the across individual difference in translation efficiency, ribo_fit2, rna_fit2 equivalent ones for ribo and rna
 # First set is genes differentially expressed at any level
@@ -1304,7 +1189,7 @@ FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 # min_cor_pval_unit
 # max_cor_unit
 # row.names(som.exp.prot$data$ribo)
-relative.som.background = hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo))
+relative.som.background = hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo))
 addList(david, relative.som.background, idType="ENSEMBL_GENE_ID", listName="relative.som.background", listType="Background")
 # Relative Som Each Unit - Enrichment
 for (i in 1:(som.exp.prot$grid$xdim *som.exp.prot$grid$ydim) ) { 
@@ -2313,3 +2198,176 @@ norm_hc_rep <- hclust (norm_dd_rep)
 
 # plot(p.adjust(random_effect_p_val_ribo, method = "holm") , ribo_F_corrected, pch = 19, cex=.2)
 # plot(p.adjust(random_effect_p_val_rna, method = "holm") , rna_F_corrected, pch = 19, cex=.2)
+
+
+# # To test whether sources of data increases across individual variance
+# # Simple test is to select only polyA_RNA individuals and equivalents in Ribo
+# # The results are consistent
+# ribo_polyA = c()
+# rna_polyA = c()
+# for ( i in 1:nrow(joint_expression_common$E)) { 
+#   ribo_polyA = c(ribo_polyA, 
+#              summary(aov(joint_expression_common$E[i,c(50,51,54:57, 74:80)] ~ as.factor(sample_id_all[c(50,51,54:57, 74:80)]), 
+#                          weights= joint_expression_common$weights[i,c(50,51,54:57, 74:80)] ))[[1]]$Pr[1] )
+#   
+#   rna_polyA = c(rna_polyA, 
+#             summary(aov(joint_expression_common$E[i,1:18] ~ as.factor(sample_id_all[1:18]), 
+#                         weights= joint_expression_common$weights[i,1:18] ))[[1]]$Pr[1] )
+#   
+# }
+
+### OLD ACROSS INDIVIDUAL SUPERSOM ANALYSIS
+linfeng_prot_common_with_te <-  colnames(linfeng_protein) %in% colnames(te_fit3$coefficients)
+linfeng_te_columns <- linfeng_protein[,linfeng_prot_common_with_te]
+class(linfeng_te_columns) <- "numeric"
+linfeng_te_match <- cbind ( linfeng_te_columns[,1], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,2:5], rep(NA, dim(linfeng_te_columns)[1]), linfeng_te_columns[,6:12])
+colnames(linfeng_te_match) <- sort(colnames(te_fit3$coefficients))
+linfeng_te_match <- merge(linfeng_te_match, ensg_hgnc, by.x="row.names", by.y="ENSG")
+# joint_count_ids is the same as row.names(v3); Pad the data with NAs when there is no proteomics
+linfeng_te_match <- merge (data.frame(HGNC=joint_count_ids), linfeng_te_match, by="HGNC", all.x=T)
+row.names(linfeng_te_match) <- linfeng_te_match[,1]
+linfeng_te_match <- linfeng_te_match[,-c(1,2)]
+
+# Simplifies the colnames; no order problems
+colnames(ribo_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
+colnames(rna_fit2$coefficients) <- sort(colnames(te_fit3$coefficients))
+te_matrix = te_fit3$coefficients[,sort(colnames(te_fit3$coefficients), index.return=T)$ix]
+# The easiest way for interpretation is using quantized data
+ribo.quantiles = matrix(ecdf(ribo_fit2$coefficients)(ribo_fit2$coefficients), ncol = 14, dimnames = list(rownames(ribo_fit2$coefficients), colnames(ribo_fit2$coefficients)))
+rna.quantiles = matrix(ecdf(rna_fit2$coefficients)(rna_fit2$coefficients), ncol = 14, dimnames = list(rownames(rna_fit2$coefficients), colnames(rna_fit2$coefficients)))
+te.quantiles = matrix(ecdf(te_matrix)(te_matrix), ncol = 14, dimnames = list(rownames(te_matrix), colnames(te_matrix)))
+prot.quantiles = matrix(ecdf(as.matrix(linfeng_te_match))(as.matrix(linfeng_te_match)), ncol = 14, dimnames = list(rownames(linfeng_te_match), colnames(linfeng_te_match)))
+dropCols <- c(2,7)
+dropRows <- !apply(is.na(prot.quantiles[,-dropCols]), 1, any)
+#singleNARows <- which(apply(is.na(prot.quantiles[,-dropCols]),1, sum) == 1)
+
+som.data = list (  ribo= ribo.quantiles[dropRows, -dropCols] , rna = rna.quantiles[dropRows, -dropCols] ,te = te.quantiles[dropRows, -dropCols])
+som.data.prot = list ( ribo= ribo.quantiles , rna = rna.quantiles ,te = te.quantiles, prot=prot.quantiles)
+som.data.prot.noNA = list ( Ribosome_Occupancy= ribo.quantiles[dropRows, -dropCols] , 
+                            RNA_Expression = rna.quantiles[dropRows, -dropCols] ,
+                            Translation_Efficiency = te.quantiles[dropRows, -dropCols], 
+                            Protein_Expression=prot.quantiles[dropRows, -dropCols])
+
+# Another version of the SuperSOM is using linfeng_protein_ribo_rna
+# Sample IDs => sample_labels_joint_prot
+# Types_of_Data => Type_Prot
+# rna_replicate_mean_prot; ribo_replicate_mean_prot: Lists 
+# rna_in_prot <- as.character(rna_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
+# ribo_in_prot <- as.character(ribo_replicate_mean_prot[[1]]$Group.1) %in% sample_labels_joint_prot[type_prot=="Prot"]
+
+# Create num mat with each individual specific data
+rna.num.mat = matrix(nrow=length(rna_replicate_mean_prot) , ncol = 27)
+ribo.num.mat = matrix ( nrow = length(ribo_replicate_mean_prot), ncol = 28)
+for (i in 1:length(rna_replicate_mean_prot)) { 
+  rna.num.mat[i, ] = rna_replicate_mean_prot[[i]]$x[rna_in_prot]
+}
+for (i in 1:length(rna_replicate_mean_prot)) { 
+  ribo.num.mat[i, ] = ribo_replicate_mean_prot[[i]]$x[ribo_in_prot]
+}
+colnames( rna.num.mat) = as.character (rna_replicate_mean_prot[[i]]$Group.1[rna_in_prot] ) 
+colnames( ribo.num.mat) = as.character (ribo_replicate_mean_prot[[i]]$Group.1[ribo_in_prot] ) 
+
+# Ribo and Prot has one extra col
+dropProt = c(23)
+ribo.num.mat  = ribo.num.mat[,-dropProt]
+prot.num.mat = matrix(as.numeric(as.matrix(linfeng_protein_ribo_rna[,type_prot=="Prot"])),ncol=28)
+prot.num.mat = prot.num.mat[, -dropProt]
+rna.full.quantiles = matrix(ecdf(rna.num.mat)(rna.num.mat), ncol = 27 )
+ribo.full.quantiles = matrix(ecdf(ribo.num.mat)(ribo.num.mat), ncol = 27 )
+prot.full.quantile = matrix( ecdf (prot.num.mat)(prot.num.mat), ncol = 27)
+
+supersom.fullrna.ribo.prot = list ( 
+  ribo= ribo.full.quantiles , rna = rna.full.quantiles , prot=prot.full.quantile)
+
+
+
+#total_cells <- floor(sqrt(length(som.data.prot)/2) * sqrt (dim(som.data.prot$ribo)[1] * dim(som.data.prot$ribo)[2]))
+total_cells.noNA <- floor(sqrt(length(som.data.prot.noNA)/2) * 
+                            sqrt (dim(som.data.prot.noNA$Ribosome_Occupancy)[1] * 
+                                    dim(som.data.prot.noNA$Ribosome_Occupancy)[2]))
+# if (floor(sqrt(total_cells/1.3333)) %% 2 == 0) { 
+#   ydim.total = floor(sqrt(total_cells/1.3333))
+# } else { 
+#   ydim.total = floor(sqrt(total_cells/1.3333)) + 1
+# }
+# xdim.total = floor(total_cells/ydim.total + 0.5)
+
+if (floor(sqrt(total_cells.noNA/1.3333)) %% 2 == 0) { 
+  ydim.total.noNA = floor(sqrt(total_cells.noNA/1.3333))
+} else { 
+  ydim.total.noNA = floor(sqrt(total_cells.noNA/1.3333)) + 1
+}
+xdim.total.noNA = floor(total_cells.noNA/ydim.total.noNA + 0.5)
+
+#som.exp = supersom(data =som.data, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
+# plot(som.exp, type="codes")
+# plot(som.exp, type="quality")
+# plot(som.exp, type="mapping", pch=19, cex=.3)
+# plot(som.exp, type="changes")
+# plot(som.exp, type="counts")
+# plot.kohonen(som.exp, type="property", property=ribo_prot_cor_in_som, main= "Between Individual Ribosome Occupancy Protein Level Correlation", palette.name=redblue_cols, contin=T,zlim=c(-1,1), ncolors=11)
+# plot.kohonen(som.exp, type="property", property=rna_prot_cor_in_som, main = "Between Individual RNA Occupancy Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
+# plot.kohonen(som.exp, type="property", property=te_prot_cor_in_som, main = "Between Individual Translation Efficiency Protein Level Correlation", palette.name=redblue_cols,contin=T, zlim=c(-1,1),ncolors=11)
+# plot.kohonen(som.exp, type="counts" )
+
+# We can update the xdim - ydim
+total_cells.full <- floor(sqrt(length(supersom.fullrna.ribo.prot)/2) * 
+                            sqrt (dim(supersom.fullrna.ribo.prot$prot)[1] * 
+                                    dim(supersom.fullrna.ribo.prot$prot)[2]))
+
+if (floor(sqrt(total_cells.full/1.3333)) %% 2 == 0) { 
+  ydim.total.full = floor(sqrt(total_cells.full/1.3333))
+} else { 
+  ydim.total.full = floor(sqrt(total_cells.full/1.3333)) + 1
+}
+xdim.total.full = floor(total_cells.full/ydim.total.full + 0.5)
+
+supersom.full_sample = supersom (data = supersom.fullrna.ribo.prot, 
+                                 grid=somgrid ( xdim.total.full, ydim.total.full, "hexagonal"), toroidal=T, contin = T)
+plot.kohonen (supersom.full_sample, type = "changes")
+
+som.exp.prot.noRibo = supersom(data =som.data.prot.noNA, whatmap = 2:4, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T)
+# Give proteins higher weight for tighter clustering -> Another rationale is colinearity between the expression measures
+# Given RNA and Ribo => TE is fixed. So, we should all gie the independent components 1/3 weight
+# mean_distance <- 1
+# iter = 500
+# # pb <- tkProgressBar(title="Progress Bar", min = 0, max = iter, width=300)
+# for (i in 11:iter) { 
+#   set.seed(i)
+#   relative.som <- supersom(data =som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
+#   if (mean(relative.som$distances) < mean_distance) { 
+#     my_seed <- i
+#     mean_distance <- mean(relative.som$distances)
+#   }
+# #   setTkProgressBar(pb, i, label=paste( round(i/iter*100, 0),"% done"))
+#  }
+# close (pb)
+# Best in 500 seeds is 378
+set.seed(378)
+som.exp.prot = supersom(data = som.data.prot.noNA, grid=somgrid(xdim.total.noNA, ydim.total.noNA, "hexagonal"), toroidal=T, contin=T, weights=c(2/9,2/9,2/9, 1/3))
+
+plot.kohonen(som.exp.prot, type="counts")
+plot.kohonen(som.exp.prot, type="changes")
+plot.kohonen(som.exp.prot, type="quality")
+mean(som.exp.prot$distances)
+pdf(file= "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSomCodes.pdf", width=8.5, height=11)
+par(mfrow = c(2, 2))
+plot.kohonen(som.exp.prot, type="codes")
+dev.off()
+
+# plot.kohonen(som.exp.prot, property=som.exp.prot$codes$ribo, type = "property", palette.name=redblue_cols, ncolors=11, contin=T)
+
+
+## UNUSED GO ANALYSIS
+# RNA/RIBO
+high_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv > 2)]
+low_rna_ribo_variation = names(rna_replicate_mean_weights)[which(rnacv/ribocv < .5)]
+high_rna_ribo_variation = hgnc_to_ensg_convert(high_rna_ribo_variation)
+low_rna_ribo_variation = hgnc_to_ensg_convert(low_rna_ribo_variation)
+addList(david, high_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="HighRNARiboVariation", listType="Gene")
+addList(david, low_rna_ribo_variation, idType="ENSEMBL_GENE_ID", listName="LowRNARiboVariation", listType="Gene")
+setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
+filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+
+# setCurrentGeneListPosition(david, 1)
