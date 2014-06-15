@@ -806,6 +806,8 @@ across_individual_supersom_nonzero_variance_data = list(
   ribo= matrix(ecdf(ribo_replicate_mean_rna_prot)(ribo_replicate_mean_rna_prot), ncol=27),
   prot = matrix(ecdf(prot_exp_rna_ribo)(prot_exp_rna_ribo), ncol=27)
   )
+row.names(across_individual_supersom_nonzero_variance_data$ribo) = 
+row.names(linfeng_protein_ribo_rna[,type_prot=="Prot"][,-22])
 total_cells.nonzerovar_individuals <- 
 floor(sqrt(length(across_individual_supersom_nonzero_variance_data)/2) * 
       sqrt (dim(across_individual_supersom_nonzero_variance_data$rna)[1] * 
@@ -1068,39 +1070,37 @@ setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_A
 background_list = hgnc_to_ensg_convert(row.names(v3))
 addList(david, background_list, idType="ENSEMBL_GENE_ID", listName="V3", listType="Background")
 
-# Across Ind RNA-Prot; RNA-RIBO -- There is not too much interesting enrichments here
-high_across_ind_ribo_correlation = row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval<= pval_cutoff]
-high_across_ind_rna_correlation = row.names(linfeng_protein_ribo_rna)[across_ind_rna_correlation_pval<= pval_cutoff]
-high_ribo_rna =row.names(linfeng_protein_ribo_rna)[across_ind_rna_correlation_pval<= pval_cutoff & across_ind_ribo_correlation_pval <= pval_cutoff]
-high_ribo_cor_list = hgnc_to_ensg_convert(high_across_ind_ribo_correlation)
-high_rna_cor_list = hgnc_to_ensg_convert(high_across_ind_rna_correlation)
-high_ribo_rna_list= hgnc_to_ensg_convert(high_ribo_rna)
-addList(david, high_ribo_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboCorProt", listType="Gene")
-addList(david, high_rna_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRNACorProt", listType="Gene")
-addList(david, high_ribo_rna_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboRNACorProt", listType="Gene")
+# # Across Ind RNA-Prot; RNA-RIBO Correlation; Nothing significant Commented_out
+# across_individual_background_list = hgnc_to_ensg_convert(row.names(linfeng_protein_ribo_rna))
+# addList(david, across_individual_background_list, idType="ENSEMBL_GENE_ID", listName="Across_Ind_Background", listType="Background")
+# 
+# high_ribo_cor_list = hgnc_to_ensg_convert(row.names(linfeng_protein_ribo_rna)[across_ind_ribo_correlation_pval<= pval_cutoff & across_ind_rna_correlation_pval >  pval_cutoff])
+# high_rna_cor_list = hgnc_to_ensg_convert(row.names(linfeng_protein_ribo_rna)[across_ind_rna_correlation_pval<= pval_cutoff & across_ind_ribo_correlation_pval >  pval_cutoff ])
+# high_ribo_rna_list = hgnc_to_ensg_convert(row.names(linfeng_protein_ribo_rna)[across_ind_rna_correlation_pval<= pval_cutoff & across_ind_ribo_correlation_pval <= pval_cutoff])
+# 
+# addList(david, high_ribo_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboCorProt", listType="Gene")
+# addList(david, high_rna_cor_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRNACorProt", listType="Gene")
+# addList(david, high_ribo_rna_list, idType="ENSEMBL_GENE_ID", listName="HighBetIndRiboRNACorProt", listType="Gene")
+# 
+# setCurrentBackgroundPosition(david,2)
+# setCurrentGeneListPosition(david,1)
+# AnnotCluster = getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+# filter_by_fdr_fold_enrichment(AnnotCluster, .1, 2)$Term
 
-#termCluster<-getClusterReport(david,type="Term")
-AnnotCluster = getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
-filter_by_fdr_fold_enrichment(AnnotCluster, .1, 2)
-
-## Variation in expression between individuals
-# NEW_VARIATION ANALYSIS WITH F_VALUES
-ribo_sig_names <- hgnc_to_ensg_convert( row.names(v3)[ribo_sig_random] ) 
-rna_sig_names = hgnc_to_ensg_convert( row.names(v3)[rna_sig_random] )
-joint_sig_names = hgnc_to_ensg_convert( row.names(v3)[joint_sig_random] )
-
-
-addList(david, ribo_sig_names, idType="ENSEMBL_GENE_ID", listName="ribo_sig_names", listType="Gene")
-addList(david, rna_sig_names, idType="ENSEMBL_GENE_ID", listName="rna_sig_names", listType="Gene")
-addList(david, joint_sig_names, idType="ENSEMBL_GENE_ID", listName="joint_sig_names", listType="Gene")
-addList(david, setdiff(rna_sig_names, joint_sig_names), idType="ENSEMBL_GENE_ID", listName="rnaonly_sig_names", listType="Gene")
-addList(david, setdiff(ribo_sig_names, joint_sig_names), idType="ENSEMBL_GENE_ID", listName="riboonly_sig_names", listType="Gene")
-
-setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
-setCurrentBackgroundPosition(david,2)
-setCurrentGeneListPosition(david, 2)
-AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
-filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)$Term
+# ## Non-zero variance Analysis-- DONE in FuncAssociate in Ordered mode
+# ribo_sig_names <- hgnc_to_ensg_convert( row.names(v3)[ribo_sig_random] ) 
+# rna_sig_names = hgnc_to_ensg_convert( row.names(v3)[rna_sig_random] )
+# joint_sig_names = hgnc_to_ensg_convert( row.names(v3)[joint_sig_random] )
+# addList(david, ribo_sig_names, idType="ENSEMBL_GENE_ID", listName="ribo_sig_names", listType="Gene")
+# addList(david, rna_sig_names, idType="ENSEMBL_GENE_ID", listName="rna_sig_names", listType="Gene")
+# addList(david, joint_sig_names, idType="ENSEMBL_GENE_ID", listName="joint_sig_names", listType="Gene")
+# addList(david, setdiff(rna_sig_names, joint_sig_names), idType="ENSEMBL_GENE_ID", listName="rnaonly_sig_names", listType="Gene")
+# addList(david, setdiff(ribo_sig_names, joint_sig_names), idType="ENSEMBL_GENE_ID", listName="riboonly_sig_names", listType="Gene")
+# setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_ALL", "KEGG_PATHWAY", "REACTOME_PATHWAY"))
+# setCurrentBackgroundPosition(david,2)
+# setCurrentGeneListPosition(david, 2)
+# AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
+# filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)$Term
 
 ## Differential Expression -- RNA/Ribo/TE => This should go with Bilal's RADIAL SETS
 # te_fit3 is the across individual difference in translation efficiency, ribo_fit2, rna_fit2 equivalent ones for ribo and rna
@@ -1184,6 +1184,9 @@ FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 #setCurrentGeneListPosition(david, 1)
 
 ### RELATIVE SOM ENRICHMENT
+# Possibly three classes, high difference in spearmant correlation difference
+# Those that have overall high correlation
+
 # som.exp.prot$unit.classif
 # min_cor_pval_unit_type
 # min_cor_pval_unit
@@ -1192,8 +1195,8 @@ FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 relative.som.background = hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo))
 addList(david, relative.som.background, idType="ENSEMBL_GENE_ID", listName="relative.som.background", listType="Background")
 # Relative Som Each Unit - Enrichment
-for (i in 1:(som.exp.prot$grid$xdim *som.exp.prot$grid$ydim) ) { 
-  unit_list = hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] )
+for (i in 1:(supersom.nonzero.ind$grid$xdim *supersom.nonzero.ind$grid$ydim) ) { 
+  unit_list = hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo)[supersom.nonzero.ind$unit.classif == i ] )
   addList(david, unit_list, idType="ENSEMBL_GENE_ID", listName=paste("RelativeSOMUnitList", i, sep="_" ), listType="Gene")
   setCurrentBackgroundPosition(david,2)
   AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
@@ -1211,34 +1214,28 @@ pval_threshold = 0.05
 table(min_cor_pval_unit_type[which(p.adjust(min_cor_pval_unit) < pval_threshold)])
 rna_cor = c()
 ribo_cor = c()
-te_cor = c()
 for ( i in which(p.adjust(min_cor_pval_unit) < pval_threshold)) { 
  if (min_cor_pval_unit_type[i] == 1) { 
    rna_cor = c(rna_cor, 
-               hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] ) ) 
+               hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo)[supersom.nonzero.ind$unit.classif == i ] ) ) 
  }
  else if (min_cor_pval_unit_type[i] == 2) { 
    ribo_cor = c(ribo_cor, 
-               hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] ) )             
- }
- else if (min_cor_pval_unit_type[i] == 3) { 
-   te_cor = c(te_cor, 
-              hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[som.exp.prot$unit.classif == i ] ) )            
+               hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo)[supersom.nonzero.ind$unit.classif == i ] ) )             
  }
 }
 length(ribo_cor)
 length(rna_cor)
-length(te_cor)
+
 addList(david, rna_cor, idType="ENSEMBL_GENE_ID", listName="rna_cor", listType="Gene")
 addList(david, ribo_cor, idType="ENSEMBL_GENE_ID", listName="ribo_cor", listType="Gene")
-addList(david, te_cor, idType="ENSEMBL_GENE_ID", listName="te_cor", listType="Gene")
 setCurrentBackgroundPosition(david,2)
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
 FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 FilteredChart$Term
 
-significantly_correlated_rnacells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$te, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 1),] 
-significantly_correlated_ribocells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$te, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2),] 
+significantly_correlated_rnacells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 1),] 
+significantly_correlated_ribocells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2),] 
 
 ap.cluster.relative.rna = apcluster(negDistMat(r=2), significantly_correlated_rnacells)
 ap.cluster.relative.ribo = apcluster(negDistMat(r=2), significantly_correlated_ribocells)
