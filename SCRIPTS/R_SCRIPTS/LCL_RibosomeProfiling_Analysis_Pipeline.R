@@ -1109,7 +1109,7 @@ addList(david, background_list, idType="ENSEMBL_GENE_ID", listName="V3", listTyp
 #results.ribo <- decideTests(ribo_fit2, p.value=0.01, lfc=log2(1.5))
 #results.rna <- decideTests(rna_fit2, p.value=0.01, lfc=log2(1.5))
 
-### Both up/down have interesting categories for enrichment. We can use the radial sets as a visualization and quote the GO enrichment in text
+### Both up/down have interesting categories for enrichment. We can use the radial sets as a visualization
 te_down_list = hgnc_to_ensg_convert(names(apply(te.diff.results == -1 , 1 , any))[apply(te.diff.results == -1 , 1 , any)])
 te_up_list = hgnc_to_ensg_convert(names(apply(te.diff.results == 1 , 1 , any))[apply(te.diff.results == 1 , 1 , any)])
 te_any  = hgnc_to_ensg_convert(names(apply(te.diff.results != 0 , 1 , any))[apply(te.diff.results != 0  , 1 , any)])
@@ -1167,6 +1167,9 @@ setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_A
 # }
 
 # Enrichment by clustered Affinity Propagation
+# Cluster 4 -> Chromosome enrichhed high rna not too low te but low protein. Any reason proteomics?
+# Cluster 8 => Super high RNA levels not very highly translated but reaches high protein levels
+# Cluster 5 = > Much more highly translated RNAs in intersting categories.
 for (i in 1:max(cluster.membership) ) { 
 units_in_cluster = c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == i]
 cluster_list = hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% units_in_cluster])
