@@ -1,0 +1,716 @@
+dim(r)
+summary(r$mskin_corr)
+summary(r$PC1)
+summary(r$slc24a5.rs1426654)
+summary(lm(r$mskin_corr~r$slc24a5.rs1426654+r$PC1))$coefficients[2,4] #2.049666e-25
+summary(lm(r$mskin_corr~r$slc24a5.rs1426654))$coefficients[2,4] #3.887897e-38
+summary(lm(r$slc24a5.rs1426654~r$PC1))$coefficients[2,4] #3.887897e-38
+summary(lm(r$mskin_corr~r$PC1))$coefficients[2,4] #2.049666e-25
+residP <- resid(lm(r$mskin_corr~r$PC1))
+residG <- resid(lm(r$slc24a5.rs1426654~r$PC1))
+summary(lm(residP~residG))$coefficients[2,4] #2.049666e-25
+summary(lm(residP~r$slc24a5.rs1426654))$coefficients[2,4] #2.049666e-25
+trig$PC1 <- format(trig$PC1,digits=5)
+write.table(trig,"trigTEST.ped",sep=" ",col.names=F,row.names=F,quote=F)
+data <- read.table("/srv/gs1/projects/tang/sophie/encodeStartingMay2013/WHIwork/GWASonIMPUTEDforHDL/chr22.hdl.txt",comment.char="#")
+?read.table
+library(R.utils)
+install
+?scan
+?read.fwf
+data <- read.table("~/Desktop/SnyderTableS1.txt",sep="\t",header=T,as.is=T)
+data[1:5,]
+names(data)
+data$median <- apply(data[,8:5960],2,median,na.rm=T)
+data$median <- apply(data[,8:5960],1,median,na.rm=T)
+summary(data$median)
+data$mean <- apply(data[,8:5960],1,mean,na.rm=T)
+summary(data$mean)
+hist(data$mean)
+hist(data$median)
+2^0.01
+2^0.1
+2^0.5
+2^0.6
+2^0.001
+miss <- function(x){#
+	sum(is.na(x))#
+}
+m <- apply(data[,8:5960],2,miss)
+64*14.5+31*7.25+67*7.35+61*4.2+20*11
+150/24
+r2[1:5,]
+load("/Users/scand/Desktop/workTransfer/dhsMatrixA.Rdata")
+dhsMatrixA[1:5,1:5]
+load("/Users/scand/Desktop/workTransfer/dhsMatrixA.Rdata")
+g <- g[g$chr==paste("chr",chr,sep=""),]#
+dim(g)
+a <- a[a$chr==chr,] #2900665      17
+300000-300000*0.78
+g <- read.table("KGannotation/protCodingGeneAnnot.txt",header=T,sep="\t",as.is=T,quote="",comment.char="#")#
+dim(g)
+summary(g$start5)
+t <- rpois(10000000,0.2)#
+table(t>4)
+24/10000000
+1/(24/10000000)
+table(t>1)
+10000000
+10000000/175389
+t <- rpois(1000000,2)
+table(t>4)
+1000000/52431
+t <- rpois(1000000,0.4)#
+table(t>4)
+1000000/50
+300000/19
+4626/5568
+5568/4626
+library("EBImage")
+f = system.file("images", "lena.png", package="EBImage")
+f
+lena = readImage(f)
+display(lena)
+spot <- readImage("~/Desktop/workTransfer/bengals/IMG_2502 Holly only web1aCROPPED.jpg")
+display(spot)
+print(spot)
+colorMode(spot) <- Grayscale
+display(spot)
+hist(spot)
+print(spot)
+dim(spot)
+print(spot[,,1])
+print(spot[,,2])
+display(spot[,,2])
+display(spot[,,3])
+display(spot[,,1])
+hist(spot[,,1])
+hist(spot[,,2])
+hist(spot[,,3])
+dim(spot)
+display(spot[100:200,100:200])
+display(spot[100:200,100:200,1])
+display(spot[100:400,100:400,1])
+display(spot[100:400,100:200,1])
+display(spot[100:400,100:350,1])
+display(spot[100:400,100:250,1])
+display(spot[100:380,100:250,1])
+display(spot[100:380,100:250,])
+spot1 <- spot[100:380,100:250,]
+?colorMode
+colorMode(spot1) <- "Color"
+display(spot1)
+display(spot1[,,1])
+display(spot1[,,])
+display(spot1[,,2])
+display(spot1[,,3])
+hist(spot1[,,])
+spot1Tred <- spot1[,,1]
+dim(spot1Tred)
+spot1Tred[spot1Tred>0.5] <-1
+display(spot1Tred)
+spot2Tg <- spot1[,,2]
+spot2Tg[spot2Tg>0.4] <-1
+display(spot2Tg)
+?channel
+spot1G <- channel(spot1,"grey")
+display(splot1G)
+display(spot1G)
+hist(spot1G)
+hist(spot1)
+par(mfrow=c(1,2))#
+hist(spot1)#
+hist(spot1G)
+spot1Gmod <- spot1G
+spot1Gmod[spot1Gmod<0.22] <- 0#
+spot1Gmod[spot1Gmod>0.22&spot1Gmod<0.4] <- 0.5#
+spot1Gmod[spot1Gmod>0.4] <- 1
+display(spot1Gmod)
+hist(spot1Gmod)
+spot1Gmod <- spot1G#
+spot1Gmod[spot1G<0.22] <- 0#
+spot1Gmod[spot1G>0.22&spot1G<0.4] <- 0.5#
+spot1Gmod[spot1G>0.4] <- 1#
+display(spot1Gmod)#
+#
+hist(spot1Gmod)
+hist(spot1G)
+fhi = matrix(1, nc=3, nr=3)
+fhi[2,2] = -8
+fhi
+display(filter2(spot1G,fhi))
+fhi[2,2] = -4
+display(filter2(spot1G,fhi))
+g[1:5,]
+load("/Users/scand/Desktop/workTransfer/done/clSpecifictyANDdhs.Rdata")
+load("/Users/scand/Desktop/workTransfer/clSpecifictyANDdhs.Rdata")
+objects()
+cl
+qlogin -l h_vmem=30G
+load("/Users/scand/Desktop/workTransfer/clSpecifictyANDdhs.Rdata")
+objects()
+cl
+cl[1:5,]
+cl <- cl[order(cl$Label),]
+cl
+log2(1)
+R
+28/174
+26/164
+34*5
+55000*0.004
+220/12
+270*0.06
+round(250)
+round(251)
+round(251,digits=-3)
+round(251,digits=-2)
+round(25,digits=-2)
+round(250,digits=-2)
+round(350,digits=-2)
+x <- c(1:1000)#
+#
+image(x)
+x <- as.matrix(x)
+image(x)
+x <- c(1:1000)#
+x <- sample(x)#
+x <- as.matrix(x)#
+image(x)
+?image
+?heat.color
+?heat.colors
+image(x,col=rainbow(500,end=4/6))
+x <- c(1:1000)#
+#x <- sample(x)#
+x <- as.matrix(x)#
+image(x,col=rainbow(500,end=4/6))
+x <- c(1:500)#
+#x <- sample(x)#
+x <- as.matrix(x)#
+par(mfrow=c(2,1))#
+image(x,col=rainbow(500,end=4/6))
+image(x,col=rainbow(500,end=4/6))
+image(x,col=rainbow(10,end=4/6))
+image(x,col=rainbow(1000,end=4/6))
+image(x,col=rainbow(3,end=4/6))
+par(mfrow=c(2,1))#
+image(x,col=rainbow(3,end=4/6))#
+x <- sample(x)#
+image(x,col=rainbow(3,end=4/6))
+x <- c(1:500)#
+#x <- sample(x)#
+x <- as.matrix(x)#
+par(mfrow=c(2,1))#
+image(x,col=rainbow(3,end=4/6))#
+y <- sample(x)#
+y <- as.matrix(y)#
+#
+image(x,col=rainbow(3,end=4/6))
+x <- c(1:500)#
+#x <- sample(x)#
+x <- as.matrix(x)#
+par(mfrow=c(2,1))#
+image(x,col=rainbow(3,end=4/6))#
+y <- sample(x)#
+y <- as.matrix(y)#
+#
+image(y,col=rainbow(3,end=4/6))
+x <- c(1:500)#
+#x <- sample(x)#
+xM <- as.matrix(x)#
+par(mfrow=c(2,1))#
+image(xM,col=rainbow(3,end=4/6))#
+y <- c(sample(x[1:100],100,replace=T),sample(x[101:200],100,replace=T),sample(x[201:300],100,replace=T),sample(x[301:400],100,replace=T),sample(x[401:500],100,replace=T))#
+yM <- as.matrix(y)#
+image(yM,col=rainbow(3,end=4/6))
+x <- c(1:500)#
+#x <- sample(x)#
+xM <- as.matrix(x)#
+par(mfrow=c(2,1))#
+image(xM,col=rainbow(1000,end=4/6))#
+y <- c(sample(x[1:100],100,replace=T),sample(x[101:200],100,replace=T),sample(x[201:300],100,replace=T),sample(x[301:400],100,replace=T),sample(x[401:500],100,replace=T))#
+yM <- as.matrix(y)#
+image(yM,col=rainbow(1000,end=4/6))
+par(mfrow=c(2,1))#
+image(xM,col=rainbow(1000,end=1/6))#
+y <- c(sample(x[1:100],100,replace=T),sample(x[101:200],100,replace=T),sample(x[201:300],100,replace=T),sample(x[301:400],100,replace=T),sample(x[401:500],100,replace=T))#
+yM <- as.matrix(y)#
+image(yM,col=rainbow(1000,end=1/6))
+par(mfrow=c(2,1))#
+image(xM,col=rainbow(1000,end=1/6))#
+y <- c(sample(x[1:100],100,replace=T),sample(x[101:200],100,replace=T),sample(x[201:300],100,replace=T),sample(x[301:400],100,replace=T),sample(x[401:500],100,replace=T))#
+yM <- as.matrix(y)#
+image(yM,col=rainbow(10000,end=1/6))
+par(mfrow=c(2,1))#
+image(xM,col=rainbow(1000,end=1/6))#
+y <- c(sample(x[1:100],100,replace=T),sample(x[101:200],100,replace=T),sample(x[201:300],100,replace=T),sample(x[301:400],100,replace=T),sample(x[401:500],100,replace=T))#
+yM <- as.matrix(y)#
+image(yM,col=rainbow(100,end=1/6))
+par(mfrow=c(2,1))#
+image(xM,col=rainbow(1000,end=6/6))#
+y <- c(sample(x[1:100],100,replace=T),sample(x[101:200],100,replace=T),sample(x[201:300],100,replace=T),sample(x[301:400],
+y <- c(sample(x[1:100],100,replace=T),sample(x[101:200],100,replace=T),sample(x[201:300],100,replace=T),sample(x[301:400],100,replace=T),sample(x[401:500],100,replace=T))#
+yM <- as.matrix(y)#
+image(yM,col=rainbow(100,end=6/6))
+2720/136000
+4000/217000
+4480/217000
+4480/22480
+300000*0.78
+260900-234000
+300000*0.78
+234000-260879
+?options
+131+23
+180007-179978
+408633+29
+865767+29
+1632529+29
+5648378 +29
+7.75/12
+8/0.6458333
+load("DHSmatrix9Mnarrow.Rdata")
+?load
+?save
+58+45.5
+236+117
+7.75*12
+7.75*13
+4
+4*7.75
+21/7.75
+16+16
+print("Hello Casey")
+for (i in 1:20){print(paste("Hello Casey", i,"\n"))}
+for (i in 1:20){print(paste("Hello Casey", i))}
+for (i in 1:20){print(paste("Hello Maman", i))}
+for (i in 1:102){print(paste("Hello Maman", i))}
+for (i in 1:1002){print(paste("Hello Maman", i))}
+250/9
+bim[1:5,]
+chr=1#
+files <- list.files("impute2out/results/")#
+files <- files[grep(paste("imputed.chr",i,"\\.",sep=""),files)]#
+files <- files[grep("summary",files)]#
+sort(files)#
+k=length(files)
+11000/300
+dim(df.all)
+table(df.all$EB.fdr<0.05)
+table(is.na(df.all$GC.Pvalue))
+annot <- read.table("ALL_SNPs_Annotation_v1",header=F,as.is=T)#
+dim(annot)#
+annot[1:5,]#
+#
+annot$snpID <- paste(annot$V1,annot$V2,sep=";")#
+#
+p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)#
+r <- read.table("qtlMapping.ribo1.21YRI.txt",header=T,as.is=T)#
+p[1:5,]#
+dim(r[is.na(r$P),])#
+table(is.na(r$P))#
+table(is.na(p$P))#
+#
+#make the same SNP ID:#
+#
+makeSNPid <- function(x){#
+	k <- unlist(strsplit(x,";"))#
+	res <- paste(k[1],k[2],sep=";")#
+	return(res)#
+}#
+#
+p$snpID <- unlist(lapply(p$SNP,makeSNPid))#
+r$snpID <- unlist(lapply(r$SNP,makeSNPid))#
+#
+p <- merge(p,annot,by="snpID")#
+dim(annot)#
+dim(p)#
+p[1:5,]#
+#
+#redo annotation:#
+splitAnnot <- function(x){#
+	k <- unlist(strsplit(x,";"))#
+	return(k[length(k)])#
+}#
+#
+p$tag <-  unlist(lapply(p$V3,splitAnnot))#
+table(p$tag)#
+p[p$tag=="A_G",]#
+annot[grep("Annotated_Start",annot$V3),]#
+p[grep("Annotated_Start",p$V3),]#
+annot[grep("ENST00000390556.2;1452",annot$snpID),]#
+p[1:5,]#
+boxplot(abs(p$STAT)~p$tag,ylim=c(0,1))#
+r <- merge(r,annot,by="snpID")#
+dim(annot)#
+dim(r)#
+r$tag <-  unlist(lapply(r$V3,splitAnnot))#
+table(r$tag)#
+#simplify:#
+r <- r[is.element(r$tag,c("3UTR","5UTR","Nonsynonymous","Synonymous")),]#
+boxplot(abs(r$STAT)~r$tag,ylim=c(0,1))#
+boxplot(abs(r$STAT)~r$tag)#
+#
+summary(abs(r$STAT[r$tag=="Nonsynonymous"]))#
+summary(abs(r$STAT[r$tag=="Synonymous"]))#
+summary(abs(r$STAT[r$tag=="3UTR"]))#
+summary(abs(r$STAT[r$tag=="5UTR"]))#
+# > summary(abs(r$STAT[r$tag=="Nonsynonymous"]))#
+     # Min.   1st Qu.    Median      Mean   3rd Qu.      Max. #
+ # 0.000922  0.350600  0.747400  0.932500  1.316000 10.970000 #
+# > summary(abs(r$STAT[r$tag=="Synonymous"]))#
+     # Min.   1st Qu.    Median      Mean   3rd Qu.      Max. #
+ # 0.000028  0.343100  0.739800  0.904600  1.274000 10.970000 #
+# > summary(abs(r$STAT[r$tag=="3UTR"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. #
+# 0.000039 0.343400 0.724000 0.884500 1.246000 9.534000 #
+# > summary(abs(r$STAT[r$tag=="5UTR"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. #
+# 0.000776 0.344200 0.746100 0.929000 1.336000 5.445000 #
+#
+summary(abs(p$STAT[p$tag=="Nonsynonymous"]))#
+summary(abs(p$STAT[p$tag=="Synonymous"]))#
+summary(abs(p$STAT[p$tag=="3UTR"]))#
+summary(abs(p$STAT[p$tag=="5UTR"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. #
+# 0.000642 0.353400 0.770600 0.955900 1.270000 7.173000 #
+# > summary(abs(p$STAT[p$tag=="Synonymous"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. #
+# 0.000324 0.333000 0.710400 0.884000 1.202000 7.286000 #
+# > summary(abs(p$STAT[p$tag=="3UTR"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. #
+# 0.000716 0.328900 0.724200 0.882300 1.222000 7.286000 #
+# > summary(abs(p$STAT[p$tag=="5UTR"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. #
+# 0.000158 0.334000 0.717000 0.873300 1.230000 5.027000 #
+#
+summary(abs(r$STAT[grep("Annotated_Start",r$V3)]))#
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. #
+ # 0.6537  0.9862  1.3860  1.3460  1.6480  2.0630 #
+#these are very significant ->but only 6...#
+length(r$STAT[grep("Annotated_Start",r$V3)]) #6#
+#
+summary(abs(r$STAT[grep("Annotated_End",r$V3)]))#
+length(r$STAT[grep("Annotated_End",r$V3)]) #0#
+summary(abs(p$STAT[grep("Annotated_Start",p$V3)]))#
+length(p$STAT[grep("Annotated_Start",p$V3)]) #1#
+p[grep("Annotated_Start",p$V3),]#
+r[r$snpID=="ENST00000359678.5;297",]#
+#
+summary(abs(r$STAT[r$tag=="Nonsynonymous"]))#
+summary(abs(r$STAT[r$tag=="Nonsynonymous"]))#
+########################try qqplots:#
+r <- r[order(r$P,decreasing=T),]#
+#
+obsAll <- sort(-log10(r$P))#
+obsAll[1:100]#
+table(obsAll==0)#
+hist(r$P)#
+obsAll <- sort(-log10(r$P))#
+exp <- sort(-log10(seq(1:length(r$P))/length(r$P)))#
+hist(seq(1:length(r$P))/length(r$P))#
+#
+par(mfrow=c(1,2))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(r$P[r$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="Nonsynonymous"]))/length(r$P[r$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(r$P[r$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="Synonymous"]))/length(r$P[r$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(r$P[r$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="5UTR"]))/length(r$P[r$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(r$P[r$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="3UTR"]))/length(r$P[r$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")#
+obsAll <- sort(-log10(p$P))#
+exp <- sort(-log10(seq(1:length(p$P))/length(p$P)))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(p$P[p$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="Nonsynonymous"]))/length(p$P[p$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(p$P[p$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="Synonymous"]))/length(p$P[p$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(p$P[p$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="5UTR"]))/length(p$P[p$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(p$P[p$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="3UTR"]))/length(p$P[p$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")#
+table(p$tag)#
+length(unique(p$ENST[p$tag=="Nonsynonymous"])) #612
+annot <- read.table("ALL_SNPs_Annotation_v1",header=F,as.is=T)#
+dim(annot)#
+annot[1:5,]
+annot$snpID <- paste(annot$V1,annot$V2,sep=";")#
+#
+p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)#
+r <- read.table("qtlMapping.ribo1.21YRI.txt",header=T,as.is=T)#
+p[1:5,]#
+dim(r[is.na(r$P),])#
+table(is.na(r$P))#
+table(is.na(p$P))
+make the same SNP ID:#
+#
+makeSNPid <- function(x){#
+	k <- unlist(strsplit(x,";"))#
+	res <- paste(k[1],k[2],sep=";")#
+	return(res)#
+}#
+#
+p$snpID <- unlist(lapply(p$SNP,makeSNPid))#
+r$snpID <- unlist(lapply(r$SNP,makeSNPid))
+p <- merge(p,annot,by="snpID")#
+dim(annot)#
+dim(p)#
+p[1:5,]#
+#
+#redo annotation:#
+splitAnnot <- function(x){#
+	k <- unlist(strsplit(x,";"))#
+	return(k[length(k)])#
+}#
+#
+p$tag <-  unlist(lapply(p$V3,splitAnnot))#
+table(p$tag)#
+p[p$tag=="A_G",]#
+annot[grep("Annotated_Start",annot$V3),]#
+p[grep("Annotated_Start",p$V3),]#
+annot[grep("ENST00000390556.2;1452",annot$snpID),]#
+p[1:5,]#
+boxplot(abs(p$STAT)~p$tag,ylim=c(0,1))
+r <- merge(r,annot,by="snpID")#
+dim(annot)#
+dim(r)#
+r$tag <-  unlist(lapply(r$V3,splitAnnot))#
+table(r$tag)#
+#simplify:#
+r <- r[is.element(r$tag,c("3UTR","5UTR","Nonsynonymous","Synonymous")),]#
+boxplot(abs(r$STAT)~r$tag,ylim=c(0,1))#
+boxplot(abs(r$STAT)~r$tag)#
+#
+summary(abs(r$STAT[r$tag=="Nonsynonymous"]))#
+summary(abs(r$STAT[r$tag=="Synonymous"]))#
+summary(abs(r$STAT[r$tag=="3UTR"]))#
+summary(abs(r$STAT[r$tag=="5UTR"]))#
+# > summary(abs(r$STAT[r$tag=="Nonsynonymous"]))#
+     # Min.   1st Qu.    Median      Mean   3rd Qu.      Max. #
+ # 0.000922  0.350600  0.747400  0.932500  1.316000 10.970000 #
+# > summary(abs(r$STAT[r$tag=="Synonymous"]))#
+     # Min.   1st Qu.    Median      Mean   3rd Qu.      Max. #
+ # 0.000028  0.343100  0.739800  0.904600  1.274000 10.970000 #
+# > summary(abs(r$STAT[r$tag=="3UTR"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. #
+# 0.000039 0.343400 0.724000 0.884500 1.246000 9.534000 #
+# > summary(abs(r$STAT[r$tag=="5UTR"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. #
+# 0.000776 0.344200 0.746100 0.929000 1.336000 5.445000 #
+#
+summary(abs(p$STAT[p$tag=="Nonsynonymous"]))#
+summary(abs(p$STAT[p$tag=="Synonymous"]))#
+summary(abs(p$STAT[p$tag=="3UTR"]))#
+summary(abs(p$STAT[p$tag=="5UTR"]))#
+    # Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
+summary(abs(p$STAT[grep("Annotated_Start",p$V3)]))#
+length(p$STAT[grep("Annotated_Start",p$V3)]) #1#
+p[grep("Annotated_Start",p$V3),]#
+r[r$snpID=="ENST00000359678.5;297",]#
+#
+summary(abs(r$STAT[r$tag=="Nonsynonymous"]))#
+summary(abs(r$STAT[r$tag=="Nonsynonymous"]))#
+########################try qqplots:#
+r <- r[order(r$P,decreasing=T),]#
+#
+obsAll <- sort(-log10(r$P))#
+obsAll[1:100]#
+table(obsAll==0)#
+hist(r$P)#
+obsAll <- sort(-log10(r$P))#
+exp <- sort(-log10(seq(1:length(r$P))/length(r$P)))#
+hist(seq(1:length(r$P))/length(r$P))#
+#
+par(mfrow=c(1,2))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(r$P[r$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="Nonsynonymous"]))/length(r$P[r$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(r$P[r$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="Synonymous"]))/length(r$P[r$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(r$P[r$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="5UTR"]))/length(r$P[r$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(r$P[r$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="3UTR"]))/length(r$P[r$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")
+obsAll <- sort(-log10(p$P))#
+exp <- sort(-log10(seq(1:length(p$P))/length(p$P)))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(p$P[p$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="Nonsynonymous"]))/length(p$P[p$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(p$P[p$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="Synonymous"]))/length(p$P[p$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(p$P[p$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="5UTR"]))/length(p$P[p$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(p$P[p$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="3UTR"]))/length(p$P[p$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")
+p[1:5,]
+ns <- p[p$tag=="Nonsynonymous",]
+ns[1:5,]
+dim(ns)
+hist(ns$P)
+s <- p[p$tag=="Synonymous",]
+dim(s)
+hist(s$P)
+par(mfrow=c(1,2))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(r$P[r$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="Nonsynonymous"]))/length(r$P[r$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(r$P[r$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="Synonymous"]))/length(r$P[r$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(r$P[r$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="5UTR"]))/length(r$P[r$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(r$P[r$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="3UTR"]))/length(r$P[r$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")#
+obsAll <- sort(-log10(p$P))#
+exp <- sort(-log10(seq(1:length(p$P))/length(p$P)))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(p$P[p$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="Nonsynonymous"]))/length(p$P[p$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(p$P[p$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="Synonymous"]))/length(p$P[p$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(p$P[p$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="5UTR"]))/length(p$P[p$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(p$P[p$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="3UTR"]))/length(p$P[p$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")
+r <- r[order(r$P,decreasing=T),]#
+#
+obsAll <- sort(-log10(r$P))#
+obsAll[1:100]#
+table(obsAll==0)#
+hist(r$P)#
+obsAll <- sort(-log10(r$P))#
+exp <- sort(-log10(seq(1:length(r$P))/length(r$P)))#
+hist(seq(1:length(r$P))/length(r$P))#
+#
+par(mfrow=c(1,2))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(r$P[r$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="Nonsynonymous"]))/length(r$P[r$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(r$P[r$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="Synonymous"]))/length(r$P[r$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(r$P[r$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="5UTR"]))/length(r$P[r$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(r$P[r$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(r$P[r$tag=="3UTR"]))/length(r$P[r$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")#
+obsAll <- sort(-log10(p$P))#
+exp <- sort(-log10(seq(1:length(p$P))/length(p$P)))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(p$P[p$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="Nonsynonymous"]))/length(p$P[p$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(p$P[p$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="Synonymous"]))/length(p$P[p$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(p$P[p$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="5UTR"]))/length(p$P[p$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(p$P[p$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(p$P[p$tag=="3UTR"]))/length(p$P[p$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")
+length(unique(ns$ENST))
+ns <- ns[ns$P<0.15,]
+ns <- ns[ns$P<0.1,]
+dim(ns)
+length(unique(ns$ENST)) #566
+ns[1:5,]
+table(ns$CHR)
+p6 <- p[p$CHROM!=6,]
+dim(p6)
+p6 <- p[p$CHR!=6,]
+dim(p6)
+p6 <- p[p$CHR!=6,]#
+dim(p6)#
+#
+obsAll <- sort(-log10(p6$P))#
+exp <- sort(-log10(seq(1:length(p6$P))/length(p6$P)))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(p6$P[p6$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="Nonsynonymous"]))/length(p6$P[p6$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(p6$P[p6$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="Synonymous"]))/length(p6$P[p6$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(p6$P[p6$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(p6$P[p$tag=="5UTR"]))/length(p6$P[p$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(p6$P[p6$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(p6$P[p$tag=="3UTR"]))/length(p6$P[p$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")
+p6 <- p[p$CHR!=6,]#
+dim(p6)#
+#
+obsAll <- sort(-log10(p6$P))#
+exp <- sort(-log10(seq(1:length(p6$P))/length(p6$P)))#
+plot(exp,obsAll,pch=".",cex=4)#
+abline(0,1)#
+obs <- sort(-log10(p6$P[p6$tag=="Nonsynonymous"]))#
+exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="Nonsynonymous"]))/length(p6$P[p6$tag=="Nonsynonymous"])))#
+points(exp,obs,pch=".",cex=4,col="red")#
+obs <- sort(-log10(p6$P[p6$tag=="Synonymous"]))#
+exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="Synonymous"]))/length(p6$P[p6$tag=="Synonymous"])))#
+points(exp,obs,pch=".",cex=4,col="blue")#
+#
+obs <- sort(-log10(p6$P[p6$tag=="5UTR"]))#
+exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="5UTR"]))/length(p6$P[p$tag=="5UTR"])))#
+points(exp,obs,pch=".",cex=4,col="green")#
+#
+obs <- sort(-log10(p6$P[p6$tag=="3UTR"]))#
+exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="3UTR"]))/length(p6$P[p6$tag=="3UTR"])))#
+points(exp,obs,pch=".",cex=4,col="purple")
