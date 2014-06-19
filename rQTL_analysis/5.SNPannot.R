@@ -1,25 +1,16 @@
-
-
-# qlogin -l h_vmem=10G
-# cd /srv/gs1/projects/tang/sophie/riboseq/qtlTesting
-# module add r
-#R
-
 options(scipen=100)  
-
-annot <- read.table("ALL_SNPs_Annotation_v1",header=F,as.is=T)
+# 675 line cont
+annot <- read.table("~/project/rQTL_analysis/ALL_SNPs_Annotation_v1",header=F,as.is=T)
 dim(annot)
 annot[1:5,]
 
 annot$snpID <- paste(annot$V1,annot$V2,sep=";")
-
-p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)
-r <- read.table("qtlMapping.ribo2.21YRI.txt",header=T,as.is=T)
-rna <- read.table("qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
-te <- read.table("qtlMapping.ribo2.CovarRNA1.21YRI.txt",header=T,as.is=T)
+p <- read.table("~/project/rQTL_analysis/qtlMapping.protein.21YRI.txt",header=T,as.is=T)
+r <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.21YRI.txt",header=T,as.is=T)
+rna <- read.table("~/project/rQTL_analysis/qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
+te <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.CovarRNA1.21YRI.txt",header=T,as.is=T)
 
 p[1:5,]
-dim(r[is.na(r$P),])
 table(is.na(r$P))
 table(is.na(p$P))
 table(is.na(rna$P))
@@ -269,16 +260,6 @@ points(exp,obs,pch=".",cex=4,col="purple")
 
 legend("bottomright",fill=c("red","blue","green","purple"),c("NonSyn","Syn","5UTR","3UTR"))
 
-
-
-
-
-
-
-
-
-
-
 p[1:5,]
 ns <- p[p$tag=="Nonsynonymous",]
 ns[1:5,]
@@ -324,45 +305,6 @@ points(exp,obs,pch=".",cex=4,col="green")
 obs <- sort(-log10(p6$P[p6$tag=="3UTR"]))
 exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="3UTR"]))/length(p6$P[p6$tag=="3UTR"])))
 points(exp,obs,pch=".",cex=4,col="purple")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -419,8 +361,9 @@ points(exp,obs,pch=".",cex=4,col="purple")
 
 
 #################################
-p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)
-r <- read.table("qtlMapping.ribo2.21YRI.txt",header=T,as.is=T)
+# COMPARING BETAS FOR THE SIGNIFICANT OR LOW P_VALUE VARIANTS
+p <- read.table("~/project/rQTL_analysis/qtlMapping.protein.21YRI.txt",header=T,as.is=T)
+r <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.21YRI.txt",header=T,as.is=T)
 p[1:5,]
 p <- merge(p,r,by="SNP")
 
@@ -452,14 +395,11 @@ hist(p$BETA.y,xlim=c(-2,2),nclass=100)
 abline(v=c(-0.25,0.25))
 
 
-p[1:5,]
 #look at it for p<0.05
-dim(p)
 pProt0.05 <- p[p$P.x<0.05,]
 dim(pProt0.05) #462
 plot(pProt0.05$BETA.x,pProt0.05$BETA.y,xlim=c(-2,2),ylim=c(-2,2))
 abline(v=0,h=0)
-abline(0,1)
 abline(0,1)
 summary(lm(pProt0.05$BETA.y~pProt0.05$BETA.x))
 #est 0.911791 
@@ -520,32 +460,12 @@ pProt0.05[1:5,]
 length(unique(pProt0.05$ENST.x)) #37
 
 
-
-#################################
-p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)
-r <- read.table("qtlMapping.ribo1.21YRI.txt",header=T,as.is=T)
-p[1:5,]
-par(mfrow=c(1,2))
-hist(p$P,nclass=1000)
-hist(r$P,nclass=1000)
-
-p <- read.table("qtlMapping.protein.21YRI.bestHits.txt",header=T,as.is=T)
-r <- read.table("qtlMapping.ribo1.21YRI.bestHits.txt",header=T,as.is=T)
-p[1:5,]
-par(mfrow=c(1,2))
-hist(p$EMP2,nclass=1000)
-hist(r$EMP2,nclass=1000)
-
-
-
-
-
 #################################################################
-best <- read.table("qtlMapping.ribo2.21YRI.bestHits.txt",header=T,as.is=T)
+best <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.21YRI.bestHits.txt",header=T,as.is=T)
 best[1:5,]
 	
 source("http://www.bioconductor.org/biocLite.R")
-biocLite("qvalue")
+#biocLite("qvalue")
 citation("qvalue")
 library(qvalue)
 
@@ -560,9 +480,7 @@ par(mfrow=c(1,2))
 hist(p,nclass=1000)
 hist(p[best$CHR!=6],nclass=1000)
 
-
-
-best <- read.table("qtlMapping.protein21YRI.bestHits.txt",header=T,as.is=T)
+best <- read.table("~/project/rQTL_analysis/qtlMapping.protein.21YRI.bestHits.txt",header=T,as.is=T)
 best[1:5,]
 
 p <- best$EMP2
@@ -576,42 +494,13 @@ par(mfrow=c(1,2))
 hist(p,nclass=1000)
 hist(p[best$CHR!=6],nclass=1000)
 
-
-
-
 plot(-log10(best$P),-log10(best$EMP1))
 plot(-log10(best$EMP2),-log10(best$EMP1))
-
-
-all <- read.table("qtlMapping.ribo.21YRI.txt",header=T,as.is=T)
-all[1:5,]
-dim(all) #40785    12
-all[1:5,]
-t <- 0.05/(dim(all)[1])
-
-sign <- all[all$P<t,]
-dim(sign)
-#9 SNPs in 4 genes
-
-
-best <- read.table("qtlMapping.ribo.21YRI.bestHit.V2.txt",header=T,as.is=T)
-best[1:10,]
-t <- 0.05/(dim(best)[1])
-sign <- all[all$EMP2<t,]
-dim(sign) #0 byt maybe there are 6: since we only do 10,000 perm min EMP2 is 9.999e-05
-best <- best[order(best$EMP2),]
-
-
-
-
-
-
-
 
 #############################
 #FDR
 ###############################
-best <- read.table("qtlMapping.protein.21YRI.bestHits.txt",header=T,as.is=T)
+best <- read.table("~/project/rQTL_analysis/qtlMapping.protein.21YRI.bestHits.txt",header=T,as.is=T)
 best[1:5,]
 library(qvalue)
 p <- best$EMP2
@@ -626,34 +515,12 @@ table(qobj$significant) #29 at FDR30%
 qobj <- qvalue(p,fdr.level=0.1)
 table(qobj$significant) #4 at FDR10%
 
-
-
 par(mfrow=c(1,2))
 hist(p,nclass=1000)
 hist(p[best$CHR!=6],nclass=1000)
 
 
-bestR1 <- read.table("qtlMapping.ribo1.21YRI.bestHits.txt",header=T,as.is=T)
-bestR1[1:5,]
-pR1 <- bestR1$EMP2
-hist(pR1,nclass=1000)
-min(pR1)
-qobj <- qvalue(pR1,fdr.level=0.5)
-qplot(qobj)
-table(qobj$significant) #227 at FDR50%
-qobj <- qvalue(pR1,fdr.level=0.3)
-qplot(qobj)
-table(qobj$significant) #55 at FDR30%
-qobj <- qvalue(pR1,fdr.level=0.1)
-qplot(qobj)
-table(qobj$significant) #0 at FDR10%
-
-par(mfrow=c(1,2))
-hist(pR1,nclass=1000)
-hist(pR1[best$CHR!=6],nclass=1000)
-
-
-bestR2 <- read.table("qtlMapping.ribo2.21YRI.bestHits.txt",header=T,as.is=T)
+bestR2 <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.21YRI.bestHits.txt",header=T,as.is=T)
 bestR2[1:5,]
 pR2 <- bestR2$EMP2
 hist(pR2,nclass=1000)
@@ -672,58 +539,7 @@ par(mfrow=c(1,2))
 hist(pR2,nclass=1000)
 hist(pR2[best$CHR!=6],nclass=1000)
 
-
-
-bestR3 <- read.table("qtlMapping.ribo3.21YRI.bestHits.txt",header=T,as.is=T)
-bestR3[1:5,]
-pR3 <- bestR3$EMP2
-hist(pR3,nclass=1000)
-min(pR3)
-qobj <- qvalue(pR3,fdr.level=0.5)
-qplot(qobj)
-table(qobj$significant) #156 at FDR50%
-qobj <- qvalue(pR3,fdr.level=0.3)
-qplot(qobj)
-table(qobj$significant) #48 at FDR30%
-qobj <- qvalue(pR3,fdr.level=0.1)
-qplot(qobj)
-table(qobj$significant) #0 at FDR10%
-
-par(mfrow=c(1,2))
-hist(pR3,nclass=1000)
-hist(pR3[best$CHR!=6],nclass=1000)
-par(mfrow=c(1,3))
-hist(pR1,nclass=200,ylim=c(0,120))
-hist(pR2,nclass=200,ylim=c(0,120))
-hist(pR3,nclass=200,ylim=c(0,120))
-
-
-
-bestR4 <- read.table("qtlMapping.ribo4.21YRI.bestHits.txt",header=T,as.is=T)
-bestR4[1:5,]
-pR4 <- bestR4$EMP2
-hist(pR4,nclass=1000)
-min(pR4)
-qobj <- qvalue(pR4,fdr.level=0.5)
-qplot(qobj)
-table(qobj$significant) #156 at FDR50%
-qobj <- qvalue(pR4,fdr.level=0.3)
-qplot(qobj)
-table(qobj$significant) #48 at FDR30%
-qobj <- qvalue(pR4,fdr.level=0.1)
-qplot(qobj)
-table(qobj$significant) #15 at FDR10%
-
-par(mfrow=c(1,2))
-hist(pR3,nclass=1000)
-hist(pR3[best$CHR!=6],nclass=1000)
-par(mfrow=c(1,3))
-hist(pR1,nclass=200,ylim=c(0,120))
-hist(pR2,nclass=200,ylim=c(0,120))
-hist(pR3,nclass=200,ylim=c(0,120))
-
-
-bestRNA1 <- read.table("qtlMapping.rna1.21YRI.bestHits.txt",header=T,as.is=T)
+bestRNA1 <- read.table("~/project/rQTL_analysis/qtlMapping.rna1.21YRI.bestHits.txt",header=T,as.is=T)
 bestRNA1[1:5,]
 pRNA1 <- bestRNA1$EMP2
 hist(pRNA1,nclass=1000)
@@ -742,63 +558,8 @@ hist(pRNA1,nclass=1000)
 hist(pRNA1[bestRNA1$CHR!=6],nclass=1000)
 
 
-
-
-
-bestRNA2 <- read.table("qtlMapping.rna2.21YRI.bestHits.txt",header=T,as.is=T)
-bestRNA2[1:5,]
-pRNA2 <- bestRNA2$EMP2
-hist(pRNA2,nclass=1000)
-min(pRNA2)
-qobj <- qvalue(pRNA2,fdr.level=0.5)
-qplot(qobj)
-table(qobj$significant) #513 at FDR50%
-qobj <- qvalue(pRNA2,fdr.level=0.3)
-qplot(qobj)
-table(qobj$significant) #100 at FDR30%
-par(mfrow=c(1,2))
-hist(pRNA2,nclass=1000)
-hist(pRNA2[bestRNA2$CHR!=6],nclass=1000)
-qobj <- qvalue(pRNA2,fdr.level=0.1)
-table(qobj$significant) #15 at FDR10%
-
-
-bestRNA3 <- read.table("qtlMapping.rna3.21YRI.bestHits.txt",header=T,as.is=T)
-bestRNA3[1:5,]
-pRNA3 <- bestRNA3$EMP2
-hist(pRNA3,nclass=1000)
-min(pRNA3)
-qobj <- qvalue(pRNA3,fdr.level=0.5)
-qplot(qobj)
-table(qobj$significant) #513 at FDR50%
-qobj <- qvalue(pRNA3,fdr.level=0.3)
-qplot(qobj)
-table(qobj$significant) #100 at FDR30%
-qobj <- qvalue(pRNA3,fdr.level=0.1)
-table(qobj$significant) #31 at FDR10%
-
-par(mfrow=c(1,2))
-hist(pRNA3,nclass=1000)
-hist(pRNA3[bestRNA3$CHR!=6],nclass=1000)
-
-
-bestRNA3 <- read.table("qtlMapping.rna3.21YRI.bestHits.txt",header=T,as.is=T)
-bestRNA3[1:5,]
-pRNA3 <- bestRNA3$EMP2
-hist(pRNA3,nclass=1000)
-min(pRNA3)
-qobj <- qvalue(pRNA3,fdr.level=0.5)
-qplot(qobj)
-table(qobj$significant) #513 at FDR50%
-qobj <- qvalue(pRNA3,fdr.level=0.3)
-qplot(qobj)
-table(qobj$significant) #100 at FDR30%
-qobj <- qvalue(pRNA3,fdr.level=0.1)
-table(qobj$significant) #31 at FDR10%
-
-
 #this is ribo2~geno+rna1
-bestR5 <- read.table("qtlMapping.ribo2.CovarRNA1.21YRI.bestHits.txt",header=T,as.is=T)
+bestR5 <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.CovarRNA1.21YRI.bestHits.txt",header=T,as.is=T)
 bestR5[1:5,]
 pR5 <- bestR5$EMP2
 hist(pR5,nclass=1000)
@@ -832,64 +593,21 @@ table(qobj$significant) #0 at FDR10%
 
 
 
-#more signal in the RNA
-p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)
-r <- read.table("qtlMapping.ribo1.21YRI.txt",header=T,as.is=T)
-p[1:5,]
-p <- merge(p,r,by="SNP")
-
-plot(p$BETA.x,p$BETA.y)
-abline(v=0,h=0)
-abline(0,1)
-plot(p$STAT.x,p$STAT.y)
-abline(v=0,h=0)
-abline(0,1)
-cor(p$BETA.x,p$BETA.y,method="spearman")
-cor(p$BETA.x,p$BETA.y,method="spearman")
-cor(p$STAT.x,p$STAT.y,method="spearman")
-
-
-
 ############
 #looking at beta values, protein rna riboseq
 ###########
 
-p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)
-r1 <- read.table("qtlMapping.ribo1.21YRI.txt",header=T,as.is=T)
-r2 <- read.table("qtlMapping.ribo2.21YRI.txt",header=T,as.is=T)
-r3 <- read.table("qtlMapping.ribo3.21YRI.txt",header=T,as.is=T)
-r2[1:5,]
-r3[1:5,]
-test <- merge(r2,r3,by="SNP")
-dim(test)
-cor(test$BETA.x,test$BETA.y,method="spearman") #0.65
-plot(test$BETA.x,test$BETA.y)
-abline(v=0,h=0)
-abline(0,1)
-par(mfrow=c(1,2))
-hist(r2$P,ylim=c(0,2700))
-hist(r3$P,ylim=c(0,2700))
-
-
-
-rn1 <- read.table("qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
-rn2 <- read.table("qtlMapping.rna2.21YRI.txt",header=T,as.is=T)
-par(mfrow=c(1,2))
+p <- read.table("~/project/rQTL_analysis/qtlMapping.protein.21YRI.txt",header=T,as.is=T)
+r2 <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.21YRI.txt",header=T,as.is=T)
+rn1 <- read.table("~/project/rQTL_analysis/qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
 hist(rn1$P,ylim=c(0,3000))
-hist(rn2$P,ylim=c(0,3000))
 
-test <- merge(rn1,rn2,by="SNP")
-cor(test$BETA.x,test$BETA.y,method="spearman") #0.79
-plot(test$BETA.x,test$BETA.y)
-
-test <- merge(rn1,r1,by="SNP")
+test <- merge(rn1,r2,by="SNP")
 dim(test)
 cor(test$BETA.x,test$BETA.y,method="spearman") #0.35
 plot(test$BETA.x,test$BETA.y)
 #pretty correlated!
 plot(-log10(test$P.x),-log10(test$P.y))
-
-
 
 test <- merge(rn1,p,by="SNP")
 cor(test$BETA.x,test$BETA.y,method="spearman") #0.30
@@ -901,200 +619,7 @@ plot(test$BETA.x,test$BETA.y)
 #pretty correlated!
 plot(-log10(test$P.x),-log10(test$P.y))
 
-#########enrichments:
-
-
-
-
-options(scipen=100)  
-
-annot <- read.table("ALL_SNPs_Annotation_v1",header=F,as.is=T)
-dim(annot)
-annot[1:5,]
-
-annot$snpID <- paste(annot$V1,annot$V2,sep=";")
-
-p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)
-r <- read.table("qtlMapping.ribo1.21YRI.txt",header=T,as.is=T)
-r3 <- read.table("qtlMapping.ribo3.21YRI.txt",header=T,as.is=T)
-rn1 <- read.table("qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
-rn2 <- read.table("qtlMapping.rna2.21YRI.txt",header=T,as.is=T)
-
-
-makeSNPid <- function(x){
-	k <- unlist(strsplit(x,";"))
-	res <- paste(k[1],k[2],sep=";")
-	return(res)
-}
-
-p$snpID <- unlist(lapply(p$SNP,makeSNPid))
-r$snpID <- unlist(lapply(r$SNP,makeSNPid))
-r3$snpID <- unlist(lapply(r3$SNP,makeSNPid))
-rn2$snpID <- unlist(lapply(rn2$SNP,makeSNPid))
-rn1$snpID <- unlist(lapply(rn1$SNP,makeSNPid))
-
-#redo annotation:
-splitAnnot <- function(x){
-	k <- unlist(strsplit(x,";"))
-	return(k[length(k)])
-}
-
-p <- merge(p,annot,by="snpID")
-p[1:5,]
-p$tag <-  unlist(lapply(p$V3,splitAnnot))
-table(p$tag)
-
-r <- merge(r,annot,by="snpID")
-r$tag <-  unlist(lapply(r$V3,splitAnnot))
-table(r$tag)
-#simplify:
-
-r3 <- merge(r3,annot,by="snpID")
-r3$tag <-  unlist(lapply(r3$V3,splitAnnot))
-table(r3$tag)
-
-rn2 <- merge(rn2,annot,by="snpID")
-rn2$tag <-  unlist(lapply(rn2$V3,splitAnnot))
-table(rn2$tag)
-
-rn1 <- merge(rn1,annot,by="snpID")
-rn1$tag <-  unlist(lapply(rn1$V3,splitAnnot))
-table(rn1$tag)
-
-
-
-
-
-
-
-
-
-########################try qqplots:
-
-#compare the qq plots for ribo1 and ribo3
-obsAll <- sort(-log10(r$P))
-exp <- sort(-log10(seq(1:length(r$P))/length(r$P)))
-#hist(seq(1:length(r$P))/length(r$P))
-
-par(mfrow=c(1,1))
-plot(exp,obsAll,pch=".",cex=4,main="ribo1",xlim=c(0,6),ylim=c(0,10))
-abline(0,1)
-obsAll <- sort(-log10(r3$P))
-exp <- sort(-log10(seq(1:length(r3$P))/length(r3$P)))
-points(exp,obsAll,pch=".",cex=4,col="blue")
-#ribo3 is not as good as 1
-
-
-#compare the qq plots for rna1 and rna2
-obsAll <- sort(-log10(rn1$P))
-exp <- sort(-log10(seq(1:length(rn1$P))/length(rn1$P)))
-par(mfrow=c(1,1))
-plot(exp,obsAll,pch=".",cex=4,main="rna",xlim=c(0,6),ylim=c(0,10))
-abline(0,1)
-obsAll <- sort(-log10(rn2$P))
-exp <- sort(-log10(seq(1:length(rn2$P))/length(rn2$P)))
-points(exp,obsAll,pch=".",cex=4,col="blue")
-#rna2 not as good as rna1
-
-
-
-
-
-
-
-
-
-
-
-
-#hist(seq(1:length(r$P))/length(r$P))
-
-par(mfrow=c(2,2))
-
-obsAll <- sort(-log10(r$P))
-obsAll[1:100]
-table(obsAll==0)
-#hist(r$P)
-obsAll <- sort(-log10(r$P))
-exp <- sort(-log10(seq(1:length(r$P))/length(r$P)))
-
-plot(exp,obsAll,pch=".",cex=4,main="ribo1",xlim=c(0,6),ylim=c(0,10))
-abline(0,1)
-obs <- sort(-log10(r$P[r$tag=="Nonsynonymous"]))
-exp <- sort(-log10(seq(1:length(r$P[r$tag=="Nonsynonymous"]))/length(r$P[r$tag=="Nonsynonymous"])))
-points(exp,obs,pch=".",cex=4,col="red")
-obs <- sort(-log10(r$P[r$tag=="Synonymous"]))
-exp <- sort(-log10(seq(1:length(r$P[r$tag=="Synonymous"]))/length(r$P[r$tag=="Synonymous"])))
-points(exp,obs,pch=".",cex=4,col="blue")
-
-obs <- sort(-log10(r$P[r$tag=="5UTR"]))
-exp <- sort(-log10(seq(1:length(r$P[r$tag=="5UTR"]))/length(r$P[r$tag=="5UTR"])))
-points(exp,obs,pch=".",cex=4,col="green")
-
-obs <- sort(-log10(r$P[r$tag=="3UTR"]))
-exp <- sort(-log10(seq(1:length(r$P[r$tag=="3UTR"]))/length(r$P[r$tag=="3UTR"])))
-points(exp,obs,pch=".",cex=4,col="purple")
-
-
-p6 <- p[p$CHR!=6,]
-dim(p6)
-
-obsAll <- sort(-log10(p6$P))
-exp <- sort(-log10(seq(1:length(p6$P))/length(p6$P)))
-plot(exp,obsAll,pch=".",cex=4,xlim=c(0,6),ylim=c(0,10),main="protein no chr 6")
-abline(0,1)
-obs <- sort(-log10(p6$P[p6$tag=="Nonsynonymous"]))
-exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="Nonsynonymous"]))/length(p6$P[p6$tag=="Nonsynonymous"])))
-points(exp,obs,pch=".",cex=4,col="red")
-obs <- sort(-log10(p6$P[p6$tag=="Synonymous"]))
-exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="Synonymous"]))/length(p6$P[p6$tag=="Synonymous"])))
-points(exp,obs,pch=".",cex=4,col="blue")
-
-obs <- sort(-log10(p6$P[p6$tag=="5UTR"]))
-exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="5UTR"]))/length(p6$P[p6$tag=="5UTR"])))
-points(exp,obs,pch=".",cex=4,col="green")
-
-obs <- sort(-log10(p6$P[p6$tag=="3UTR"]))
-exp <- sort(-log10(seq(1:length(p6$P[p6$tag=="3UTR"]))/length(p6$P[p6$tag=="3UTR"])))
-points(exp,obs,pch=".",cex=4,col="purple")
-
-
-
-obsAll <- sort(-log10(rn1$P))
-exp <- sort(-log10(seq(1:length(rn1$P))/length(rn1$P)))
-plot(exp,obsAll,pch=".",cex=4,xlim=c(0,6),ylim=c(0,10),main="rna1")
-abline(0,1)
-obs <- sort(-log10(rn1$P[rn1$tag=="Nonsynonymous"]))
-exp <- sort(-log10(seq(1:length(rn1$P[rn1$tag=="Nonsynonymous"]))/length(rn1$P[rn1$tag=="Nonsynonymous"])))
-points(exp,obs,pch=".",cex=4,col="red")
-obs <- sort(-log10(rn1$P[rn1$tag=="Synonymous"]))
-exp <- sort(-log10(seq(1:length(rn1$P[rn1$tag=="Synonymous"]))/length(rn1$P[rn1$tag=="Synonymous"])))
-points(exp,obs,pch=".",cex=4,col="blue")
-
-obs <- sort(-log10(rn1$P[rn1$tag=="5UTR"]))
-exp <- sort(-log10(seq(1:length(rn1$P[rn1$tag=="5UTR"]))/length(rn1$P[rn1$tag=="5UTR"])))
-points(exp,obs,pch=".",cex=4,col="green")
-
-obs <- sort(-log10(rn1$P[rn1$tag=="3UTR"]))
-exp <- sort(-log10(seq(1:length(rn1$P[rn1$tag=="3UTR"]))/length(rn1$P[rn1$tag=="3UTR"])))
-points(exp,obs,pch=".",cex=4,col="purple")
-
-
-
-
-
-
-#look at the beta between riboseq and rna
-
-############
-#looking at beta values, ribo rna riboseq
-###########
-
-p <- read.table("qtlMapping.protein.21YRI.txt",header=T,as.is=T)
-r1 <- read.table("qtlMapping.ribo1.21YRI.txt",header=T,as.is=T)
-rn1 <- read.table("qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
-
-test <- merge(rn1,r1,by="SNP")
+test <- merge(rn1,r2,by="SNP")
 cor(test$BETA.x,test$BETA.y,method="spearman") #0.35
 plot(test$BETA.x,test$BETA.y)
 testS <- test[test$P.x<0.05&test$P.y<0.05,]
@@ -1110,10 +635,6 @@ abline(v=0,h=0)
 testS[1:5,]
 testS$sign <- testS$BETA.x*testS$BETA.y
 opp <- testS$SNP[testS$sign<0]
-
-
-
-
 
 
 test <- merge(rn1,p,by="SNP")
@@ -1133,12 +654,7 @@ points(testS$BETA.x[is.element(testS$SNP,opp)],testS$BETA.y[is.element(testS$SNP
 
 
 
-
-
-
-
-
-test <- merge(r1,p,by="SNP")
+test <- merge(r2,p,by="SNP")
 dim(test)
 cor(test$BETA.x,test$BETA.y,method="spearman") #0.35
 plot(test$BETA.x,test$BETA.y)
@@ -1155,25 +671,17 @@ plot(testS$BETA.x,testS$BETA.y,main="beta for protein and rna\n for associations
 abline(0,1)
 abline(v=0,h=0)
 
-
-
-
-
-
-
 ############
 #looking at p value for rna assoc of ribo QTLs
 ###########
 
 rb <- read.table("qtlMapping.ribo2.21YRI.bestHits.txt",header=T,as.is=T)
 rna <- read.table("qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
-rnaB <- read.table("qtlMapping.rna2.21YRI.bestHits.txt",header=T,as.is=T)
 dim(rb)
 dim(rna)
 rb[1:5,]
 hist(rb$EMP2,nclass=50)
 hist(rna$EMP2,nclass=50)
-hist(rnaB$EMP2,nclass=50)
 
 par(mfrow=c(2,2))
 sign <- rb$SNP[rb$EMP2<0.05]
@@ -1203,18 +711,9 @@ qobj <- qvalue(rna$P[is.element(rna$SNP,sign)],fdr.level=0.5)
 qplot(qobj) #pie0 is 19%
 
 
-
-
-
-
 par(mfrow=c(1,2))
 hist(pRNA1,nclass=1000)
 hist(pRNA1[bestRNA1$CHR!=6],nclass=1000)
-
-
-
-
-
 
 ###########plot the hist of emp2
 bestR2 <- read.table("qtlMapping.ribo2.21YRI.bestHits.txt",header=T,as.is=T)
@@ -1259,8 +758,3 @@ abline(v=0,h=0)
 # rna1       22         128       488  (qn)
 # rna2       15         100       513   (sv20)
 # rna3       31         164       398   (sv3)
-
-
-
-
-
