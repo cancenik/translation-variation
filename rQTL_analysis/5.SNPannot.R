@@ -1,5 +1,4 @@
 options(scipen=100)  
-# 675 line cont
 annot <- read.table("~/project/rQTL_analysis/ALL_SNPs_Annotation_v1",header=F,as.is=T)
 dim(annot)
 annot[1:5,]
@@ -117,9 +116,6 @@ p[grep("Annotated_Start",p$V3),]
 r[r$snpID=="ENST00000359678.5;297",]
 
 summary(abs(r$STAT[r$tag=="Nonsynonymous"]))
-summary(abs(r$STAT[r$tag=="Nonsynonymous"]))
-
-
 
 ########################try qqplots:
 r <- r[order(r$P,decreasing=T),]
@@ -230,9 +226,6 @@ points(exp,obs,pch=".",cex=4,col="green")
 obs <- sort(-log10(te$P[te$tag=="3UTR"]))
 exp <- sort(-log10(seq(1:length(te$P[te$tag=="3UTR"]))/length(te$P[te$tag=="3UTR"])))
 points(exp,obs,pch=".",cex=4,col="purple")
-
-
-
 
 #protein not 6
 
@@ -675,8 +668,8 @@ abline(v=0,h=0)
 #looking at p value for rna assoc of ribo QTLs
 ###########
 
-rb <- read.table("qtlMapping.ribo2.21YRI.bestHits.txt",header=T,as.is=T)
-rna <- read.table("qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
+rb <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.21YRI.bestHits.txt",header=T,as.is=T)
+rna <- read.table("~/project/rQTL_analysis/qtlMapping.rna1.21YRI.txt",header=T,as.is=T)
 dim(rb)
 dim(rna)
 rb[1:5,]
