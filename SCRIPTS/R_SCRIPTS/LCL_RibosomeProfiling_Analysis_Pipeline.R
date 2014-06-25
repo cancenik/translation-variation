@@ -968,9 +968,17 @@ high_diff = which(cor_diff > .2)
 high_diff = high_diff[p.adjust ( min_cor_pval_unit, method = "holm")[high_diff] < .05]
 cor_diff_sigs = rep (0,times=length(cor_diff))
 cor_diff_sigs[high_diff] = 1
+pdf(file="~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSOM_CorDiff.2_Pval05.pdf", width=4, height=3.5)
 plot.kohonen(supersom.nonzero.ind, property=cor_diff_sigs, type = "property", 
              palette.name=function(x){colorpanel(x,'white', 'red')}, ncolors=2, 
              main= "Significant Correlation Difference")
+dev.off()
+
+cor_diff_sig_units = which ( as.logical(cor_diff_sigs) == T)
+cor_diff_sig_units_rna = cor_diff_sig_units[which (min_cor_pval_unit_type[cor_diff_sig_units] == 1 )]
+cor_diff_sig_units_ribo = cor_diff_sig_units[which (min_cor_pval_unit_type[cor_diff_sig_units] == 2 )]
+cor_diff_sig_units_rna_genes_index = supersom.nonzero.ind$unit.classif %in% cor_diff_sig_units_rna
+cor_diff_sig_units_ribo_genes_index = supersom.nonzero.ind$unit.classif %in% cor_diff_sig_units_ribo
 
 plot.kohonen(supersom.nonzero.ind, type="counts", palette.name=function(x){colorpanel(x, 'white', 'red')}, ncolors=20)
 pdf(file="~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSOM_Codes.pdf", width=4, height=10.5)
@@ -1194,11 +1202,25 @@ FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 # min_cor_pval_unit
 # max_cor_unit
 # row.names(som.exp.prot$data$ribo)
-relative.som.background = hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo))
+
+## RELATIVE SOM IDS ARE EQUAL TO row.names(linfeng_protein_ribo_rna[,type_prot=="Prot"][,-22])
+
+
+relative.som.background = hgnc_to_ensg_convert(row.names(linfeng_protein_ribo_rna[,type_prot=="Prot"][,-22]))
 addList(david, relative.som.background, idType="ENSEMBL_GENE_ID", listName="relative.som.background", listType="Background")
-# Relative Som Each Unit - Enrichment
+# # Relative Som Enrichment for significant correlation difference
+# # cor_diff_sig_units_rna_genes_index ; No significant enrichment for either RNA or Ribo
+# cor_diff_sig_rna_ids = hgnc_to_ensg_convert (
+#   row.names(linfeng_protein_ribo_rna[,type_prot=="Prot"][,-22])[cor_diff_sig_units_rna_genes_index]
+#   )
+# addList(david, cor_diff_sig_rna_ids, idType="ENSEMBL_GENE_ID", listName="cor_diff_sig_rna_ids", listType="Gene")
+# setCurrentBackgroundPosition(david,2)
+# AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+# FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+
+# Relative SOM UnitWise Enrichment -- 3 cells with enrichment
 for (i in 1:(supersom.nonzero.ind$grid$xdim *supersom.nonzero.ind$grid$ydim) ) { 
-  unit_list = hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo)[supersom.nonzero.ind$unit.classif == i ] )
+  unit_list = hgnc_to_ensg_convert(row.names(linfeng_protein_ribo_rna[,type_prot=="Prot"][,-22])[supersom.nonzero.ind$unit.classif == i ] )
   addList(david, unit_list, idType="ENSEMBL_GENE_ID", listName=paste("RelativeSOMUnitList", i, sep="_" ), listType="Gene")
   setCurrentBackgroundPosition(david,2)
   AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
@@ -1210,67 +1232,41 @@ for (i in 1:(supersom.nonzero.ind$grid$xdim *supersom.nonzero.ind$grid$ydim) ) {
   }
 }
 
-# Relative SOM Enrichment grouped by best correlating feature
-# Here we took a cumulative approach. We can also do a clustering or unit-wise approach
-pval_threshold = 0.05
-table(min_cor_pval_unit_type[which(p.adjust(min_cor_pval_unit) < pval_threshold)])
-rna_cor = c()
-ribo_cor = c()
-for ( i in which(p.adjust(min_cor_pval_unit) < pval_threshold)) { 
- if (min_cor_pval_unit_type[i] == 1) { 
-   rna_cor = c(rna_cor, 
-               hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo)[supersom.nonzero.ind$unit.classif == i ] ) ) 
- }
- else if (min_cor_pval_unit_type[i] == 2) { 
-   ribo_cor = c(ribo_cor, 
-               hgnc_to_ensg_convert(row.names(supersom.nonzero.ind$data$ribo)[supersom.nonzero.ind$unit.classif == i ] ) )             
- }
-}
-length(ribo_cor)
-length(rna_cor)
+# # Relative SOM Enrichment grouped by best correlating feature
+# # Here we took a cumulative approach. We can also do a clustering or unit-wise approach
+# # There is a no significant enrichment with the cumulative approach
+# 
+# pval_threshold = 0.05
+# table(min_cor_pval_unit_type[which(p.adjust(min_cor_pval_unit, method = "holm") < pval_threshold)])
+# rna_cor = c()
+# ribo_cor = c()
+# for ( i in which(p.adjust(min_cor_pval_unit, method = "holm") < pval_threshold)) { 
+#  if (min_cor_pval_unit_type[i] == 1) { 
+#    rna_cor = c(rna_cor, 
+#                hgnc_to_ensg_convert(
+#     row.names(linfeng_protein_ribo_rna[,type_prot=="Prot"][,-22])[supersom.nonzero.ind$unit.classif == i ] ) ) 
+#  }
+#  else if (min_cor_pval_unit_type[i] == 2) { 
+#    ribo_cor = c(ribo_cor, 
+#                hgnc_to_ensg_convert(
+#     row.names(linfeng_protein_ribo_rna[,type_prot=="Prot"][,-22])[supersom.nonzero.ind$unit.classif == i ] ) )             
+#  }
+# }
+# length(ribo_cor)
+# length(rna_cor)
+# 
+# addList(david, rna_cor, idType="ENSEMBL_GENE_ID", listName="rna_cor", listType="Gene")
+# addList(david, ribo_cor, idType="ENSEMBL_GENE_ID", listName="ribo_cor", listType="Gene")
+# setCurrentBackgroundPosition(david,2)
+# AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
+# FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
+# FilteredChart$Term
+# 
+# significantly_correlated_rnacells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 1),] 
+# significantly_correlated_ribocells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2),] 
 
-addList(david, rna_cor, idType="ENSEMBL_GENE_ID", listName="rna_cor", listType="Gene")
-addList(david, ribo_cor, idType="ENSEMBL_GENE_ID", listName="ribo_cor", listType="Gene")
-setCurrentBackgroundPosition(david,2)
-AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
-FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
-FilteredChart$Term
 
-significantly_correlated_rnacells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 1),] 
-significantly_correlated_ribocells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2),] 
-
-ap.cluster.relative.rna = apcluster(negDistMat(r=2), significantly_correlated_rnacells)
-ap.cluster.relative.ribo = apcluster(negDistMat(r=2), significantly_correlated_ribocells)
-
-for (j in 1: length(ap.cluster.relative.rna@clusters) ) {
-  rna_unit_j =  which(p.adjust(min_cor_pval_unit) < pval_threshold & 
-                        min_cor_pval_unit_type == 1)[ap.cluster.relative.rna@clusters[[j]]]  
-  cluster_j = hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[which(som.exp.prot$unit.classif %in% rna_unit_j) ])            
-  addList(david, cluster_j, idType="ENSEMBL_GENE_ID", listName=paste("rna_unit",j, sep="_"), listType="Gene")
-  setCurrentBackgroundPosition(david,2)
-  AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
-  FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
-  if (length(FilteredChart$Term) != 0L) { 
-    out.file = paste("Relative.SOM.RNACluster", j, sep="_")
-    out.df = data.frame(Term=FilteredChart$Term, FE = FilteredChart$Fold.Enrichment, FDR= FilteredChart$FDR )  
-    write.table(out.df, file = paste('~/project/CORE_DATAFILES/GO_RESULTS/', out.file, sep=""),row.names=F)
-  }
-}
-
-for (j in 1:length(ap.cluster.relative.ribo@clusters) ) { 
-  ribo_unit_j =  which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2)
-  cluster_j = hgnc_to_ensg_convert(row.names(som.exp.prot$data$ribo)[which(som.exp.prot$unit.classif %in% ribo_unit_j) ])            
-  addList(david, cluster_j, idType="ENSEMBL_GENE_ID", listName=paste("ribo_unit",j, sep="_"), listType="Gene")
-  setCurrentBackgroundPosition(david,2)
-  AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
-  FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
-  if (length(FilteredChart$Term) != 0L) { 
-    out.file = paste("Relative.SOM.RiboCluster", j, sep="_")
-    out.df = data.frame(Term=FilteredChart$Term, FE = FilteredChart$Fold.Enrichment, FDR= FilteredChart$FDR )  
-    write.table(out.df, file = paste('~/project/CORE_DATAFILES/GO_RESULTS/', out.file, sep=""),row.names=F)
-  }
-}
-
+##############END OF GO ANALYSIS
 
 #### ANALYSES BASED ON JUST RIBOSOME PROFILING
 ### KOZAK SEQUENCE ANALYSIS
