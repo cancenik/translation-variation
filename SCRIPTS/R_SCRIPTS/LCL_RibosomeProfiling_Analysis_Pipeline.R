@@ -510,13 +510,14 @@ for (i in 1:length(ribo_replicate_mean_prot)) {
 
 length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
-# 0.38; Strict 0.65
+# 0.38; Strict 0.65; non-sig .16
 median(across_ind_rna_correlation)
-# 0.42; Strict 0.67
+# 0.42; Strict 0.67; non-sig .18
 ks.test (across_ind_ribo_correlation, across_ind_rna_correlation )
 # p= 0.03; Strict p= 0.61
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
 # FDR ~ 20% 0.0004 ; For Non-zero variation %10 FDR is 0.0002
+# FDR ~10: for non-sig 0.00002 for rna ; for ribo  0.00005 - At 20% FDR -> 6 significant RNA; 13 sig Ribo
 pval_cutoff <- 0.0002
 color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
 color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
@@ -1232,15 +1233,17 @@ for (i in 1:(supersom.nonzero.ind$grid$xdim *supersom.nonzero.ind$grid$ydim) ) {
   }
 }
 
-# # Relative SOM Enrichment grouped by best correlating feature
-# # Here we took a cumulative approach. We can also do a clustering or unit-wise approach
-# # There is a no significant enrichment with the cumulative approach
-# 
+## Relative SOM Enrichment grouped by best correlating feature
+## Here we took a cumulative approach. We can also do a clustering or unit-wise approach
+## There is a no significant enrichment with the cumulative approach
+## No dependence on whether we threshold on the spearman
+
 # pval_threshold = 0.05
+# spearman_threhold = .5
 # table(min_cor_pval_unit_type[which(p.adjust(min_cor_pval_unit, method = "holm") < pval_threshold)])
 # rna_cor = c()
 # ribo_cor = c()
-# for ( i in which(p.adjust(min_cor_pval_unit, method = "holm") < pval_threshold)) { 
+# for ( i in which(p.adjust(min_cor_pval_unit, method = "holm") < pval_threshold & max_cor_unit > spearman_threhold)) { 
 #  if (min_cor_pval_unit_type[i] == 1) { 
 #    rna_cor = c(rna_cor, 
 #                hgnc_to_ensg_convert(
@@ -1264,7 +1267,7 @@ for (i in 1:(supersom.nonzero.ind$grid$xdim *supersom.nonzero.ind$grid$ydim) ) {
 # 
 # significantly_correlated_rnacells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 1),] 
 # significantly_correlated_ribocells <- cbind(som.exp.prot$codes$rna,som.exp.prot$codes$ribo, som.exp.prot$codes$prot)[which(p.adjust(min_cor_pval_unit) < pval_threshold & min_cor_pval_unit_type == 2),] 
-
+# 
 
 ##############END OF GO ANALYSIS
 
