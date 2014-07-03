@@ -63,7 +63,7 @@ cor(rna_ribo$BETA.x,rna_ribo$BETA.y,method="spearman") #0.35
 plot(rna_ribo$BETA.x,rna_ribo$BETA.y)
 # Ribo QTL P < .05
 rna_ribo_ribosig <- rna_ribo[rna_ribo$EMP2.y<0.003,]
-cor(rna_ribo_ribosig$BETA.x,rna_ribo_ribosig$BETA.y,method="spearman") #0.81
+cor(rna_ribo_ribosig$BETA.x,rna_ribo_ribosig$BETA.y,method="spearman") #0.86
 
 # Color the points by rna EMP2
 pval_colors <- rep("Black", times = length(rna_ribo_ribosig$BETA.x ))
@@ -95,13 +95,13 @@ rb <- read.table("~/project/rQTL_analysis/qtlMapping.ribo2.21YRI.bestHits.txt",h
 # Use p and rn1
 # rb$EMP2<0.0029 ~ fdr 30
 sign <- rb$SNP[rb$EMP2<0.0029]
-pdf (file = "~/Google_Drive/Manuscript Figures/rQTLs/PVals_as_eQTL.pdf",
+pdf (file = "~/Google_Drive/Manuscript Figures/roQTLs//PVals_as_eQTL.pdf",
      width= 6, height = 5)
-hist(rn1$P[is.element(rn1$SNP,sign)],nclass=50,main="P as eQTL of SNP with\n p.emp2<0.01 (n=67, fdr=30%) for rQTL",xlab="P as eQTL ")
+hist(rn1$P[is.element(rn1$SNP,sign)],xlim= c(0,1), nclass=50,main="P as eQTL of SNP with\n rb$EMP2<0.0029 (n=67, fdr=30%)",xlab="P as eQTL ")
 dev.off()
-pdf (file = "~/Google_Drive/Manuscript Figures/rQTLs/PVals_as_pQTL.pdf",
+pdf (file = "~/Google_Drive/Manuscript Figures/roQTLs/PVals_as_pQTL.pdf",
      width= 6, height = 5)
-hist(p$EMP2[is.element(p$SNP,sign)],nclass=50,main="EMP2 as pQTL of SNP with\np.emp2<0.01 (n=16, fdr=30%) for rQTL",xlab="EMP2 p as pQTL ")
+hist(p$P[is.element(p$SNP,sign)],nclass=50, xlim= c(0,1), main="P as pQTL of SNP with\n rb$EMP2<0.0029 (n=16, fdr=30%) for rQTL",xlab="P as pQTL ")
 dev.off()
 
 #results:  fdr10      fdr30    fdr50
