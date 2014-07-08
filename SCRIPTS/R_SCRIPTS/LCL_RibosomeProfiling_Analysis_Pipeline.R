@@ -287,21 +287,30 @@ length(ribo_sig_random)
 length(rna_sig_random)
 length(joint_sig_random)
 length (random_effect_p_val_ribo )
+significant_difference_counts = matrix (nrow=2, ncol=2)
+significant_difference_counts[,1] <- c(length (random_effect_p_val_ribo ) -length(rna_sig_random), length(rna_sig_random) ) 
+significant_difference_counts[,2] <- c(length (random_effect_p_val_ribo ) - length(ribo_sig_random), length(ribo_sig_random) )
+
+pdf ('~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Number_Variable.pdf', width = 5, height = 3)
+barplot (significant_difference_counts, ylab = "Number of Genes", names = c("RNA Expression", "Ribosome Occupancy"),
+         col = c("Yellow2", "Green2"), main = "", beside=T)
+dev.off()
 random_effect_df = data.frame (ID = hgnc_to_ensg_convert(row.names(v3)), 
     RNA_Stat=random_effect_stat_rna, RNA_P = p.adjust(random_effect_p_val_rna, method = "holm"),
     RIBO_Stat=random_effect_stat_ribo, RIBO_P = p.adjust(random_effect_p_val_ribo, method = "holm"))
 # write.table(random_effect_df, file = paste(data_dir , "Random_Effect_Model_stats_DF_Table.txt", sep = "" ), row.names=F )
 
 ## VENN DIAGRAM REPRESENTATION
+## ADD Color
 venn.mixed <- venn.diagram(
   x = list (
     Ribosome_Ocuppancy = ribo_sig_random,
     RNA_Expression = rna_sig_random
   ),
-  filename = NULL
+  filename = NULL,  fill = c("Yellow2", "Green2")
 );
 
-#pdf("Variation_Mixed_Model_Venn.pdf");
+#pdf("~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Variation_Mixed_Model_VennColored.pdf");
 grid.draw(venn.mixed);
 #dev.off();
 
@@ -464,8 +473,16 @@ linfeng_protein_na <- linfeng_protein_common[apply(is.na(linfeng_protein_common)
 linfeng_protein_ribo_rna <- merge (v3$E, linfeng_protein_na, by.x="row.names", by.y="HGNC")
 linfeng_protein_ribo_rna_nonzero_variance <- 
   merge (v3$E[sig_ribo_rna_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
+linfeng_protein_ribo_rna_zero_variance <- 
+  merge (v3$E[-sig_ribo_rna_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
+linfeng_protein_ribo_rna_strict_variance <- 
+  merge (v3$E[sig_ribo_rna_random_strict,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
 
 ## SWITCHED TO USING THE NONZERO VARIANCE SET
+# We will add the zero_variance ones on top 
+## INSTEAD OF EXTRACTING THE FUNCTION WE WILL SWITCH THE DATASET
+# linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_zero_variance
+# linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_strict_variance
 linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_nonzero_variance
 
 row.names(linfeng_protein_ribo_rna) <- linfeng_protein_ribo_rna[,1]
@@ -547,11 +564,14 @@ across_ind_rna_ribo <- as.numeric(lapply(c2, function(x){ cor(x[,2], x[,4],metho
 p1 <- hist(across_ind_ribo_correlation,40)
 p2 <- hist(across_ind_rna_correlation,40)
 p3 <- hist(across_ind_rna_ribo, 40)
-# Try adding separate histograms
+# Try adding separate histograms -- We can plot all three on the same with different transparency
+# For strict and variable; Non-variable can be added as grayscale. We need to plot as Density
 #pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations.pdf", width=9, height=6.5)
+#pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_ZeroVariance.pdf", width=4, height=11)
+#pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Strict.pdf", width=4, height=11)
 pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Separate.pdf", width=4, height=11)
 par(mfrow = c(3, 1))
-plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="Ribosome Occupancy-Protein Level")
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), ylim=c(0,.2), xlab="Spearman Correlation Coefficient", main="Ribosome Occupancy-Protein Level")
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="RNA Expression-Protein Level")
 #     add=T)
 plot(p3, col=rgb(0,1,0,1/4), xlim=c(-1,1),ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="RNA Expression-Ribosome Occupancy")
@@ -737,10 +757,14 @@ plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="proper
 plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation",contin=T,zlim=c(-1,1), palette.name=redblue_cols, ncolors=11)
 
-plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,1],palette.name=redblue_cols, ncolors=11, contin=T, main="Ribosome Occupancy" )
-plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,2],palette.name=redblue_cols, ncolors=11, contin=T, main="RNA Expression" )
-plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],palette.name=redblue_cols, ncolors=11, contin=T, main="Translation Efficiency" )
-plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=redblue_cols, ncolors=11, contin=T, main="Protein Level")
+pdf('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/Absolute_SOM_Codes.pdf', width=7, height=5)
+par(mfrow = c(2, 2))
+plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,1],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Ribosome Occupancy", zlim = c(0,1))
+plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,2],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="RNA Expression" , zlim = c(0,1))
+plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Translation Efficiency", zlim = c(0,1))
+plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Protein Level", zlim = c(0,1))
+dev.off()
+
 plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
 
 #plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Dark2")}, bgcol= brewer.pal(7,"Set2")[cluster.membership])
@@ -767,15 +791,17 @@ cluster.membership[ap.cluster@clusters[[i]]] <- i
 # Change colors for inside the piechars and cluster colors so they separate out much more nicely
 colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
 absolute.som$codes <- absolute.som$codes[,c(2,1,3,4)]
-pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterColored.pdf", width=12, height=8)
-plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,1:3], scale=T,  palette.name=function(x) {brewer.pal(x,"Blues")}, bgcol= brewer.pal(length(ap.cluster@clusters),"YlOrRd")[cluster.membership])
+pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterColored_New.pdf", width=12, height=8)
+plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,c(1,3)], scale=T, 
+palette.name=function(x) {c("Yellow2", "Green2")}, bgcol= gray.colors(length(ap.cluster@clusters), start=0, end=1)[cluster.membership])
+# ADD CLUSTER BOUNDARIES FOR 
 dev.off()
 absolute.som$codes[ap.cluster@exemplars, ]
 aggregate(absolute.som$codes , by = list(cluster.membership), FUN=mean)
 #abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
 #plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
 
-#add.cluster.boundaries(absolute.som, cluster.membership)
+add.cluster.boundaries(absolute.som, cluster.membership, col = "blue")
 # corSimMat(method="spearman")
 plot(ap.cluster, absolute.som$codes)
 heatmap(ap.cluster)
@@ -1552,12 +1578,14 @@ barplot2(df.summary$MEAN[c(6,4,10)], space = 0, col=c("blue", "salmon", "green")
 # Generate this table by merging kozak data with translation efficiency table (grand_mean_te)
 kozak_seq_score_table <- read.table('~/project/CORE_DATAFILES/Kozak_IDs_PWM_Strand_Seq_HGNC_TE_Ribo.bed')
 
+kruskal_pvals = c()
 # Translation Efficiency and Ribosome Occupancy are different somewhat
 f <- function(s, letter) strsplit(s, "")[[1]][letter]
 g <- function(s) strsplit(s, "")[[1]][c(4,10)]
 for ( j in c(1:6, 10:11)) { 
 seq_factor <- sapply(as.character(kozak_seq_score_table$V7), f, letter=j)
 k1 <- kruskal.test(kozak_seq_score_table$V9 ~ as.factor(seq_factor))
+kruskal_pvals = c(kruskal_pvals, k1$p.value)
 print (k1$p.value * 8)
 print(kruskalmc(kozak_seq_score_table$V9 ~ as.factor(seq_factor), probs=.05/8))
 if (j < 7) { 
@@ -1572,6 +1600,29 @@ boxplot(kozak_seq_score_table$V9 ~ as.factor(seq_factor),
 #dev.off()
 #boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(4,6), notch=T, range=.001, cex=.2)
 }
+
+# Add Heatmap of p-values from the kruskal vallis
+# Use rect for drawing; Use -log10p 
+adjusted_p_kruskal = log10(p.adjust (kruskal_pvals, method = "bonferroni"))
+# We can also draw 6*7 matrix with p-values for each change
+# Fill color = colorpanel(1024,'blue', 'red')
+i = rep(1,1+abs(min(adjusted_p_kruskal)))
+j = seq(1,1+abs(min(adjusted_p_kruskal)))
+# 20 color heatmap legend
+colors = c( colorpanel(17,'red', "#FFEFEF"), colorpanel(3,'white', 'blue') )
+pdf ("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Color_Key_Kozak_Significance.pdf", width=3, height=3)
+plot(NA, type = "n", ann=FALSE, xlim=c(1,2),ylim=c(1,2+abs(min(adjusted_p_kruskal))),xaxt="n",yaxt="n",bty="n")
+rect(i,0+j, i+1, 1+j, col =colors)
+dev.off()
+# Log-pvalue of the effect on translation efficiency summarized by position
+p_corresponding_colors = rev(colors)[round(abs(adjusted_p_kruskal))+1]
+i_cor = rep(1, length(p_corresponding_colors))
+j_cor = seq(1, length(p_corresponding_colors))
+
+pdf ("~/Google_Drive/Manuscript Figures/Kozak_Analysis/KozakPosition_Significance.pdf", width=3, height=3)
+plot(NA, type = "n", ann=FALSE, xlim=c(1,2),ylim=c(1,2+abs(min(adjusted_p_kruskal))),xaxt="n",yaxt="n",bty="n")
+rect(i_cor,0+j_cor, i_cor+1, 1+j_cor, col = p_corresponding_colors)
+dev.off()
 
 ###
 
