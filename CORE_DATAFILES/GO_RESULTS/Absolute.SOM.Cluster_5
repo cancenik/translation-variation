@@ -23,9 +23,9 @@
 "GO:0048770~pigment granule" 2.69024186822352 0.000424485804007002
 "GO:0010498~proteasomal protein catabolic process" 2.45276292335116 0.000677589352815477
 "GO:0043161~proteasomal ubiquitin-dependent protein catabolic process" 2.45276292335116 0.000677589352815477
-"GO:0000375~RNA splicing, via transesterification reactions" 2.05934409161895 0.000685862084615074
 "GO:0000377~RNA splicing, via transesterification reactions with bulged adenosine as nucleophile" 2.05934409161895 0.000685862084615074
 "GO:0000398~nuclear mRNA splicing, via spliceosome" 2.05934409161895 0.000685862084615074
+"GO:0000375~RNA splicing, via transesterification reactions" 2.05934409161895 0.000685862084615074
 "GO:0031396~regulation of protein ubiquitination" 2.52941176470588 0.000760485009976275
 "REACT_13635:Regulation of activated PAK-2p34 by proteasome mediated degradation" 2.41132913735653 0.000829574569150004
 "GO:0031399~regulation of protein modification process" 2.12144212523719 0.00271699180083296
@@ -38,6 +38,6 @@
 "GO:0046365~monosaccharide catabolic process" 2.72398190045249 0.0160328129562903
 "GO:0031401~positive regulation of protein modification process" 2.25701357466063 0.0206019247301348
 "hsa00010:Glycolysis / Gluconeogenesis" 2.54549214226634 0.0218984512636133
-"GO:0046164~alcohol catabolic process" 2.59110473457676 0.0419511073840195
 "GO:0044275~cellular carbohydrate catabolic process" 2.59110473457676 0.0419511073840195
+"GO:0046164~alcohol catabolic process" 2.59110473457676 0.0419511073840195
 "REACT_11045:Signaling by Wnt" 2.05890410958904 0.0352755863955778

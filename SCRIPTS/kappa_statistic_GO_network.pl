@@ -15,9 +15,9 @@
 
 use strict; 
 use Getopt::Long; 
-use constant GO_ID => 5; 
-use constant PVAL => 4;
-use constant LOD =>2 ;
+use constant GO_ID => 0; 
+use constant PVAL => 2;
+use constant LOD =>1;
 
 my ( $go_annotations, $go_results) = ""; 
 GetOptions ("go_annotations=s" => \$go_annotations, 

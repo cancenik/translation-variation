@@ -18,6 +18,7 @@ source('~/project/kohonen2/R/plot.kohonen.R')
 library("lme4")
 library("RLRsim")
 library ("VennDiagram")
+par(las = 1)
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
@@ -291,10 +292,10 @@ significant_difference_counts = matrix (nrow=2, ncol=2)
 significant_difference_counts[,1] <- c(length (random_effect_p_val_ribo ) -length(rna_sig_random), length(rna_sig_random) ) 
 significant_difference_counts[,2] <- c(length (random_effect_p_val_ribo ) - length(ribo_sig_random), length(ribo_sig_random) )
 
-pdf ('~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Number_Variable.pdf', width = 5, height = 3)
+#pdf ('~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Number_Variable.pdf', width = 5, height = 3)
 barplot (significant_difference_counts, ylab = "Number of Genes", names = c("RNA Expression", "Ribosome Occupancy"),
          col = c("Yellow2", "Green2"), main = "", beside=T)
-dev.off()
+#dev.off()
 random_effect_df = data.frame (ID = hgnc_to_ensg_convert(row.names(v3)), 
     RNA_Stat=random_effect_stat_rna, RNA_P = p.adjust(random_effect_p_val_rna, method = "holm"),
     RIBO_Stat=random_effect_stat_ribo, RIBO_P = p.adjust(random_effect_p_val_ribo, method = "holm"))
@@ -569,14 +570,14 @@ p3 <- hist(across_ind_rna_ribo, 40)
 #pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations.pdf", width=9, height=6.5)
 #pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_ZeroVariance.pdf", width=4, height=11)
 #pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Strict.pdf", width=4, height=11)
-pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Separate.pdf", width=4, height=11)
+#pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Separate.pdf", width=4, height=11)
 par(mfrow = c(3, 1))
 plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), ylim=c(0,.2), xlab="Spearman Correlation Coefficient", main="Ribosome Occupancy-Protein Level")
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="RNA Expression-Protein Level")
 #     add=T)
 plot(p3, col=rgb(0,1,0,1/4), xlim=c(-1,1),ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="RNA Expression-Ribosome Occupancy")
 #     add=T)
-dev.off()
+#dev.off()
 legend(.4,170,c("RNA Expression-\nProtein Expression", "Ribosome Occupancy-\nProtein Expression", "RNA Expression-\nRibosome Occupancy"), 
        yjust =0.5, x.intersp=0.2, y.intersp=1.5,bty="n", border="white", fill=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4), rgb(0,1,0,1/4)), cex=.9)
 #dev.off()
@@ -651,6 +652,35 @@ grand_mean_rna <- apply (v3$E[,type=="RNA"], 1, median)
 grand_mean_rna  <- data.frame(HGNC=joint_count_ids, grand_mean_rna)
 grand_mean_ribo <- apply(v3$E[,type=="Ribo"], 1, median)
 grand_mean_ribo <- data.frame (HGNC=joint_count_ids, grand_mean_ribo)
+# USE i = 18 ; 20 to create example barplots showing the median to indicate what goes into SOM
+exemp1 = 18
+exemp2 = 20
+
+pdf('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/Example_Genes.pdf', height=12, width=4)
+par (mfrow = c(6,1), las = 1)
+
+rna_cols = rep ("gray", length(v3$E[exemp1,type=="RNA"]))
+ribo_cols = rep ("gray", length(v3$E[exemp1,type=="Ribo"]))
+te_cols = rep ("gray", length(te_fit4$coefficients[exemp1,]))
+rna_cols[which(v3$E[exemp1,type=="RNA"] == median(v3$E[exemp1,type=="RNA"]))] = "red"
+ribo_cols[which.min(abs (v3$E[exemp1,type=="Ribo"] - median(v3$E[exemp1,type=="Ribo"] )))] = "red"
+te_cols [which.min(abs (te_fit4$coefficients[exemp1,] - median(te_fit4$coefficients[exemp1,]))) ] = "red"
+barplot(v3$E[exemp1,type=="RNA"], names.arg = F , col=rna_cols )
+barplot(v3$E[exemp1,type=="Ribo"] , names.arg = F , col=ribo_cols)
+barplot (te_fit4$coefficients[exemp1,], names.arg = F , col=te_cols)
+
+rna_cols = rep ("gray", length(v3$E[exemp2,type=="RNA"]))
+ribo_cols = rep ("gray", length(v3$E[exemp2,type=="Ribo"]))
+te_cols = rep ("gray", length(te_fit4$coefficients[exemp2,]))
+rna_cols[which(v3$E[exemp2,type=="RNA"] == median(v3$E[exemp2,type=="RNA"]))] = "red"
+ribo_cols[which.min(abs (v3$E[exemp2,type=="Ribo"] - median(v3$E[exemp2,type=="Ribo"] )))] = "red"
+te_cols [which.min(abs (te_fit4$coefficients[exemp2,] - median(te_fit4$coefficients[exemp2,]))) ] = "red"
+
+barplot(v3$E[exemp2,type=="RNA"], names.arg = F , col=rna_cols)
+barplot(v3$E[exemp2,type=="Ribo"], names.arg = F , col=ribo_cols)
+barplot (te_fit4$coefficients[exemp2,], names.arg = F , col=te_cols)
+
+dev.off()
 
 # Calculated TE correlates weakly with Protein amount but better than ratio
 # It might be again due to polysome profile shape
@@ -757,13 +787,13 @@ plot.kohonen(absolute.som, property=ribo_prot_cor_across_genes_som, type="proper
 plot.kohonen(absolute.som, property=rna_prot_cor_across_genes_som, type="property", main = "RNA Expression Protein Correlation", contin=T,zlim=c(-1,1),palette.name=redblue_cols, ncolors=11)
 plot.kohonen(absolute.som, property=te_prot_cor_across_genes_som, type="property", main="Translation Efficiency Protein Correlation",contin=T,zlim=c(-1,1), palette.name=redblue_cols, ncolors=11)
 
-pdf('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/Absolute_SOM_Codes.pdf', width=7, height=5)
+#pdf('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/Absolute_SOM_Codes.pdf', width=7, height=5)
 par(mfrow = c(2, 2))
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,1],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Ribosome Occupancy", zlim = c(0,1))
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,2],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="RNA Expression" , zlim = c(0,1))
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Translation Efficiency", zlim = c(0,1))
 plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Protein Level", zlim = c(0,1))
-dev.off()
+#dev.off()
 
 plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
 
@@ -791,17 +821,23 @@ cluster.membership[ap.cluster@clusters[[i]]] <- i
 # Change colors for inside the piechars and cluster colors so they separate out much more nicely
 colnames(absolute.som$codes) <- c("Ribosome Occupancy", "RNA Expression", "Translation Efficiency", "Protein Level")
 absolute.som$codes <- absolute.som$codes[,c(2,1,3,4)]
-pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterColored_New.pdf", width=12, height=8)
+#pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterColored_New.pdf", width=12, height=8)
 plot.kohonen(absolute.som, type="classes", property=absolute.som$codes[,c(1,3)], scale=T, 
 palette.name=function(x) {c("Yellow2", "Green2")}, bgcol= gray.colors(length(ap.cluster@clusters), start=0, end=1)[cluster.membership])
-# ADD CLUSTER BOUNDARIES FOR 
-dev.off()
+# ADD CLUSTER BOUNDARIES FOR GO ENRICHED CATEGORIES
+#dev.off()
+
 absolute.som$codes[ap.cluster@exemplars, ]
 aggregate(absolute.som$codes , by = list(cluster.membership), FUN=mean)
 #abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
 #plot.kohonen(absolute.som, type = "property", property=abs.som.which.max,palette.name=redblue_cols, ncolors=3, contin=F, main="Which.Max" )
 
-add.cluster.boundaries(absolute.som, cluster.membership, col = "blue")
+cluster.membership5 = cluster.membership8 = cluster.membership
+cluster.membership5[cluster.membership5 != 5] = 1
+cluster.membership8[cluster.membership8 != 8] = 1
+add.cluster.boundaries(absolute.som, cluster.membership5, col = "blue")
+add.cluster.boundaries(absolute.som, cluster.membership8, col = "red")
+
 # corSimMat(method="spearman")
 plot(ap.cluster, absolute.som$codes)
 heatmap(ap.cluster)
@@ -847,18 +883,18 @@ if (floor(sqrt(total_cells.nonzerovar_individuals/1.3333)) %% 2 == 0) {
 }
 xdim.ind = floor(total_cells.nonzerovar_individuals/ydim.ind + 0.5)
 
-mean_distance <- 1
-for (i in 1:100) { 
-   set.seed(i)
-   supersom.nonzero.ind = supersom (data = across_individual_supersom_nonzero_variance_data, 
-                                    grid=somgrid ( xdim.ind, ydim.ind, "hexagonal"), 
-                                    toroidal=T, contin = T)
-   
-  if (mean(supersom.nonzero.ind$distances) < mean_distance) { 
-     my_seed <- i
-     mean_distance <- mean(supersom.nonzero.ind$distances)
-   }
-}
+# mean_distance <- 1
+# for (i in 1:100) { 
+#    set.seed(i)
+#    supersom.nonzero.ind = supersom (data = across_individual_supersom_nonzero_variance_data, 
+#                                     grid=somgrid ( xdim.ind, ydim.ind, "hexagonal"), 
+#                                     toroidal=T, contin = T)
+#    
+#   if (mean(supersom.nonzero.ind$distances) < mean_distance) { 
+#      my_seed <- i
+#      mean_distance <- mean(supersom.nonzero.ind$distances)
+#    }
+# }
 set.seed(61)
 supersom.nonzero.ind = supersom (data = across_individual_supersom_nonzero_variance_data, 
                                  grid=somgrid ( xdim.ind, ydim.ind, "hexagonal"), 
@@ -995,11 +1031,11 @@ high_diff = which(cor_diff > .2)
 high_diff = high_diff[p.adjust ( min_cor_pval_unit, method = "holm")[high_diff] < .05]
 cor_diff_sigs = rep (0,times=length(cor_diff))
 cor_diff_sigs[high_diff] = 1
-pdf(file="~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSOM_CorDiff.2_Pval05.pdf", width=4, height=3.5)
+#pdf(file="~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSOM_CorDiff.2_Pval05.pdf", width=4, height=3.5)
 plot.kohonen(supersom.nonzero.ind, property=cor_diff_sigs, type = "property", 
              palette.name=function(x){colorpanel(x,'white', 'red')}, ncolors=2, 
              main= "Significant Correlation Difference")
-dev.off()
+#dev.off()
 
 cor_diff_sig_units = which ( as.logical(cor_diff_sigs) == T)
 cor_diff_sig_units_rna = cor_diff_sig_units[which (min_cor_pval_unit_type[cor_diff_sig_units] == 1 )]
@@ -1008,10 +1044,10 @@ cor_diff_sig_units_rna_genes_index = supersom.nonzero.ind$unit.classif %in% cor_
 cor_diff_sig_units_ribo_genes_index = supersom.nonzero.ind$unit.classif %in% cor_diff_sig_units_ribo
 
 plot.kohonen(supersom.nonzero.ind, type="counts", palette.name=function(x){colorpanel(x, 'white', 'red')}, ncolors=20)
-pdf(file="~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSOM_Codes.pdf", width=4, height=10.5)
+#pdf(file="~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/SuperSOM_Codes.pdf", width=4, height=10.5)
 par(mfrow = c(3, 1))
 plot.kohonen(supersom.nonzero.ind)
-dev.off()
+#dev.off()
 # Compared to random median correlation per unit is not much higher
 # However, there are many more units where the correlations are higher. 
 # > quantile(max_cor_unit)
@@ -1047,9 +1083,14 @@ go_dag_joint = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociat
 go_dag_ribo = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/Ribo_Only_funcassociate_results.tsv_Kappa_Network.sif'
 go_dag_rna = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/RNA_Only_funcassociate_results.tsv_Kappa_Network.sif'
 
+go_dag_abs5 = read.table('~/project/CORE_DATAFILES/GO_RESULTS/Absolute.SOM.Cluster_GOID_Only_5_Kappa_Network.sif', header = T)
+go_dag_abs8 = read.table('~/project/CORE_DATAFILES/GO_RESULTS/Absolute.SOM.Cluster_GOID_Only_8_Kappa_Network.sif', header = T)
+
 go_dag = read.table(go_dag_joint, header=T)
 go_dag = read.table(go_dag_ribo, header=T)
 go_dag = read.table(go_dag_rna, header=T)
+go_dag = go_dag_abs5
+go_dag = go_dag_abs8
 
 # Calculates kappa similarity between two binary vectors 
 calculate_kappa <- function (a1, a2) { 
@@ -1209,7 +1250,7 @@ for (i in 1:max(cluster.membership) ) {
 units_in_cluster = c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == i]
 cluster_list = hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% units_in_cluster])
 addList(david, cluster_list, idType="ENSEMBL_GENE_ID", listName=paste("cluster_list", i, sep="_" ), listType="Gene")
-setCurrentBackgroundPosition(david,3)
+setCurrentBackgroundPosition(david,2)
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
 FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
   if (length(FilteredChart$Term) != 0L) { 
@@ -1610,19 +1651,19 @@ i = rep(1,1+abs(min(adjusted_p_kruskal)))
 j = seq(1,1+abs(min(adjusted_p_kruskal)))
 # 20 color heatmap legend
 colors = c( colorpanel(17,'red', "#FFEFEF"), colorpanel(3,'white', 'blue') )
-pdf ("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Color_Key_Kozak_Significance.pdf", width=3, height=3)
+#pdf ("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Color_Key_Kozak_Significance.pdf", width=3, height=3)
 plot(NA, type = "n", ann=FALSE, xlim=c(1,2),ylim=c(1,2+abs(min(adjusted_p_kruskal))),xaxt="n",yaxt="n",bty="n")
 rect(i,0+j, i+1, 1+j, col =colors)
-dev.off()
+#dev.off()
 # Log-pvalue of the effect on translation efficiency summarized by position
 p_corresponding_colors = rev(colors)[round(abs(adjusted_p_kruskal))+1]
 i_cor = rep(1, length(p_corresponding_colors))
 j_cor = seq(1, length(p_corresponding_colors))
 
-pdf ("~/Google_Drive/Manuscript Figures/Kozak_Analysis/KozakPosition_Significance.pdf", width=3, height=3)
+#pdf ("~/Google_Drive/Manuscript Figures/Kozak_Analysis/KozakPosition_Significance.pdf", width=3, height=3)
 plot(NA, type = "n", ann=FALSE, xlim=c(1,2),ylim=c(1,2+abs(min(adjusted_p_kruskal))),xaxt="n",yaxt="n",bty="n")
 rect(i_cor,0+j_cor, i_cor+1, 1+j_cor, col = p_corresponding_colors)
-dev.off()
+#dev.off()
 
 ###
 
