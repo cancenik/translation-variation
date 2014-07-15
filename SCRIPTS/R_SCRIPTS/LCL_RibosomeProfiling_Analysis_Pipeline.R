@@ -565,6 +565,43 @@ across_ind_rna_ribo <- as.numeric(lapply(c2, function(x){ cor(x[,2], x[,4],metho
 p1 <- hist(across_ind_ribo_correlation,40)
 p2 <- hist(across_ind_rna_correlation,40)
 p3 <- hist(across_ind_rna_ribo, 40)
+
+# Calculate Density
+p1$counts = p1$counts / sum(p1$counts) 
+p2$counts = p2$counts / sum(p2$counts) 
+p3$counts = p3$counts / sum(p3$counts) 
+
+# Make replicate variables
+# ribo_nonzero = p1
+# rna_nonzero = p2
+# rr_nonzero = p3
+# 
+# ribo_strict = p1
+# rna_strict = p2
+# rr_strict = p3
+# 
+# ribo_zero = p1
+# rna_zero = p2
+# rr_zero = p3
+
+#pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_ALLSUPER.pdf", width=5, height=9)
+par(mfrow = c(3, 1))
+# USE rgb(204/255,204/255,204/255,1/8) for no-variance
+# COL opaque for strict ; alpha 1/4 COL for union
+plot(ribo_zero, col=rgb(204/255,204/255,204/255,1/8), xlim=c(-1,1), ylim=c(0,.15), xlab="Spearman Correlation Coefficient", main="Ribosome Occupancy-Protein Level")
+#plot(ribo_nonzero, col=rgb(0,0,1,1/4), xlim=c(-1,1), ylim=c(0,.15), add=T)
+plot(ribo_strict, col=rgb(0,0,1,1/2), xlim=c(-1,1), ylim=c(0,.15), add=T)
+
+plot(rna_zero, col=rgb(204/255,204/255,204/255,1/8), xlim=c(-1,1), ylim=c(0,.15), xlab="Spearman Correlation Coefficient", main="RNA Expression-Protein Level")
+#plot(rna_nonzero, col=rgb(1,0,,1/4), xlim=c(-1,1), ylim=c(0,.15), add=T)
+plot(rna_strict, col=rgb(1,0,0,1/2), xlim=c(-1,1), ylim=c(0,.15), add=T)
+
+plot(rr_zero, col=rgb(204/255,204/255,204/255,1/8), xlim=c(-1,1), ylim=c(0,.15), xlab="Spearman Correlation Coefficient", main="RNA Expression-Ribosome Occupancy")
+#plot(rr_nonzero, col=rgb(0,1,0,1/4), xlim=c(-1,1), ylim=c(0,.15), add=T)
+plot(rr_strict, col=rgb(0,1,0,1/2), xlim=c(-1,1), ylim=c(0,.15), add=T)
+
+#dev.off()
+
 # Try adding separate histograms -- We can plot all three on the same with different transparency
 # For strict and variable; Non-variable can be added as grayscale. We need to plot as Density
 #pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations.pdf", width=9, height=6.5)
@@ -572,7 +609,7 @@ p3 <- hist(across_ind_rna_ribo, 40)
 #pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Strict.pdf", width=4, height=11)
 #pdf(file = "~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Individual_Correlations_Separate.pdf", width=4, height=11)
 par(mfrow = c(3, 1))
-plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), ylim=c(0,.2), xlab="Spearman Correlation Coefficient", main="Ribosome Occupancy-Protein Level")
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-1,1), ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="Ribosome Occupancy-Protein Level")
 plot(p2, col=rgb(1,0,0,1/4), xlim=c(-1,1), ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="RNA Expression-Protein Level")
 #     add=T)
 plot(p3, col=rgb(0,1,0,1/4), xlim=c(-1,1),ylim=c(0,50), xlab="Spearman Correlation Coefficient", main="RNA Expression-Ribosome Occupancy")
