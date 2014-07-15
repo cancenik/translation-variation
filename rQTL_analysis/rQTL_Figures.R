@@ -69,7 +69,7 @@ cor(rna_ribo_ribosig$BETA.x,rna_ribo_ribosig$BETA.y,method="spearman") #0.86
 pval_colors <- rep("Black", times = length(rna_ribo_ribosig$BETA.x ))
 pval_colors[rna_ribo_ribosig$P.x < .05] <- "Red"
 
-pdf (file = "~/Google_Drive/Manuscript Figures/rQTLs/Comparison_of_Betas.pdf",
+pdf (file = "~/Google_Drive/Manuscript Figures/roQTLs/Comparison_of_Betas.pdf",
      width= 4, height = 4)
 plot(rna_ribo_ribosig$BETA.x,rna_ribo_ribosig$BETA.y, xlab="RNA Beta", ylab= "Ribo Beta",
      tck=.02, pch=19, cex=.65, col = pval_colors)
@@ -78,16 +78,21 @@ abline(v=0,h=0)
 dev.off()
 
 # We will probably not going to compare protein Betas
-# prot_ribo = merge( p, r2, by ="SNP")
-# cor(prot_ribo$BETA.x,prot_ribo$BETA.y,method="spearman") #0.29
-# plot(prot_ribo$BETA.x,prot_ribo$BETA.y)
-# # Nominal Ribo QTL P < .05
-# prot_ribo_ribosig <- prot_ribo[prot_ribo$EMP2.y<0.01,]
-# cor(prot_ribo_ribosig$BETA.x,prot_ribo_ribosig$BETA.y,method="spearman") #0.64
-# plot(prot_ribo_ribosig$BETA.x,prot_ribo_ribosig$BETA.y,  ylab= "Ribo Beta", xlab= "Protein Beta",
-#      tck=.02, pch=19, cex=.65,  xlim = c(-1, 1), ylim= c(-1,1))
-# abline(0,1)
-# abline(v=0,h=0)
+prot_ribo = merge( p, r2, by ="SNP")
+cor(prot_ribo$BETA.x,prot_ribo$BETA.y,method="spearman") #0.29
+plot(prot_ribo$BETA.x,prot_ribo$BETA.y)
+# Nominal Ribo QTL P < .05
+prot_ribo_ribosig <- prot_ribo[prot_ribo$EMP2.y<0.003,]
+cor(prot_ribo_ribosig$BETA.x,prot_ribo_ribosig$BETA.y,method="spearman") #0.67
+pval_colors <- rep("Black", times = length(prot_ribo_ribosig$BETA.x))
+pval_colors[prot_ribo_ribosig$P.x < .05] <- "Red"
+pdf (file = "~/Google_Drive/Manuscript Figures/roQTLs//Comparison_of_RiboProtBetas.pdf",
+     width= 4, height = 4)
+plot(prot_ribo_ribosig$BETA.x,prot_ribo_ribosig$BETA.y,  ylab= "Ribo Beta", xlab= "Protein Beta",
+     tck=.02, pch=19, cex=.65,  xlim = c(-.75, .75), ylim= c(-.75,.75),  col = pval_colors)
+abline(0,1)
+abline(v=0,h=0)
+dev.off()
 
 # PLOT OF RNA P-VALs for SIGNIFICANT RIBO QTLS at FDR 30% -- BEST HITS
 # PLOT OF PROTEIN P_VALs
