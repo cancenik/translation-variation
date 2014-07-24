@@ -1294,6 +1294,8 @@ setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_A
 #   }
 # }
 
+
+
 # Enrichment by clustered Affinity Propagation
 # Cluster 4 -> Chromosome enrichhed high rna not too low te but low protein. Any reason proteomics?
 # Cluster 8 => Super high RNA levels not very highly translated but reaches high protein levels
@@ -1301,38 +1303,22 @@ setAnnotationCategories (david, c("GOTERM_CC_ALL", "GOTERM_BP_ALL", "GOTERM_MF_A
 for (i in 1:max(cluster.membership) ) { 
 units_in_cluster = c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == i]
 cluster_list = hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% units_in_cluster])
+out.file = paste("Absolute.SOM.Cluster", i, sep="_")
+write.table(cluster_list, row.names=F, file = paste('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/',out.file, sep="") )
+
 addList(david, cluster_list, idType="ENSEMBL_GENE_ID", listName=paste("cluster_list", i, sep="_" ), listType="Gene")
 setCurrentBackgroundPosition(david,2)
 AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.01, count=2L)
 FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
   if (length(FilteredChart$Term) != 0L) { 
-    out.file = paste("Absolute.SOM.Cluster", i, sep="_")
     out.df = data.frame(Term=FilteredChart$Term, FE = FilteredChart$Fold.Enrichment, FDR= FilteredChart$FDR )  
     write.table(out.df, file = paste('~/project/CORE_DATAFILES/GO_RESULTS/', out.file, sep=""),row.names=F)    
   }
 }
 
-cluster5 =  hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == 5]])
-cluster8 =  hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == 8]])
+## Repeat these analysis with FUNCASSOCIATE
+write.table(hgnc_to_ensg_convert (abs.som.genes), '~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/AbsSOMBackground', row.names=F)
 
-# MAKE A HASHTABLE OF GO TERMS
-GO = hash()
-fmat5 = matrix(nrow=2, ncol =2)
-fmat8 = matrix(nrow=2, ncol =2)
-dag = readLines('~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/funcassociate_go_associations.txt')
-dag = dag[-c(1:23)]
-for (line in dag) {
-  lineelements = unlist(strsplit(line,split="\t")[[1]])
-  GOterm = lineelements[1]
-  Genes  = unlist(strsplit(lineelements[3],split=" ")[[1]])
-  
-  fmat5[1,] = c( length (intersect (cluster5, Genes)) , length(setdiff(cluster5, Genes)))
-  fmat5[2,] = c (length(setdiff( Genes, cluster5) ), TOTAL - length(union (cluster5, Genes)) ) 
-  fmat8[1,] = c( length (intersect (cluster8, Genes)) , length(setdiff(cluster8, Genes)))
-  fmat8[2,] = c (length(setdiff( Genes, cluster8) ), TOTAL - length(union (cluster8, Genes)) ) 
-  
-  GO[[GOterm]] = c ( fisher.test(fmat5)$estimate, fisher.test(fmat8)$estimate)  
-}
   
 ### RELATIVE SOM ENRICHMENT
 # Possibly three classes, high difference in spearmant correlation difference
@@ -2509,3 +2495,48 @@ AnnotCHART <- getFunctionalAnnotationChart(david, threshold=0.001, count=2L)
 filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 
 # setCurrentGeneListPosition(david, 1)
+
+# MAKE A HASHTABLE OF GO TERMS
+# Comparative graph doesn't look very pretty 
+# DAVID RESULTS and manual fisher calculation does not agree well
+# Better strategy is output all cluster ids into separate files and run funcassociate
+GO = hash()
+fmat5 = matrix(nrow=2, ncol =2)
+fmat8 = matrix(nrow=2, ncol =2)
+dag = readLines('~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/funcassociate_go_associations.txt')
+dag = dag[-c(1:23)]
+for (line in dag) {
+  lineelements = unlist(strsplit(line,split="\t")[[1]])
+  GOterm = lineelements[1]
+  Genes  = unlist(strsplit(lineelements[3],split=" ")[[1]])
+  fmat5[1,] = c( length (intersect (cluster5, Genes)) , length(setdiff(cluster5, Genes)))
+  fmat5[2,] = c (length(setdiff( Genes, cluster5) ), 9651-length(union (cluster5, Genes)) ) 
+  fmat8[1,] = c( length (intersect (cluster8, Genes)) , length(setdiff(cluster8, Genes)))
+  fmat8[2,] = c (length(setdiff( Genes, cluster8) ), 9651-length(union (cluster8, Genes)) ) 
+  GO[[GOterm]] = as.numeric(c ( fisher.test(fmat5)$estimate, fisher.test(fmat8)$estimate,  fisher.test(fmat5, conf.level = 0.9)$conf.int,  fisher.test(fmat8, conf.level = 0.9)$conf.int)   )
+}
+
+c5 = read.table('~/project/CORE_DATAFILES/GO_RESULTS/Absolute.SOM.Cluster_GOID_Only_5', stringsAsFactors=F)
+c8 = read.table('~/project/CORE_DATAFILES/GO_RESULTS/Absolute.SOM.Cluster_GOID_Only_8', stringsAsFactors=F)
+
+listofkeys = union( c5[,1], c8[,1])
+barplotdata = matrix(nrow = 2, ncol = length(listofkeys))
+colnames(barplotdata) <- rep("GO", length(listofkeys))
+i = 1
+for (key in listofkeys) {
+  if (!is.null (GO[[key]])) {
+    if(GO[[key]][1] / GO[[key]][2] > 5 | GO[[key]][1] / GO[[key]][2] < .2) {
+      barplotdata[,i] = c(GO[[key]][1], GO[[key]][2])
+      colnames(barplotdata)[i] = key
+      i= i+1
+    }
+    else {
+      barplotdata = barplotdata[,-i]    
+    }
+  }
+  else {
+    barplotdata = barplotdata[,-i]
+  }
+}
+barplot(barplotdata, beside=T, horiz = T, cex.names = .5, col = c("blue", "magenta"))
+
