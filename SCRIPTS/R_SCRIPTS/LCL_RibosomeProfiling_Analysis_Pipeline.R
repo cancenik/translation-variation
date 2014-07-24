@@ -1135,8 +1135,8 @@ go_dag_joint = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociat
 go_dag_ribo = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/Ribo_Only_funcassociate_results.tsv_Kappa_Network.sif'
 go_dag_rna = '~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/RNA_Only_funcassociate_results.tsv_Kappa_Network.sif'
 
-go_dag_abs5 = read.table('~/project/CORE_DATAFILES/GO_RESULTS/Absolute.SOM.Cluster_GOID_Only_5_Kappa_Network.sif', header = T)
-go_dag_abs8 = read.table('~/project/CORE_DATAFILES/GO_RESULTS/Absolute.SOM.Cluster_GOID_Only_8_Kappa_Network.sif', header = T)
+go_dag_abs5 = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/RESULTS/funcassociate_results_Cluster5_2_foldenriched.tsv_Kappa_Network.sif', header = T)
+go_dag_abs8 = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/RESULTS/funcassociate_results_Cluster8_2_foldenriched.tsv_Kappa_Network.sif', header = T)
 
 go_dag = read.table(go_dag_joint, header=T)
 go_dag = read.table(go_dag_ribo, header=T)
@@ -1167,6 +1167,7 @@ for ( i in 1:dim(go_dag)[1]) {
 #write(first_kappas, file = paste(go_dag_joint, "modified", sep="_"))
 #write(first_kappas, file = paste(go_dag_ribo, "modified", sep="_"))
 #write(first_kappas, file = paste(go_dag_rna, "modified", sep="_"))
+write(first_kappas, file = paste(go_dag_abs5, "modified", sep="_"))
 
 ### PATHWAY ENRICHMENT ANALYSIS WITH RDAVID
 david<-DAVIDWebService$new(email="ccenik@stanford.edu")
