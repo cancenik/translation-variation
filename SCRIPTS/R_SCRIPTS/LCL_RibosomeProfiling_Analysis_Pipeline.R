@@ -18,6 +18,7 @@ source('~/project/kohonen2/R/plot.kohonen.R')
 library("lme4")
 library("RLRsim")
 library ("VennDiagram")
+library("hash")
 par(las = 1)
 
 # Data Directory
@@ -864,6 +865,20 @@ palette.name=function(x) {c("Yellow2", "Green2")}, bgcol= gray.colors(length(ap.
 # ADD CLUSTER BOUNDARIES FOR GO ENRICHED CATEGORIES
 #dev.off()
 
+## A version of the cluster membership that represents clusters only with different contrasting colors
+#pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterOnlyColors.pdf", width=12, height=8)
+plot.kohonen(absolute.som, type= "property", property= cluster.membership, scale = T, 
+             palette.name = function(x){return (c("grey","black","brown","red","blue" ,"green","cyan","magenta","yellow" ))})
+#dev.off()
+## HEATMAP OF CLUSTER EXPRESSION
+pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterExpressionHeatMap.pdf", width=8, height=10)
+h1 = heatmap.2 (absolute.som$codes[ap.cluster@exemplars, ], Rowv =F, scale="none", dendrogram = "none", 
+density.info="none", trace = "none", keysize = 1, labRow = paste( "Cluster", seq(1, 9, by = 1), sep = " "),
+breaks = 50, col = function(x) {colorpanel(x, 'blue3','white', 'red2')},cexRow=.9,cexCol=.5,
+RowSideColors = c("grey","black","brown","red","blue" ,"green","cyan","magenta","yellow" ) )
+dev.off()
+##
+
 absolute.som$codes[ap.cluster@exemplars, ]
 aggregate(absolute.som$codes , by = list(cluster.membership), FUN=mean)
 #abs.som.which.max <- apply(absolute.som$codes[,1:3], 1, which.max)
@@ -1297,7 +1312,28 @@ FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
   }
 }
 
+cluster5 =  hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == 5]])
+cluster8 =  hgnc_to_ensg_convert(abs.som.genes[absolute.som$unit.classif %in% c(1:(absolute.som$grid$xdim *absolute.som$grid$ydim))[cluster.membership == 8]])
 
+# MAKE A HASHTABLE OF GO TERMS
+GO = hash()
+fmat5 = matrix(nrow=2, ncol =2)
+fmat8 = matrix(nrow=2, ncol =2)
+dag = readLines('~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/funcassociate_go_associations.txt')
+dag = dag[-c(1:23)]
+for (line in dag) {
+  lineelements = unlist(strsplit(line,split="\t")[[1]])
+  GOterm = lineelements[1]
+  Genes  = unlist(strsplit(lineelements[3],split=" ")[[1]])
+  
+  fmat5[1,] = c( length (intersect (cluster5, Genes)) , length(setdiff(cluster5, Genes)))
+  fmat5[2,] = c (length(setdiff( Genes, cluster5) ), TOTAL - length(union (cluster5, Genes)) ) 
+  fmat8[1,] = c( length (intersect (cluster8, Genes)) , length(setdiff(cluster8, Genes)))
+  fmat8[2,] = c (length(setdiff( Genes, cluster8) ), TOTAL - length(union (cluster8, Genes)) ) 
+  
+  GO[[GOterm]] = c ( fisher.test(fmat5)$estimate, fisher.test(fmat8)$estimate)  
+}
+  
 ### RELATIVE SOM ENRICHMENT
 # Possibly three classes, high difference in spearmant correlation difference
 # Those that have overall high correlation
@@ -1718,31 +1754,6 @@ plot(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human),
      ylab="Log10_iBaq_ProteinExpression")
 legend(0, 8.5 , paste("Pearson Cor", round(rna_cor$estimate, 3), sep=": "), bty="n" )
 dev.off()
-
-# Species to Counts correlation
-pdf("Species_Counts_log10.pdf")
-plot(log10(cds_count_sum+1), log10(m1_species_sum+1), pch=19, cex=0.4)
-dev.off()
-
-pdf ("LCL_Ribo_Hierarchical_Clustering_Normalized_Counts.pdf", height=11, width=9)
-plot(norm_hc)
-dev.off()
-
-pdf("Distribution_of_Normalized_RiboExpression.pdf")
-hist(norm_expr,100)
-dev.ofF()
-
-pdf ("LCL_RiboWithReps_Hierarchical_Clustering_Normalized_Counts.pdf", height=11, width=9)
-plot(norm_hc_rep)
-dev.off()
-
-pdf ("LCL_Ribo_Hierarchical_Clustering_Normalized_Counts_Residuals_SVA.pdf")
-plot(sva_hc)
-dev.off()
-
-plot(norm_expr[,2], v$E[,2], pch=19, cex=0.3, xlab="SVA_GM12878_Rep1", ylab="GM12878_Rep1")
-plot(norm_expr[,21], v$E[,21], pch=19, cex=0.3, xlab="SVA_GM18526_MiSeq", ylab="GM18526_MiSeq")
-##
 
 ## FUNCTIONS
 panel.hist <- function(x, ...) {
