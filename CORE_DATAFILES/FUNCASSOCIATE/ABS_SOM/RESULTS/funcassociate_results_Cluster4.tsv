@@ -1,0 +1,72 @@
+# species: Homo sapiens
+# support: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+# associations retrieved on: 2014-07-24 13:37:57-04
+# gofunc built on: 2013-10-27 21:51:15.890197-04
+# gene associations file: ftp://ftp.geneontology.org/pub/go/gene-associations/gene_association.goa_human.gz
+#   revision: 0
+#   downloaded on: 2013-10-27 16:13:44-04
+# GO DAG files from: http://archive.geneontology.org/latest-full/go_201310-assocdb-tables.tar.gz
+#   downloaded on: 2013-10-17 16:47:31-04
+# translation required: yes
+# translation info:
+#   authority: ensembl
+#     synergizer db built on: 2012-02-05 16:36:50.758813-05
+#     synergizer db built from: Ensembl Genes 65 / Ensembl Metazoa Genes 12 / Ensembl Plants Genes 10
+#   namespace: ensembl_gene_id
+#   coverage: 99.6%
+# size of "genespace": 3279
+# number of attributes: 10471
+# NOTE: these associations have been restricted to the genes included
+# in the user-supplied gene space.
+# NOTE: the last record consists of all the entities in the
+# "genespace" that are not associated with any attribute (for
+# the requested support).
+# Original number of entities in query: 449
+# Number of entities in query: 449
+# Total number of entities: 3279
+# Total number of attributes: 10471
+# Original total number of attributes: 17521
+# Translation required: yes
+# Translation coverage: 0.995851
+# Mode: unordered
+# Number of simulations: 1000
+# Adjusted P-value cutoff: 0.05
+# Over/under: over
+# Evidence codes: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+OVERREPRESENTED ATTRIBUTES
+N	X	LOD	P	P_adj	attrib ID	attrib name
+13	26	0.809879676676556	9.56987842478873e-06	0.012	GO:0019827	stem cell maintenance
+17	41	0.66605089907662	9.92059886621258e-06	0.012	GO:0006338	chromatin remodeling
+24	66	0.577248238721194	2.46689908462746e-06	0.001	GO:0045596	negative regulation of cell differentiation
+20	57	0.550908100856958	3.18304543150336e-05	0.033	GO:0004842	ubiquitin-protein ligase activity
+25	75	0.519494007148241	9.28993156496846e-06	0.012	GO:0051093	negative regulation of developmental process
+41	125	0.518778930251344	1.93153889677338e-08	<0.001	GO:0016568	chromatin modification
+42	137	0.475294664504058	1.15876507873126e-07	<0.001	GO:0006325	chromatin organization
+61	205	0.46880309045063	4.39022276848329e-10	<0.001	GO:0051276	chromosome organization
+52	197	0.38698433380306	7.54167077504819e-07	<0.001	GO:0008270	zinc ion binding
+54	209	0.374924576390364	9.51560329459281e-07	<0.001	GO:0005694	chromosome
+81	329	0.361434053667214	1.27104700534984e-08	<0.001	GO:0003677	DNA binding
+44	176	0.349275696562163	2.59916562888092e-05	0.028	GO:0045893	positive regulation of transcription, DNA-dependent
+56	230	0.339618100074912	4.55886397385855e-06	0.003	GO:0046914	transition metal ion binding
+62	267	0.314008506912734	7.22411937154455e-06	0.011	GO:0006259	DNA metabolic process
+274	1533	0.290381441503735	4.65249941888148e-11	<0.001	GO:0005634	nucleus
+117	557	0.282789052252373	1.02059102491708e-07	<0.001	GO:0006351	transcription, DNA-dependent
+102	482	0.278669102207697	6.21512995469412e-07	<0.001	GO:0006355	regulation of transcription, DNA-dependent
+109	521	0.275419141765863	4.16230392626814e-07	<0.001	GO:0051252	regulation of RNA metabolic process
+102	491	0.266918323077199	1.60684899835766e-06	0.001	GO:2001141	regulation of RNA biosynthetic process
+201	1076	0.257950327276462	8.51171053956136e-09	<0.001	GO:0090304	nucleic acid metabolic process
+116	583	0.247004078539866	2.59772465749913e-06	0.001	GO:2000112	regulation of cellular macromolecule biosynthetic process
+126	643	0.242575390214078	1.90219126848761e-06	0.001	GO:0019219	regulation of nucleobase-containing compound metabolic process
+278	1646	0.239412148139034	5.30319858041763e-08	<0.001	GO:0044260	cellular macromolecule metabolic process
+166	884	0.237231119764899	3.54485120527202e-07	<0.001	GO:0044428	nuclear part
+117	603	0.231213609439129	8.82759930202864e-06	0.012	GO:0032774	RNA biosynthetic process
+120	620	0.231176653434126	7.32943079908593e-06	0.011	GO:0031326	regulation of cellular biosynthetic process
+116	598	0.230523333948926	9.93997624832558e-06	0.012	GO:0010556	regulation of macromolecule biosynthetic process
+139	733	0.227929646650983	3.25090383584161e-06	0.001	GO:0003676	nucleic acid binding
+120	626	0.224881728803665	1.21855973308715e-05	0.012	GO:0009889	regulation of biosynthetic process
+140	745	0.222329122024432	5.0918473725869e-06	0.004	GO:0031981	nuclear lumen
+121	637	0.219427763301722	1.77418302048041e-05	0.023	GO:0010468	regulation of gene expression
+129	684	0.21883451112796	1.20570661235649e-05	0.012	GO:0051171	regulation of nitrogen compound metabolic process
+285	1734	0.218572879857388	7.17042533028129e-07	<0.001	GO:0043170	macromolecule metabolic process
+169	940	0.20766270284019	6.00271899137227e-06	0.006	GO:0016070	RNA metabolic process
+132	717	0.204258308635184	3.39945632695868e-05	0.036	GO:0006996	organelle organization

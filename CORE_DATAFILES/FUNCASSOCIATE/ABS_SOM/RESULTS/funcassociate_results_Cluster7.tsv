@@ -1,0 +1,41 @@
+# species: Homo sapiens
+# support: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+# associations retrieved on: 2014-07-24 13:54:35-04
+# gofunc built on: 2013-10-27 21:51:15.890197-04
+# gene associations file: ftp://ftp.geneontology.org/pub/go/gene-associations/gene_association.goa_human.gz
+#   revision: 0
+#   downloaded on: 2013-10-27 16:13:44-04
+# GO DAG files from: http://archive.geneontology.org/latest-full/go_201310-assocdb-tables.tar.gz
+#   downloaded on: 2013-10-17 16:47:31-04
+# translation required: yes
+# translation info:
+#   authority: ensembl
+#     synergizer db built on: 2012-02-05 16:36:50.758813-05
+#     synergizer db built from: Ensembl Genes 65 / Ensembl Metazoa Genes 12 / Ensembl Plants Genes 10
+#   namespace: ensembl_gene_id
+#   coverage: 99.6%
+# size of "genespace": 3279
+# number of attributes: 10471
+# NOTE: these associations have been restricted to the genes included
+# in the user-supplied gene space.
+# NOTE: the last record consists of all the entities in the
+# "genespace" that are not associated with any attribute (for
+# the requested support).
+# Original number of entities in query: 454
+# Number of entities in query: 454
+# Total number of entities: 3279
+# Total number of attributes: 10471
+# Original total number of attributes: 17521
+# Translation required: yes
+# Translation coverage: 0.995851
+# Mode: unordered
+# Number of simulations: 1000
+# Adjusted P-value cutoff: 0.05
+# Over/under: over
+# Evidence codes: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+OVERREPRESENTED ATTRIBUTES
+N	X	LOD	P	P_adj	attrib ID	attrib name
+7	9	1.27711600714063	2.61423965791946e-05	0.023	GO:0031080	nuclear pore outer ring
+25	70	0.559688515022501	2.74469560568252e-06	0.001	GO:0016072	rRNA metabolic process
+24	68	0.551111981870774	5.54491661996171e-06	0.001	GO:0006364	rRNA processing
+29	90	0.493663930056895	4.82551238402481e-06	0.001	GO:0042254	ribosome biogenesis
