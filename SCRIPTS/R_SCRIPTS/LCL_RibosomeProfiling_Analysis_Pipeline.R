@@ -19,7 +19,6 @@ library("lme4")
 library("RLRsim")
 library ("VennDiagram")
 library("hash")
-par(las = 1)
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
