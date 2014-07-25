@@ -787,6 +787,15 @@ my.ecdf <- function (x) {ecdf(x)(x)}
 abs.som.data <- apply(ribo_rna_te_prot, 2 , my.ecdf)
 abs.som.data.noNA <- abs.som.data[!apply(is.na(abs.som.data), 1, any),]
 
+### Add heatmap representation of the data to include as a motivator for SOM
+pdf ("~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_Input.pdf", width=10, height=10)
+h2 = heatmap.2 ( abs.som.data.noNA[20:47,], Colv =F, Rowv =F, scale="none", dendrogram = "none", 
+      density.info="none", trace = "none",  labRow=paste("Gene",seq(1,28,length.out=28) , sep ="-"), 
+      breaks = seq(0,1,length.out=50), col = function(x) {colorpanel(x, 'blue3','white', 'red2')},
+      cexRow=.9,cexCol=.5,
+)
+dev.off()
+
 # Run the SOM, 1000 times and keep track of the distances pick the one with the min 75% distance
 # This section was run once to determine the best seed
 mean_distance <- 1
