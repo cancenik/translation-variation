@@ -1,0 +1,151 @@
+# species: Homo sapiens
+# support: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+# associations retrieved on: 2014-07-24 13:38:48-04
+# gofunc built on: 2013-10-27 21:51:15.890197-04
+# gene associations file: ftp://ftp.geneontology.org/pub/go/gene-associations/gene_association.goa_human.gz
+#   revision: 0
+#   downloaded on: 2013-10-27 16:13:44-04
+# GO DAG files from: http://archive.geneontology.org/latest-full/go_201310-assocdb-tables.tar.gz
+#   downloaded on: 2013-10-17 16:47:31-04
+# translation required: yes
+# translation info:
+#   authority: ensembl
+#     synergizer db built on: 2012-02-05 16:36:50.758813-05
+#     synergizer db built from: Ensembl Genes 65 / Ensembl Metazoa Genes 12 / Ensembl Plants Genes 10
+#   namespace: ensembl_gene_id
+#   coverage: 99.6%
+# size of "genespace": 3279
+# number of attributes: 10471
+# NOTE: these associations have been restricted to the genes included
+# in the user-supplied gene space.
+# NOTE: the last record consists of all the entities in the
+# "genespace" that are not associated with any attribute (for
+# the requested support).
+# Original number of entities in query: 573
+# Number of entities in query: 573
+# Total number of entities: 3279
+# Total number of attributes: 10471
+# Original total number of attributes: 17521
+# Translation required: yes
+# Translation coverage: 0.995851
+# Mode: unordered
+# Number of simulations: 1000
+# Adjusted P-value cutoff: 0.05
+# Over/under: over
+# Evidence codes: EXP, IMP, ISS, ISM, TAS, IEA, IBA, IRD, IDA, IGI, ISO, IGC, NAS, IBD, IPI, IEP, ISA, RCA, IC, IKR
+OVERREPRESENTED ATTRIBUTES
+N	X	LOD	P	P_adj	attrib ID	attrib name
+17	21	1.27612606886557	3.21578204218829e-10	<0.001	GO:0022624	proteasome accessory complex
+9	12	1.11391798858923	1.91458767467636e-05	0.018	GO:0006541	glutamine metabolic process
+26	38	1.01842992534864	4.05040204923687e-12	<0.001	GO:0006521	regulation of cellular amino acid metabolic process
+28	43	0.957712791065565	3.77011403086215e-12	<0.001	GO:0033238	regulation of cellular amine metabolic process
+32	50	0.940623212427659	2.07818513100511e-13	<0.001	GO:0000502	proteasome complex
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:0006977	DNA damage response, signal transduction by p53 class mediator resulting in cell cycle arrest
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:0072395	signal transduction involved in cell cycle checkpoint
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:0072401	signal transduction involved in DNA integrity checkpoint
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:0072413	signal transduction involved in mitotic cell cycle checkpoint
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:0072422	signal transduction involved in DNA damage checkpoint
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:0072431	signal transduction involved in mitotic G1 DNA damage checkpoint
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:1902400	intracellular signal transduction involved in G1 DNA damage checkpoint
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:1902402	signal transduction involved in mitotic DNA damage checkpoint
+26	41	0.924524436406067	5.58795774833904e-11	<0.001	GO:1902403	signal transduction involved in mitotic DNA integrity checkpoint
+27	43	0.914091579713147	3.29196903996292e-11	<0.001	GO:0071158	positive regulation of cell cycle arrest
+29	47	0.896162444296493	1.12218894071949e-11	<0.001	GO:0002479	antigen processing and presentation of exogenous peptide antigen via MHC class I, TAP-dependent
+28	46	0.880388417494274	4.12752238308197e-11	<0.001	GO:0051352	negative regulation of ligase activity
+28	46	0.880388417494274	4.12752238308197e-11	<0.001	GO:0051436	negative regulation of ubiquitin-protein ligase activity involved in mitotic cell cycle
+28	46	0.880388417494274	4.12752238308197e-11	<0.001	GO:0051444	negative regulation of ubiquitin-protein ligase activity
+26	43	0.871495250356222	2.60581621508843e-10	<0.001	GO:0031571	mitotic G1 DNA damage checkpoint
+26	43	0.871495250356222	2.60581621508843e-10	<0.001	GO:0044783	G1 DNA damage checkpoint
+14	23	0.866805759436707	3.71100151820444e-06	0.003	GO:0006099	tricarboxylic acid cycle
+30	50	0.866533274773431	1.36218711858985e-11	<0.001	GO:0042590	antigen processing and presentation of exogenous peptide antigen via MHC class I
+27	45	0.864080839954665	1.49592218093493e-10	<0.001	GO:0044773	mitotic DNA damage checkpoint
+12	20	0.84926374909752	2.34220313005822e-05	0.019	GO:0003724	RNA helicase activity
+16	27	0.841180568304751	1.21099838789211e-06	0.001	GO:0003697	single-stranded DNA binding
+27	46	0.841056389105685	3.03504940733493e-10	<0.001	GO:0044774	mitotic DNA integrity checkpoint
+27	46	0.841056389105685	3.03504940733493e-10	<0.001	GO:0071156	regulation of cell cycle arrest
+28	49	0.814636801880063	3.36470594205202e-10	<0.001	GO:0030330	DNA damage response, signal transduction by p53 class mediator
+29	51	0.810505022074263	1.89051725646244e-10	<0.001	GO:0031145	anaphase-promoting complex-dependent proteasomal ubiquitin-dependent protein catabolic process
+29	51	0.810505022074263	1.89051725646244e-10	<0.001	GO:0051439	regulation of ubiquitin-protein ligase activity involved in mitotic cell cycle
+26	46	0.80229473427361	2.04232943091858e-09	<0.001	GO:2000134	negative regulation of G1/S transition of mitotic cell cycle
+27	48	0.798329224340454	1.14487025783808e-09	<0.001	GO:0051437	positive regulation of ubiquitin-protein ligase activity involved in mitotic cell cycle
+23	41	0.79264885137409	2.19125261418482e-08	<0.001	GO:0009128	purine nucleoside monophosphate catabolic process
+23	41	0.79264885137409	2.19125261418482e-08	<0.001	GO:0009158	ribonucleoside monophosphate catabolic process
+23	41	0.79264885137409	2.19125261418482e-08	<0.001	GO:0009169	purine ribonucleoside monophosphate catabolic process
+29	52	0.791457869237687	3.58166944289416e-10	<0.001	GO:0042770	signal transduction in response to DNA damage
+35	64	0.776950108946824	1.06334326695749e-11	<0.001	GO:0002474	antigen processing and presentation of peptide antigen via MHC class I
+15	27	0.776876695642651	7.98779810870547e-06	0.008	GO:0006096	glycolysis
+29	53	0.773197778159825	6.62788440609558e-10	<0.001	GO:0051438	regulation of ubiquitin-protein ligase activity
+22	40	0.772975313745277	7.28280105584341e-08	<0.001	GO:0006200	ATP catabolic process
+23	42	0.769624400525109	4.06070751428544e-08	<0.001	GO:0009125	nucleoside monophosphate catabolic process
+27	50	0.759376264895859	3.89284087869063e-09	<0.001	GO:0051443	positive regulation of ubiquitin-protein ligase activity
+27	50	0.759376264895859	3.89284087869063e-09	<0.001	GO:2000045	regulation of G1/S transition of mitotic cell cycle
+29	54	0.755661752751501	1.19963435022516e-09	<0.001	GO:0051340	regulation of ligase activity
+30	56	0.75407022854899	6.65171746289183e-10	<0.001	GO:0010565	regulation of cellular ketone metabolic process
+13	24	0.751699647375058	4.72386954159128e-05	0.047	GO:0030532	small nuclear ribonucleoprotein complex
+27	51	0.741116173817997	6.93219392675327e-09	<0.001	GO:0051351	positive regulation of ligase activity
+31	61	0.707178219641698	1.92339424947627e-09	<0.001	GO:0071013	catalytic step 2 spliceosome
+30	59	0.707007754450203	3.48409081900442e-09	<0.001	GO:0072331	signal transduction by p53 class mediator
+31	62	0.693005212789707	3.22355813376231e-09	<0.001	GO:0009308	amine metabolic process
+31	62	0.693005212789707	3.22355813376231e-09	<0.001	GO:0044106	cellular amine metabolic process
+30	60	0.692367699297137	5.83926005212477e-09	<0.001	GO:0031397	negative regulation of protein ubiquitination
+28	56	0.691096895784517	1.91352793523831e-08	<0.001	GO:0042470	melanosome
+28	56	0.691096895784517	1.91352793523831e-08	<0.001	GO:0048770	pigment granule
+25	50	0.689201169388357	1.13132216321369e-07	<0.001	GO:0051082	unfolded protein binding
+18	36	0.684825977536252	7.13721955459628e-06	0.007	GO:0032069	regulation of nuclease activity
+16	32	0.683588124662314	2.33812196004205e-05	0.019	GO:0009127	purine nucleoside monophosphate biosynthetic process
+16	32	0.683588124662314	2.33812196004205e-05	0.019	GO:0009168	purine ribonucleoside monophosphate biosynthetic process
+33	67	0.681347727555058	1.61990992890456e-09	<0.001	GO:0042180	cellular ketone metabolic process
+24	49	0.671036008470155	3.36308221418358e-07	0.001	GO:0046034	ATP metabolic process
+32	66	0.667383518825077	4.77572704711567e-09	<0.001	GO:0009126	purine nucleoside monophosphate metabolic process
+32	66	0.667383518825077	4.77572704711567e-09	<0.001	GO:0009167	purine ribonucleoside monophosphate metabolic process
+30	62	0.664459532176634	1.56328993612446e-08	<0.001	GO:0090068	positive regulation of cell cycle process
+16	33	0.657872572425278	3.81453824536019e-05	0.04	GO:0043230	extracellular organelle
+16	33	0.657872572425278	3.81453824536019e-05	0.04	GO:0065010	extracellular membrane-bounded organelle
+16	33	0.657872572425278	3.81453824536019e-05	0.04	GO:0070062	extracellular vesicular exosome
+34	73	0.635334978524392	5.82971850802545e-09	<0.001	GO:0009161	ribonucleoside monophosphate metabolic process
+562	3051	0.630771817108966	3.18573484039211e-09	<0.001	GO:0005575	cellular_component
+19	41	0.622813951065233	1.61699734569786e-05	0.013	GO:0009124	nucleoside monophosphate biosynthetic process
+28	61	0.620085486483664	1.98275069701053e-07	0.001	GO:0000077	DNA damage checkpoint
+18	39	0.619074361922041	2.90649654826239e-05	0.03	GO:0009156	ribonucleoside monophosphate biosynthetic process
+35	77	0.616269439947713	7.70745664105979e-09	<0.001	GO:0009123	nucleoside monophosphate metabolic process
+28	62	0.607148723891691	3.03009716958337e-07	0.001	GO:0031570	DNA integrity checkpoint
+18	40	0.599168555314021	4.43870868209679e-05	0.042	GO:0019320	hexose catabolic process
+35	79	0.595972250886956	1.76266946020008e-08	<0.001	GO:0007050	cell cycle arrest
+44	100	0.595773407280435	3.07764775469076e-10	<0.001	GO:0048002	antigen processing and presentation of peptide antigen
+28	63	0.59457693054798	4.57096175172164e-07	0.001	GO:0031398	positive regulation of protein ubiquitination
+25	57	0.582722789775387	2.58733994655279e-06	0.002	GO:0006986	response to unfolded protein
+21	48	0.578827245107825	1.74709292931087e-05	0.015	GO:0022900	electron transport chain
+21	48	0.578827245107825	1.74709292931087e-05	0.015	GO:0022904	respiratory electron transport chain
+25	58	0.569398929922739	3.81246181569971e-06	0.003	GO:0035966	response to topologically incorrect protein
+45	106	0.568599055106326	8.05859707495994e-10	<0.001	GO:0019882	antigen processing and presentation
+30	70	0.567586855728699	4.66576324550647e-07	0.001	GO:0007093	mitotic cell cycle checkpoint
+40	94	0.567579489750916	6.80352254846938e-09	<0.001	GO:0002478	antigen processing and presentation of exogenous peptide antigen
+24	56	0.564557628857185	6.75042904989502e-06	0.007	GO:0043566	structure-specific DNA binding
+38	90	0.560524680611845	2.14076458784617e-08	<0.001	GO:0000082	G1/S transition of mitotic cell cycle
+25	59	0.556462167330767	5.54659708723377e-06	0.004	GO:0009986	cell surface
+40	96	0.551599960197187	1.41516146938189e-08	<0.001	GO:0019884	antigen processing and presentation of exogenous antigen
+22	53	0.539731402855826	3.02154025742003e-05	0.031	GO:0003729	mRNA binding
+30	73	0.536063735090684	1.38465820551826e-06	0.001	GO:1901988	negative regulation of cell cycle phase transition
+30	73	0.536063735090684	1.38465820551826e-06	0.001	GO:1901991	negative regulation of mitotic cell cycle phase transition
+34	83	0.53569572031611	2.94659175439008e-07	0.001	GO:0010948	negative regulation of cell cycle process
+41	101	0.532645008276135	2.29554033524313e-08	<0.001	GO:0010498	proteasomal protein catabolic process
+33	81	0.53114403479545	5.15611262823401e-07	0.001	GO:0045333	cellular respiration
+38	94	0.527980615083633	8.76600163539877e-08	<0.001	GO:0051325	interphase
+38	94	0.527980615083633	8.76600163539877e-08	<0.001	GO:0051329	interphase of mitotic cell cycle
+65	165	0.52384201023955	6.20085467293738e-12	<0.001	GO:0043069	negative regulation of programmed cell death
+37	92	0.523660189757654	1.53023196573563e-07	0.001	GO:0006457	protein folding
+31	77	0.521421121639821	1.56841727445815e-06	0.001	GO:0000209	protein polyubiquitination
+64	163	0.520816762645666	1.09282440655259e-11	<0.001	GO:0043066	negative regulation of apoptotic process
+66	169	0.518002830936629	6.70851521689962e-12	<0.001	GO:0060548	negative regulation of cell death
+38	96	0.512545365530062	1.69808296091804e-07	0.001	GO:0043161	proteasomal ubiquitin-dependent protein catabolic process
+32	82	0.49930334214463	2.39359797382178e-06	0.002	GO:0031396	regulation of protein ubiquitination
+32	82	0.49930334214463	2.39359797382178e-06	0.002	GO:1901987	regulation of cell cycle phase transition
+32	82	0.49930334214463	2.39359797382178e-06	0.002	GO:1901990	regulation of mitotic cell cycle phase transition
+68	181	0.490859802365868	2.57052640909642e-11	<0.001	GO:0006520	cellular amino acid metabolic process
+30	78	0.487995216972406	7.05753502111873e-06	0.007	GO:0006006	glucose metabolic process
+59	157	0.48608619719088	6.01881733543489e-10	<0.001	GO:0006091	generation of precursor metabolites and energy
+56	149	0.484548987251735	1.70308034991466e-09	<0.001	GO:0000377	RNA splicing, via transesterification reactions with bulged adenosine as nucleophile
+56	149	0.484548987251735	1.70308034991466e-09	<0.001	GO:0000398	mRNA splicing, via spliceosome
+38	100	0.483164808351554	5.88466571135319e-07	0.001	GO:0022403	cell cycle phase
+40	106	0.479185125975589	3.65045114600976e-07	0.001	GO:0045786	negative regulation of cell cycle
+
