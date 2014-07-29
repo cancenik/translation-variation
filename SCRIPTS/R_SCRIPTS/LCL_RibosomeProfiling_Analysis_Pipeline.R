@@ -755,12 +755,32 @@ rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_pro
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
 
 plot(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), xlab="RNA Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
-text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2", round(rna_cor$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
+text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("rho=", round(rna_cor$estimate,2) , sep="=") , adj=c(1,1), cex=2)
 plot(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), xlab="Ribosome Profiling Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
-text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2 ", round(ribo_cor$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
+text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("rho= ", round(ribo_cor$estimate,2) , sep="=") , adj=c(1,1), cex=2)
 plot(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna, xlab="Ribosome Profiling Expression", ylab="RNA Expression", pch=19, cex=.4)
-text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("R^2 ", round(ribo_rna$estimate^2,2) , sep="=") , adj=c(1,1), cex=2)
+text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("rho= ", round(ribo_rna$estimate,2) , sep="=") , adj=c(1,1), cex=2)
 #
+
+### Implement permutation scheme to test significance of difference in correlation
+true_diff = ribo_cor$estimate - rna_cor$estimate
+
+swap <- function(x) {
+  if (runif(1) > 0.5) {
+    return (c(x[2],x[1]))
+  }
+  else {
+    return(c(x[1],x[2]))
+  }
+}
+
+cor_dif <- c()
+for (i in 1:10000) {
+  perm <- apply (merge_ribo_rna_prot[,c(2,8)], 1, swap)
+  cor_dif <- c(cor_dif,
+        cor.test(perm[1,], log10(merge_ribo_rna_prot$ibaq.human), method="spearman")$estimate - cor.test(perm[2,], log10(merge_ribo_rna_prot$ibaq.human), method="spearman")$estimate)
+}
+
 
 ## APPLY SOMs to different versions of data. 
 # APPLY BDK to ribo_rna_te_prot
@@ -787,13 +807,13 @@ abs.som.data <- apply(ribo_rna_te_prot, 2 , my.ecdf)
 abs.som.data.noNA <- abs.som.data[!apply(is.na(abs.som.data), 1, any),]
 
 ### Add heatmap representation of the data to include as a motivator for SOM
-pdf ("~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_Input.pdf", width=10, height=10)
+#pdf ("~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_Input.pdf", width=10, height=10)
 h2 = heatmap.2 ( abs.som.data.noNA[20:47,], Colv =F, Rowv =F, scale="none", dendrogram = "none", 
       density.info="none", trace = "none",  labRow=paste("Gene",seq(1,28,length.out=28) , sep ="-"), 
       breaks = seq(0,1,length.out=50), col = function(x) {colorpanel(x, 'blue3','white', 'red2')},
       cexRow=.9,cexCol=.5,
 )
-dev.off()
+#dev.off()
 
 # Run the SOM, 1000 times and keep track of the distances pick the one with the min 75% distance
 # This section was run once to determine the best seed
@@ -879,12 +899,12 @@ plot.kohonen(absolute.som, type= "property", property= cluster.membership, scale
              palette.name = function(x){return (c("grey","black","brown","red","blue" ,"green","cyan","magenta","yellow" ))})
 #dev.off()
 ## HEATMAP OF CLUSTER EXPRESSION
-pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterExpressionHeatMap.pdf", width=8, height=10)
+#pdf(file= "~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/SOM_All_ClusterExpressionHeatMap.pdf", width=8, height=10)
 h1 = heatmap.2 (absolute.som$codes[ap.cluster@exemplars, ], Rowv =F, scale="none", dendrogram = "none", 
 density.info="none", trace = "none", keysize = 1, labRow = paste( "Cluster", seq(1, 9, by = 1), sep = " "),
 breaks = 50, col = function(x) {colorpanel(x, 'blue3','white', 'red2')},cexRow=.9,cexCol=.5,
 RowSideColors = c("grey","black","brown","red","blue" ,"green","cyan","magenta","yellow" ) )
-dev.off()
+#dev.off()
 ##
 
 absolute.som$codes[ap.cluster@exemplars, ]
