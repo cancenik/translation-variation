@@ -1359,8 +1359,14 @@ FilteredChart = filter_by_fdr_fold_enrichment(AnnotCHART, .05,2)
 
 ## Repeat these analysis with FUNCASSOCIATE
 write.table(hgnc_to_ensg_convert (abs.som.genes), '~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/AbsSOMBackground', row.names=F)
+# Output simple comparative barplot to compare cluster 5 and 8 
+# Use horizontal barplot with LOD enrichment for category. Nothing in common 
+clust8_results = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/RESULTS/funcassociate_results_Cluster8_3_foldenriched.tsv.attr', header=F)
+clust5_results = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/RESULTS/funcassociate_results_Cluster5_3_foldenriched_selected.tsv.attr')
+m1 = merge(clust5_results, clust8_results, by= "V1" ) 
 
-  
+
+
 ### RELATIVE SOM ENRICHMENT
 # Possibly three classes, high difference in spearmant correlation difference
 # Those that have overall high correlation
