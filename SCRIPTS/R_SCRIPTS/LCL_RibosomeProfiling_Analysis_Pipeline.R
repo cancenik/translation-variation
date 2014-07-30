@@ -242,6 +242,8 @@ ribo_cols_to_select = 50:80
 #####
 rna_cols_to_select = 1:36
 ribo_cols_to_select = c(50:57,62:67, 74:80)
+# These are broadly consistent much more genes variable in rna
+# Data saved as r obkect in snyder_only_variance
 #####
 random_effect_stat_rna = c()
 random_effect_stat_ribo = c()
@@ -1363,6 +1365,7 @@ write.table(hgnc_to_ensg_convert (abs.som.genes), '~/project/CORE_DATAFILES/FUNC
 # Use horizontal barplot with LOD enrichment for category. Nothing in common 
 clust8_results = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/RESULTS/funcassociate_results_Cluster8_3_foldenriched.tsv.attr', header=F)
 clust5_results = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/RESULTS/funcassociate_results_Cluster5_3_foldenriched_selected.tsv.attr')
+go_names = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/FuncAssociate_Names.txt',header=T, sep="\t", quote="")
 m1 = merge(clust5_results, clust8_results, by= "V1" ) 
 
 
