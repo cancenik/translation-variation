@@ -243,7 +243,32 @@ ribo_cols_to_select = 50:80
 rna_cols_to_select = 1:36
 ribo_cols_to_select = c(50:57,62:67, 74:80)
 # These are broadly consistent much more genes variable in rna
-# Data saved as r obkect in snyder_only_variance
+# Data saved as r object in snyder_only_variance
+
+# TEST YRI only
+rna_cols_to_select = c(10:18, 31:44, 46:49)
+ribo_cols_to_select = c(58:61,68:80)
+
+# TEST same number of replicates 2 of each
+# ribo has three samples with 3 replicates
+# 19240, 18526,18951
+# rna with more than 2 12878; 12890; 12891; 12892; 19238; 19239; 19240
+
+# to enable reproducibility - fix seed
+set.seed(1)
+rna_cols_to_select = c()
+ribo_cols_to_select = c()
+for (l in levels(as.factor(sample_id_all[1:49])) ) { 
+  rna_cols_to_select= c( rna_cols_to_select, 
+                         sample (which(as.factor(sample_id_all[1:49]) == l) , 2, replace=F) )
+}
+for (l in levels(as.factor(sample_id_all[50:80])) ) { 
+  ribo_cols_to_select= c( ribo_cols_to_select, 
+                         49 + sample (which(as.factor(sample_id_all[50:80]) == l) , 2, replace=F) )
+}
+table(sample_id_all[rna_cols_to_select])
+table(sample_id_all[ribo_cols_to_select])
+
 #####
 random_effect_stat_rna = c()
 random_effect_stat_ribo = c()
@@ -251,7 +276,7 @@ random_effect_p_val_rna = c()
 random_effect_p_val_ribo = c()
 # The p-value is fragile for low number of similuations so increased to 500k
 # This section is quite computationally intensive
-# We estimate that this will take ~12h
+# We estimate that this will take ~6h
 
 # # THIS WAS RUN ONCE AND RESULTS STORED
 for ( i in 1:nrow(joint_expression_common$E)) { 
@@ -543,15 +568,25 @@ median(across_ind_rna_correlation)
 ks.test (across_ind_ribo_correlation, across_ind_rna_correlation )
 # p= 0.03; Strict p= 0.61
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
-# FDR ~ 20% 0.0004 ; For Non-zero variation %10 FDR is 0.0002
-# FDR ~10: for non-sig 0.00002 for rna ; for ribo  0.00005 - At 20% FDR -> 6 significant RNA; 13 sig Ribo
+###
 pval_cutoff <- 0.0002
 color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
 color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
 color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 3
+
+# The current pval cutoff is based on Holm's whne we do FDR many more are significant
+adj_ribo_cor = p.adjust (across_ind_ribo_correlation_pval, method = "fdr")
+adj_rna_cor  = p.adjust (across_ind_rna_correlation_pval, method = "fdr")
+fdr_cutoff <- 0.1
+color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
+color_by_pval[adj_ribo_cor < fdr_cutoff & adj_rna_cor < fdr_cutoff] <- 1
+color_by_pval[adj_ribo_cor < fdr_cutoff & adj_rna_cor >= fdr_cutoff] <- 2
+color_by_pval[adj_ribo_cor >=fdr_cutoff & adj_rna_cor < fdr_cutoff] <- 3
+#pdf ( '~/Google_Drive/Manuscript Figures/Across_Individual_Comparison/Across_Ind_RNA_Ribo_Prot_Correlation_NonZeroVariance_FDR.1.pdf', height=5, width=5)
 plot(across_ind_ribo_correlation, across_ind_rna_correlation, pch=19, cex=.65, tck=.02, col=c("Black", "Red", "Blue", "Gold")[as.factor(color_by_pval)], 
      xlab="Between Individual Ribosome Occupancy-Protein Expression Correlation", ylab = "Between Individual RNA-Protein Expression Correlation", 
      xlim= c(-0.5,.95), ylim = c(-0.5,.95) )
+#dev.off()
 cor.test(across_ind_ribo_correlation, across_ind_rna_correlation)
 # Cor 0.61; p < 2.2e-16; Doesn't change for strict
 # Strict sense FDR ~25% p=0.013 from rna. 
@@ -559,12 +594,12 @@ cor.test(across_ind_ribo_correlation, across_ind_rna_correlation)
 # 8/87 = 9% non-significant
 #### ADD FISHER'S TEST FOR ENRICHMENT -- Huge Enrichment for Both correlating significantly
 fmat <- matrix(nrow=2, ncol=2)
-fmat[1,1] = length(which(across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff))
-fmat[1,2] =  length(which(across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval > pval_cutoff))
-fmat[2,1] = length(which(across_ind_ribo_correlation_pval > pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff))
-fmat[2,2] = length(which(across_ind_ribo_correlation_pval > pval_cutoff & across_ind_rna_correlation_pval > pval_cutoff))
+fmat[1,1] = length(which(adj_ribo_cor < fdr_cutoff & adj_rna_cor < fdr_cutoff))
+fmat[1,2] =  length(which(adj_ribo_cor < fdr_cutoff & adj_rna_cor > fdr_cutoff))
+fmat[2,1] = length(which(adj_ribo_cor > fdr_cutoff & adj_rna_cor < fdr_cutoff))
+fmat[2,2] = length(which(adj_ribo_cor > fdr_cutoff & adj_rna_cor > fdr_cutoff))
 fisher.test(fmat)
-# Odds ratio 14.7; p< 2.2e-16 ; Doesn't change for strict 
+# Odds ratio 6.9; p< 2.2e-16 ; Doesn't change for strict 
 
 # Remove one column which is not shared
 ribo_replicate_mean_rna <- lapply(ribo_replicate_mean_prot, function(x){x <- x[-24,]})
@@ -1367,10 +1402,16 @@ clust8_results = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/RESU
 clust5_results = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/ABS_SOM/RESULTS/funcassociate_results_Cluster5_3_foldenriched_selected.tsv.attr')
 go_names = read.table('~/project/CORE_DATAFILES/FUNCASSOCIATE/Mixed_Effect_FuncAssociate/RESULTS/FuncAssociate_Names.txt',header=T, sep="\t", quote="")
 m1 = merge(clust5_results, clust8_results, by= "V1" ) 
+clust5names = merge(go_names, clust5_results, by.x="GO_TERM", by.y="V1")
+clust8names = merge(go_names, clust8_results, by.x="GO_TERM", by.y="V1")
 
-
-
-### RELATIVE SOM ENRICHMENT
+selected5 = c(22, 6, 74, 17, 11, 96, 88, 95)
+selected8 = c(37,  39, 18, 17,56, 16 , 40)
+#pdf('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/Comparative_GO.pdf', width=5, height=5)
+par(las =1)
+barplot (c(log2(10)^clust5names$V3[selected5], -log2(10)^clust8names$V3[selected8]  ), cex.names=.2,
+names = c(as.character(clust5names$FULL_NAME[selected5]), as.character(clust8names$FULL_NAME[selected8]) ), horiz =T, xlim = c(-15, 5))
+#dev.off()
 # Possibly three classes, high difference in spearmant correlation difference
 # Those that have overall high correlation
 
