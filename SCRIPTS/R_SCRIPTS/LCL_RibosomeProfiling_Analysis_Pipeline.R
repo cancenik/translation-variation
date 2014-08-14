@@ -249,26 +249,6 @@ ribo_cols_to_select = c(50:57,62:67, 74:80)
 rna_cols_to_select = c(10:18, 31:44, 46:49)
 ribo_cols_to_select = c(58:61,68:80)
 
-# TEST same number of replicates 2 of each
-# ribo has three samples with 3 replicates
-# 19240, 18526,18951
-# rna with more than 2 12878; 12890; 12891; 12892; 19238; 19239; 19240
-
-# to enable reproducibility - fix seed
-set.seed(1)
-rna_cols_to_select = c()
-ribo_cols_to_select = c()
-for (l in levels(as.factor(sample_id_all[1:49])) ) { 
-  rna_cols_to_select= c( rna_cols_to_select, 
-                         sample (which(as.factor(sample_id_all[1:49]) == l) , 2, replace=F) )
-}
-for (l in levels(as.factor(sample_id_all[50:80])) ) { 
-  ribo_cols_to_select= c( ribo_cols_to_select, 
-                         49 + sample (which(as.factor(sample_id_all[50:80]) == l) , 2, replace=F) )
-}
-table(sample_id_all[rna_cols_to_select])
-table(sample_id_all[ribo_cols_to_select])
-
 #####
 random_effect_stat_rna = c()
 random_effect_stat_ribo = c()
@@ -276,8 +256,8 @@ random_effect_p_val_rna = c()
 random_effect_p_val_ribo = c()
 # The p-value is fragile for low number of similuations so increased to 500k
 # This section is quite computationally intensive
-# We estimate that this will take ~6h
 
+# We estimate that this will take ~4h
 # # THIS WAS RUN ONCE AND RESULTS STORED
 for ( i in 1:nrow(joint_expression_common$E)) { 
   # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
@@ -793,17 +773,24 @@ dim(merge_ribo_rna_prot)
 # In all possible comparisons riboseq is better correlated
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human))
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human))
-ribo_rna <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna)
+ribo_rna <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna, method ="spearman")
 
 rna_cor <- cor.test(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
 ribo_cor <- cor.test(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), method="spearman")
 
-plot(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), xlab="RNA Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
-text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("rho=", round(rna_cor$estimate,2) , sep="=") , adj=c(1,1), cex=2)
-plot(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), xlab="Ribosome Profiling Expression", ylab="log10 iBAQ protein expression", pch=19, cex=.4)
-text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("rho= ", round(ribo_cor$estimate,2) , sep="=") , adj=c(1,1), cex=2)
-plot(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna, xlab="Ribosome Profiling Expression", ylab="RNA Expression", pch=19, cex=.4)
-text(par("usr")[2]-0.5, par("usr")[4]-0.5, labels=paste ("rho= ", round(ribo_rna$estimate,2) , sep="=") , adj=c(1,1), cex=2)
+pdf ('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/GlobalCorrelation.pdf', width =6.7, height = 2)
+par(las=1)
+par(mfrow=c(1,3))
+dcols_3 <- densCols(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna, colramp= colorRampPalette(c("#660099", "#FFCCFF")), nbin = 128)
+plot(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mean_rna, xlab="Ribosome Profiling Expression", ylab="RNA Expression", pch=19, cex=.5, col = dcols_3)
+text(par("usr")[1]+3, par("usr")[4]-0.5, labels=paste ("rho= ", round(ribo_rna$estimate,2) , sep="=") , adj=c(1,1))
+dcols_2 <- densCols(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), colramp= colorRampPalette(c("#660099", "#FFCCFF")), nbin = 128)
+plot(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human), xlab="Ribosome Profiling Expression", ylab="Protein expression", pch=19, cex=.5, col = dcols_2)
+text(par("usr")[1]+3, par("usr")[4]-0.5, labels=paste ("rho= ", round(ribo_cor$estimate,2) , sep="=") , adj=c(1,1))
+dcols_1 <- densCols(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), colramp= colorRampPalette(c("#660099", "#FFCCFF")), nbin = 128)
+plot(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human), xlab="RNA Expression", ylab="Protein expression", pch=19, cex=.5, col = dcols_1)
+text(par("usr")[1]+3, par("usr")[4]-0.5, labels=paste ("rho=", round(rna_cor$estimate,2) , sep="=") , adj=c(1,1))
+dev.off()
 #
 
 ### Implement permutation scheme to test significance of difference in correlation
@@ -1409,8 +1396,8 @@ selected5 = c(22, 6, 74, 17, 11, 96, 88, 95)
 selected8 = c(37,  39, 18, 17,56, 16 , 40)
 #pdf('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/Comparative_GO.pdf', width=5, height=5)
 par(las =1)
-barplot (c(log2(10)^clust5names$V3[selected5], -log2(10)^clust8names$V3[selected8]  ), cex.names=.2,
-names = c(as.character(clust5names$FULL_NAME[selected5]), as.character(clust8names$FULL_NAME[selected8]) ), horiz =T, xlim = c(-15, 5))
+barplot (c(log2(10)^clust5names$V3[selected5], log2(10)^clust8names$V3[selected8]  ), cex.names=.2,
+names = c(as.character(clust5names$FULL_NAME[selected5]), as.character(clust8names$FULL_NAME[selected8]) ), horiz =T, xlim = c(0, 15))
 #dev.off()
 # Possibly three classes, high difference in spearmant correlation difference
 # Those that have overall high correlation
@@ -1659,8 +1646,8 @@ abline(h=0)
 # MAF 10% 101 , c1 < 1 => 14; c1 < .5 => 10; c1 < .01 => 4; c1 < .25 =>6
 # FDR < .1
 sum(!is.na(list_of_pval))
-length(which(p.adjust(list_of_pval, method="hommel") < .05))
-significant_ribo_diff <- which(p.adjust(list_of_pval, method="hommel") < .05)
+length(which(p.adjust(list_of_pval, method="fdr") < .05))
+significant_ribo_diff <- which(p.adjust(list_of_pval, method="fdr") < .05)
 color_by_pval <- rep(0, length(list_of_pval))
 pval_cutoff <- max(list_of_pval[significant_ribo_diff])
 color_by_pval[list_of_pval <= pval_cutoff] <- 1
@@ -1781,28 +1768,27 @@ print (k1$p.value * 8)
 print(kruskalmc(kozak_seq_score_table$V9 ~ as.factor(seq_factor), probs=.05/8))
 if (j < 7) { 
   pos = j -7
-}
-else { 
+} else { 
   pos = j -6
 }
-#pdf (paste('~/Google Drive/Manuscript Figures/Kozak_Analysis/Translation_Efficiency_by_Position',pos ,sep="_"), width=5, height=5 )
-boxplot(kozak_seq_score_table$V9 ~ as.factor(seq_factor), 
-        varwidth=T, ylim=c(-.75,.75), notch=T, cex=.2, whisklty=0, staplelty=0, ylab="Translation Efficiency", main = paste("Position", pos , sep = ": ") )
 
+#pdf (paste('~/Google_Drive/Manuscript Figures/Kozak_Analysis/Translation_Efficiency_by_Position', pos ,sep="_"), width=5, height=5 )
 # boxplot(kozak_seq_score_table$V9 ~ as.factor(seq_factor), 
-#         varwidth=T, cex=.2, outline = F, ylab="Translation Efficiency", main = paste("Position", pos , sep = ": ") )
-# # max(boxplot.stats(kozak_seq_score_table$V9)$out[< 0])
-# # [1] -2.238098
-# # > min(boxplot.stats(kozak_seq_score_table$V9)$out[a1])
-# # [1] 2.367177
-# collapse_out = kozak_seq_score_table$V9
-# collapse_out[collapse_out > 2.367177 ] = 2.367177
-# collapse_out[collapse_out < -2.238098 ] = -2.238098
-# bwplot(collapse_out ~ as.factor(seq_factor), panel=function(...){panel.violin(...); panel.bwplot(do.out = F, ...)})
-# #dev.off()
-
+#         varwidth=T, ylim=c(-.75,.75), notch=T, cex=.2, whisklty=0, staplelty=0,
+#         ylab="Translation Efficiency", main = paste("Position", pos , sep = ": ") )
+#dev.off()
 #boxplot(kozak_seq_score_table$V10 ~ as.factor(seq_factor), varwidth=T, ylim=c(4,6), notch=T, range=.001, cex=.2)
+
+#remove top and bottom 1% of the datapoints
+# p = ggplot(kozak_seq_score_table, aes(as.factor(seq_factor), V9))
+# p + geom_violin(scale="count") + ylim(-2.463687377, 1.796194432) +
+#   stat_summary(fun.y="median",geom='point') + theme_bw() +
+#   ylab("Translation Efficiency") + xlab(paste ("Nucleotide at Position", pos, sep=": " ) ) 
+p2 = ggplot ( kozak_seq_score_table, aes ( x= V9, fill = as.factor(seq_factor)))
+p2 + geom_density(alpha=.5) + xlim(-2.463687377, 1.796194432) + xlab("Translation Efficiency") +theme_bw()
+ggsave ( file = paste('~/Google_Drive/Manuscript Figures/Kozak_Analysis/Translation_Efficiency_by_Position_Density', pos, ".pdf" ,sep="_"), width=5, height=3 )
 }
+
 
 # Add Heatmap of p-values from the kruskal vallis
 # Use rect for drawing; Use -log10p 
@@ -2443,6 +2429,27 @@ norm_hc_rep <- hclust (norm_dd_rep)
 #   
 # }
 
+# TEST same number of replicates 2 of each
+# ribo has three samples with 3 replicates
+# 19240, 18526,18951
+# rna with more than 2 12878; 12890; 12891; 12892; 19238; 19239; 19240
+
+# # to enable reproducibility - fix seed
+# set.seed(100)
+# rna_cols_to_select = c()
+# ribo_cols_to_select = c()
+# for (l in levels(as.factor(sample_id_all[1:49])) ) { 
+#   rna_cols_to_select= c( rna_cols_to_select, 
+#                          sample (which(as.factor(sample_id_all[1:49]) == l) , 2, replace=F) )
+# }
+# for (l in levels(as.factor(sample_id_all[50:80])) ) { 
+#   ribo_cols_to_select= c( ribo_cols_to_select, 
+#                           49 + sample (which(as.factor(sample_id_all[50:80]) == l) , 2, replace=F) )
+# }
+# table(sample_id_all[rna_cols_to_select])
+# table(sample_id_all[ribo_cols_to_select])
+
+
 ### OLD ACROSS INDIVIDUAL SUPERSOM ANALYSIS
 linfeng_prot_common_with_te <-  colnames(linfeng_protein) %in% colnames(te_fit3$coefficients)
 linfeng_te_columns <- linfeng_protein[,linfeng_prot_common_with_te]
@@ -2642,4 +2649,5 @@ for (key in listofkeys) {
   }
 }
 barplot(barplotdata, beside=T, horiz = T, cex.names = .5, col = c("blue", "magenta"))
+
 
