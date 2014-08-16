@@ -121,8 +121,14 @@ rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
 all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
 polyA_mean <- apply(all_rnaseq_counts[,grep("polyA", colnames(all_rnaseq_counts))],1, mean)
 RZ_mean <- apply(all_rnaseq_counts[,grep("RiboZero", colnames(all_rnaseq_counts))],1, mean)
-plot(log10(polyA_mean), log10(RZ_mean), cex=0.2, pch=19, ylab="log10(RiboZero_ReadCount)", xlab="log10(PolyA_ReadCount)", main="Comparing RNASeq Methods")
+# pdf ('~/Google_Drive/Manuscript Figures/RNA-Seq_Quality/PolyA_vs_RZ_RNASeq.pdf', width = 5, height=5)
+par(las=1)
+dcols <- densCols(log10(polyA_mean), log10(RZ_mean), colramp= colorRampPalette(c("#660099", "#FFCCFF")), nbin = 128)
+plot(log10(polyA_mean), log10(RZ_mean), cex=0.2, pch=19, col = dcols, 
+     ylab="log10(RiboZero_ReadCount)", xlab="log10(PolyA_ReadCount)", main="Comparing RNASeq Methods")
 fit.rna <- lm(log10(RZ_mean)~log10(polyA_mean))
+abline(fit.rna, col = "blue")
+# dev.off()
 # rna_seq_normalized$ID[abs(stdres(fit.rna)) > 3]
 outlier_colors <- rep("Black", length(log10(polyA_mean)))
 outlier_colors[abs(stdres(fit.rna)) > 3] <- "Red"
@@ -476,6 +482,7 @@ as.numeric(apply(abs(te.diff.results), 2, sum))
 # Variation in both RNA and Ribo is in joint_sig_random
 # Variation in either
 sig_ribo_rna_random = union(rna_sig_random, ribo_sig_random)
+sig_rna_only_random = setdiff (rna_sig_random, ribo_sig_random)
 sig_ribo_rna_random_strict = intersect(rna_sig_random, ribo_sig_random)
 
 linfeng_common <- colnames(linfeng_protein) %in% unique(sample_labels_joint)
@@ -492,13 +499,23 @@ linfeng_protein_ribo_rna_zero_variance <-
   merge (v3$E[-sig_ribo_rna_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
 linfeng_protein_ribo_rna_strict_variance <- 
   merge (v3$E[sig_ribo_rna_random_strict,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
+linfeng_protein_ribo_rna_rnaonly_variance <- 
+  merge (v3$E[sig_rna_only_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
+linfeng_protein_ribo_rna_rnaall_variance <- 
+  merge (v3$E[rna_sig_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
+linfeng_protein_ribo_rna_riboall_variance <- 
+  merge (v3$E[ribo_sig_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
+
 
 ## SWITCHED TO USING THE NONZERO VARIANCE SET
 # We will add the zero_variance ones on top 
 ## INSTEAD OF EXTRACTING THE FUNCTION WE WILL SWITCH THE DATASET
 # linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_zero_variance
-# linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_strict_variance
-linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_nonzero_variance
+# linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_rnaonly_variance
+linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_strict_variance
+# linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_nonzero_variance
+# linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_rnaall_variance
+# linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_riboall_variance
 
 row.names(linfeng_protein_ribo_rna) <- linfeng_protein_ribo_rna[,1]
 linfeng_protein_ribo_rna <- linfeng_protein_ribo_rna[,-c(1,135)]
@@ -542,9 +559,9 @@ for (i in 1:length(ribo_replicate_mean_prot)) {
 
 length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
-# 0.38; Strict 0.65; non-sig .16
+# 0.38; Strict 0.65; non-sig .16; RNA-only 0.31
 median(across_ind_rna_correlation)
-# 0.42; Strict 0.67; non-sig .18
+# 0.42; Strict 0.67; non-sig .18; RNA-only 0.4
 ks.test (across_ind_ribo_correlation, across_ind_rna_correlation )
 # p= 0.03; Strict p= 0.61
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
