@@ -99,19 +99,28 @@ CDS_IDs <- CDS[,1]
 ## SPECIES TO COUNTS COMPARISON
 species_sum <- rowSums(CDS_species)
 cds_count_sum <- rowSums(CDS_Counts)
+species_sum = species_sum[cds_count_sum > 0]
+cds_count_sum = cds_count_sum[cds_count_sum > 0]
 ratios <- cds_count_sum/species_sum
-plot(log10(cds_count_sum+1), log10(species_sum+1), cex=0.2)
-ratios_dataframe <- data.frame(ID=CDS_IDs, ReadCount=log10(cds_count_sum+1) , SpeciesCount=log10(species_sum+1) )
+dcols = densCols(log10(cds_count_sum), log10(species_sum), colramp= colorRampPalette(c("#660099", "#FFCCFF")), nbin = 128)
+pdf (file = '~/Google_Drive/Manuscript Figures/Ribo-Seq_Quality/Species_to_ReadCounts_allGenes.pdf', height=5, width=5)
+plot(log10(cds_count_sum), log10(species_sum), col= dcols, 
+     pch=19, cex =.5, xlab= "Log10 Read Count", ylab= "Log10 Species Count")
+dev.off()
+
+cor.test(log10(cds_count_sum), log10(species_sum), method="spearman")
+
+ratios_dataframe <- data.frame( ReadCount=log10(cds_count_sum) , SpeciesCount=log10(species_sum) )
 
 #### Perform loess regression between read_count to species_count
 # Call outliers as 2*SE away from the fit
 ## This needs a lot of memory
-#count_to_species <- predict(loess(ReadCount~SpeciesCount, data=ratios_dataframe, statistics="approximate", trace.hat="approximate"), se=T)
+# count_to_species <- predict(loess(ReadCount~SpeciesCount, data=ratios_dataframe, statistics="approximate", trace.hat="approximate"), se=T)
 #c1 <- count_to_species$fit+10^2*count_to_species$s
 #length(which(ratios_dataframe$ReadCount- c1 > 0))
 # c2 <- count_to_species$fit-10^2*count_to_species$s
 # plot(ratios_dataframe$ReadCount, ratios_dataframe$SpeciesCount, pch=19, cex=0.2)
-#lines(ratios_dataframe$ReadCount,count_to_species$fit, col="red")
+# lines(ratios_dataframe$ReadCount,count_to_species$fit, col="red")
 # lines(ratios_dataframe$ReadCount,count_to_species$fit+3*count_to_species$s, lty=2)
 # lines(ratios_dataframe$ReadCount,count_to_species$fit-3*count_to_species$s, lty=2)
 
@@ -320,6 +329,9 @@ random_effect_df = data.frame (ID = hgnc_to_ensg_convert(row.names(v3)),
     RNA_Stat=random_effect_stat_rna, RNA_P = p.adjust(random_effect_p_val_rna, method = "holm"),
     RIBO_Stat=random_effect_stat_ribo, RIBO_P = p.adjust(random_effect_p_val_ribo, method = "holm"))
 # write.table(random_effect_df, file = paste(data_dir , "Random_Effect_Model_stats_DF_Table.txt", sep = "" ), row.names=F )
+
+# We can use the likelihood ratio (the test statistic to compare power to detect)
+
 
 ## VENN DIAGRAM REPRESENTATION
 ## ADD Color
@@ -911,7 +923,15 @@ par(mfrow = c(2, 2))
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,1],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Ribosome Occupancy", zlim = c(0,1))
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,2],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="RNA Expression" , zlim = c(0,1))
 plot.kohonen(absolute.som, type = "property", property=absolute.som$codes[,3],palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Translation Efficiency", zlim = c(0,1))
-plot.kohonen(absolute.som, property=absolute.som$codes[,4], type = "property", palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Protein Level", zlim = c(0,1))
+plot.kohonen(absolute.som,  type = "property", property=absolute.som$codes[,4], palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')}, ncolors=50, contin=T, main="Protein Level", zlim = c(0,1))
+#dev.off()
+
+# Counts plot is modified and behaves unexpectedly
+unit_counts = table(absolute.som$unit.classif)
+
+#pdf('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/Absolute_SOM_Counts.pdf', width=7, height=5)
+plot.kohonen(absolute.som,  type = "property", property = unit_counts,  main="Number of Genes per Neuron",
+  palette.name=function(x){colorpanel(x, 'blue3','white', 'red2')},  contin= T, ncolors = 43, zlim=c(0, 42))
 #dev.off()
 
 plot.kohonen(absolute.som, property=prot_mean, type = "property", palette.name=redblue_cols, ncolors=11)
