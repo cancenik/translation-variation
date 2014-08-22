@@ -88,9 +88,10 @@ pval_colors <- rep("Black", times = length(prot_ribo_ribosig$BETA.x))
 pval_colors[prot_ribo_ribosig$P.x < .05] <- "Red"
 pdf (file = "~/Google_Drive/Manuscript Figures/roQTLs//Comparison_of_RiboProtBetas.pdf",
      width= 4, height = 4)
-plot(prot_ribo_ribosig$BETA.x,prot_ribo_ribosig$BETA.y,  ylab= "Ribo Beta", xlab= "Protein Beta",
-     tck=.02, pch=19, cex=.65,  xlim = c(-.75, .75), ylim= c(-.75,.75),  col = pval_colors)
-abline(0,1)
+plot(prot_ribo_ribosig$BETA.x,prot_ribo_ribosig$BETA.y,  ylab= "Ribosome Occupancy\nQTL Effect Size", xlab= "Protein Level\nQTL effect size",
+     tck=.02, pch=19, cex=.65,  xlim = c(-.2, .2), ylim= c(-.75,.75),  col = pval_colors)
+# Sophie suggestion to comment out this and change xlim
+# abline(0,1)
 abline(v=0,h=0)
 dev.off()
 
