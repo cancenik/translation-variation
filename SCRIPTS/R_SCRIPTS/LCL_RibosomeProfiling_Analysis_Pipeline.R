@@ -14,7 +14,7 @@ library("gplots")
 # Use for progress bars
 #library("tcltk")
 source('~/project/kohonen2/R/plot.kohonen.R')
-#library(nlme)
+library(nlme)
 library("lme4")
 library("RLRsim")
 library ("VennDiagram")
@@ -431,6 +431,15 @@ apply(abs(decideTests(riborna_fit2, p.value=0.01, lfc=1)), 2, sum)
 # This nested interaction formula should allow us to calculate within individual diffs. 
 te_factor <- paste(treatment, sample_labels_joint_common, sep=".")
 te_factor <- factor(te_factor, levels=unique(te_factor))
+
+# One alternative is to use remove individual labels when calculating transcript-level TE
+# In theory, this can be done by using all datasets even those without replicates
+# However, a more comparable analysis is to just use the same individuals and change analysis
+# te_factor = treatment
+# Compare 
+# grand_mean_te <- apply(te_fit4$coefficients, 1, median)
+# With the alternative
+
 tedesign <- model.matrix(~0+ te_factor)
 colnames(tedesign) <- levels(te_factor)
 te_fit <- lmFit(all_expr_elist, design=tedesign)
@@ -1609,11 +1618,15 @@ for (i in names(total_alleles[total_alleles > 60*.1 ]) ) {
     rna_index_factor[rna_index] <- rna_index_factor[rna_index] +  (multi_diff[j] * allele_num[match(rna_index_values, ind_unique)] )
   }
 # print (index_factor)
+
+#data = data.frame (index= as.factor(index_factor), exp = ribo_only$E[my_index,], labels = as.factor(sample_labels_ribo), w=ribo_only$weights[my_index,])
+#my_lme = summary(lme(exp ~ index, random =~1|labels,weights= ~I(1/w), data=data ))$tTable[2,5]
+
  multi_pval <- c(multi_pval, summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4])
   boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Kozak Strength" , names=unique(sort(round(index_factor, digits=2))) )
-legend("topright", paste("p-val = ",  signif(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
+  legend("topright", paste("p-val = ",  signif(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
   boxplot(rna_only$E[my_index,]~rna_index_factor, ylab="RNA Expression", xlab= "Kozak Strength", names=unique(sort(round(index_factor, digits=2))))
-legend("topright", paste("p-val = ",  signif(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
+  legend("topright", paste("p-val = ",  signif(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
 summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
 summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
  }
@@ -1629,6 +1642,10 @@ kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V4[!multi]
 single_var_ind <- kozak_var_ind[!multi,]
 ribo_diff <- c()
 list_of_pval <- c()
+lme_pval = c()
+# Test robustness to lme
+# lmer(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[ribo_cols_to_select])), 
+# weights= joint_expression_common$weights[i,ribo_cols_to_select])
 for (i in 1:length(single_var_ind[,1])) { 
   all_ind <- grep("NA",single_var_ind[i,-1], value=T)
   allele_num <- rle(all_ind)$lengths
@@ -1647,6 +1664,11 @@ for (i in 1:length(single_var_ind[,1])) {
     ribo_diff <- c(ribo_diff, weighted.mean(ribo_only$E[my_index,ribo_index],ribo_only$weights[my_index,ribo_index] ) - weighted.mean(ribo_only$E[my_index, -ribo_index], ribo_only$weights[my_index, -ribo_index] ))
     index_factor <- rep(0,times=length(sample_labels_ribo))
     index_factor[ribo_index] <- allele_num[match(ribo_index_values, ind_unique)]
+    #lmer(ribo_only$E[my_index,]  ~ index_factor + (1| as.factor(sample_labels_ribo)), weights= ribo_only$weights[my_index,])
+    data = data.frame (index= as.factor(index_factor), exp = ribo_only$E[my_index,], labels = as.factor(sample_labels_ribo), w=ribo_only$weights[my_index,])
+    my_lme = summary(lme(exp ~ index, random =~1|labels,weights= ~I(1/w), data=data ))$tTable[2,5]
+    lme_pval = c(lme_pval, my_lme)
+    
     my_pval <- summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4]
     list_of_pval <- c(list_of_pval, my_pval)
     if ( my_pval < 0.01) {
@@ -1668,8 +1690,14 @@ for (i in 1:length(single_var_ind[,1])) {
   else { 
     ribo_diff <- c(ribo_diff,NA)
     list_of_pval <- c(list_of_pval,NA)
+    lme_pval <- c(lme_pval, NA)
   }
 }
+length(which(lme_pval < .05))
+length(which(p.adjust(lme_pval, method="fdr") < .4))
+length(which(list_of_pval < .05))
+length(which(p.adjust(list_of_pval, method="fdr") < .05))
+
 
 # Type of mutation and associated ribosome diff
 ribo_diff_mutation_type = data.frame(DIFF=ribo_diff, TYPE=all_kozak_score_variants[!multi,2])
