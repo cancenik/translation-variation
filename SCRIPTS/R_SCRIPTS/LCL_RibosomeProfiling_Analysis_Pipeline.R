@@ -14,7 +14,7 @@ library("gplots")
 # Use for progress bars
 #library("tcltk")
 source('~/project/kohonen2/R/plot.kohonen.R')
-library(nlme)
+library("nlme")
 library("lme4")
 library("RLRsim")
 library ("VennDiagram")
@@ -1536,6 +1536,10 @@ kozak_score_variants_hapmap <- read.table('~/project/CORE_DATAFILES/Kozak_Varian
 stringsAsFactors=F, fill=T, col.names=paste ("V", seq(1:10), sep=""))
 all_kozak_score_variants <- merge(kozak_score_variants, kozak_score_variants_hapmap, all=T, by=c("V1", "V2", "V3", "V4") )
 all_kozak_score_variants[is.na(all_kozak_score_variants)] <- ""
+
+# Silly solution to extract all YRI is to use the same strategy as 18508
+# We can remove all individual identifiers for non-YRI
+# Alternatively, we can verify that the variant is not specific to one pop
 for ( i in 1:dim(all_kozak_score_variants)[2]) { 
   for (j in 1:dim(all_kozak_score_variants)[1]) { 
     if (all_kozak_score_variants[j,i] == "NA18508" ) { 
@@ -1560,7 +1564,8 @@ MAF <- floor(0.05 * 60)
 hist(number_alleles, 60, xlab="Number of Alleles", main="")
 
 # Comaparing the strength of the wild-type vs the variant Kozak strength
-# Let's not worry about allele_frequency. Very few cases with alternative allele very high frequency
+# Let's not worry about high allele_frequency. 
+# Very few cases with alternative allele very high frequency
 p1 <- hist(kozak_merge$V2,20)
 #p2 <- hist(kozak_merge$V4[number_alleles <= 30], 50)
 p2 <- hist(kozak_merge$V4,20)
@@ -1572,6 +1577,7 @@ wilcox.test(kozak_merge$V4, kozak_merge$V2)
 boxplot(kozak_merge$V2 -kozak_merge$V4, notch=T)
 abline(h = 0)
 #dev.off()
+
 rna_only <- v3[,type=="RNA"]
 sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
 sample_labels_rna <- sample_labels_rna[grep("GM", sample_labels_rna)]
@@ -1595,41 +1601,36 @@ total_alleles <- by(multi_alleles, as.factor(multi_ind[,1]), sum)
 multi_pval <- c()
 # total_number_of_alleles can be greater than max(number_alleles) as it is the sum in two positions
 for (i in names(total_alleles[total_alleles > 60*.1 ]) ) { 
- my_index = which ( row.names(ribo_only) == enst_hgnc[grep (i, enst_hgnc), 2])
- # Add other requirements
- if ( length(my_index) ) { 
- index_factor <- rep(0, times=length(sample_labels_ribo))
- # Modify index factor using the corresponding multi_diff
- rna_index_factor <- rep (0, times=length(sample_labels_rna))
- 
-  all_variants <-  (which(multi_ind[,1] == i))
-  for ( j in all_variants) { 
-   # Find corresponding ribo 
-    all_ind <- grep("NA",multi_ind[j,-1], value=T)
-    allele_num <- rle(all_ind)$lengths
-    ind_unique <- unique(all_ind)
-    ind_unique <- sub("NA", "GM", ind_unique)
-    ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
-    ribo_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo, value=T)
-    index_factor[ribo_index] = index_factor[ribo_index] + (multi_diff[j] * allele_num[match(ribo_index_values, ind_unique)])
-    
-    rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
-    rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
-    rna_index_factor[rna_index] <- rna_index_factor[rna_index] +  (multi_diff[j] * allele_num[match(rna_index_values, ind_unique)] )
-  }
-# print (index_factor)
-
+   my_index = which ( row.names(ribo_only) == enst_hgnc[grep (i, enst_hgnc), 2])
+   if ( length(my_index) ) { 
+    index_factor <- rep(0, times=length(sample_labels_ribo))
+  # Modify index factor using the corresponding multi_diff
+    rna_index_factor <- rep (0, times=length(sample_labels_rna))
+    all_variants <-  (which(multi_ind[,1] == i))
+    for ( j in all_variants) { 
+     # Find corresponding ribo 
+      all_ind <- grep("NA",multi_ind[j,-1], value=T)
+      allele_num <- rle(all_ind)$lengths
+      ind_unique <- unique(all_ind)
+      ind_unique <- sub("NA", "GM", ind_unique)
+      ribo_index <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo)
+      ribo_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_ribo, value=T)
+      index_factor[ribo_index] = index_factor[ribo_index] + (multi_diff[j] * allele_num[match(ribo_index_values, ind_unique)])
+      rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
+      rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
+      rna_index_factor[rna_index] <- rna_index_factor[rna_index] +  (multi_diff[j] * allele_num[match(rna_index_values, ind_unique)] )
+    }
 #data = data.frame (index= as.factor(index_factor), exp = ribo_only$E[my_index,], labels = as.factor(sample_labels_ribo), w=ribo_only$weights[my_index,])
 #my_lme = summary(lme(exp ~ index, random =~1|labels,weights= ~I(1/w), data=data ))$tTable[2,5]
-
- multi_pval <- c(multi_pval, summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4])
-  boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Kozak Strength" , names=unique(sort(round(index_factor, digits=2))) )
-  legend("topright", paste("p-val = ",  signif(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
-  boxplot(rna_only$E[my_index,]~rna_index_factor, ylab="RNA Expression", xlab= "Kozak Strength", names=unique(sort(round(index_factor, digits=2))))
-  legend("topright", paste("p-val = ",  signif(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
-summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))
-summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))
- }
+    my_pval = summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4] 
+    multi_pval <- c(multi_pval, my_pval)
+    if (my_pval < 0.05 ) {
+      boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Kozak Strength" , names=unique(sort(round(index_factor, digits=2))) )
+      legend("topright", paste("p-val = ",  signif(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
+      boxplot(rna_only$E[my_index,]~rna_index_factor, ylab="RNA Expression", xlab= "Kozak Strength", names=unique(sort(round(index_factor, digits=2))))
+      legend("topright", paste("p-val = ",  signif(summary.lm(lm(rna_only$E[my_index,] ~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
+    }
+  }
 }
 
 # Kozak Diff is WT - VARIANT
@@ -1644,8 +1645,6 @@ ribo_diff <- c()
 list_of_pval <- c()
 lme_pval = c()
 # Test robustness to lme
-# lmer(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[ribo_cols_to_select])), 
-# weights= joint_expression_common$weights[i,ribo_cols_to_select])
 for (i in 1:length(single_var_ind[,1])) { 
   all_ind <- grep("NA",single_var_ind[i,-1], value=T)
   allele_num <- rle(all_ind)$lengths
@@ -1660,17 +1659,17 @@ for (i in 1:length(single_var_ind[,1])) {
   rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
   rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
   if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 1 & length(ind_unique) < 29 & sum(allele_num) > 60*0.1 ) {
-# Ribo_Diff is a weighted mean difference
     ribo_diff <- c(ribo_diff, weighted.mean(ribo_only$E[my_index,ribo_index],ribo_only$weights[my_index,ribo_index] ) - weighted.mean(ribo_only$E[my_index, -ribo_index], ribo_only$weights[my_index, -ribo_index] ))
     index_factor <- rep(0,times=length(sample_labels_ribo))
     index_factor[ribo_index] <- allele_num[match(ribo_index_values, ind_unique)]
-    #lmer(ribo_only$E[my_index,]  ~ index_factor + (1| as.factor(sample_labels_ribo)), weights= ribo_only$weights[my_index,])
+
     data = data.frame (index= as.factor(index_factor), exp = ribo_only$E[my_index,], labels = as.factor(sample_labels_ribo), w=ribo_only$weights[my_index,])
     my_lme = summary(lme(exp ~ index, random =~1|labels,weights= ~I(1/w), data=data ))$tTable[2,5]
     lme_pval = c(lme_pval, my_lme)
     
     my_pval <- summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4]
     list_of_pval <- c(list_of_pval, my_pval)
+
     if ( my_pval < 0.01) {
     #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Ribo_", row.names(ribo_only)[my_index],".pdf", sep=""), width=5, height=5   )
     boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Allele Number" , names=unique(sort(index_factor)), main=row.names(ribo_only)[my_index] )
@@ -1693,11 +1692,14 @@ for (i in 1:length(single_var_ind[,1])) {
     lme_pval <- c(lme_pval, NA)
   }
 }
-length(which(lme_pval < .05))
-length(which(p.adjust(lme_pval, method="fdr") < .4))
-length(which(list_of_pval < .05))
-length(which(p.adjust(list_of_pval, method="fdr") < .05))
 
+length(which(lme_pval < .05))
+lme_sig = which(lme_pval < .05)
+length(which(list_of_pval < .05))
+length(which(p.adjust(list_of_pval, method="fdr") < .1))
+lm_sig = which(p.adjust(list_of_pval, method="fdr") < .1)
+both_sig = intersect(lm_sig, lme_sig)
+single_var_ind[both_sig,1]
 
 # Type of mutation and associated ribosome diff
 ribo_diff_mutation_type = data.frame(DIFF=ribo_diff, TYPE=all_kozak_score_variants[!multi,2])
