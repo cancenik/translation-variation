@@ -128,6 +128,48 @@ ratios_dataframe <- data.frame( ReadCount=log10(cds_count_sum) , SpeciesCount=lo
 # Identify differences in PolyA to RiboZero and remove
 rnaexpr <- rowSums(cpm(all_rnaseq_counts) > 1) >= 40
 all_rnaseq_counts <- all_rnaseq_counts[rnaexpr,]
+colnames(all_rnaseq_counts)
+cell_type_all_rnaseq_counts = unlist(strsplit(colnames(all_rnaseq_counts), "_"))
+cell_type_all_rnaseq_counts <- cell_type_all_rnaseq_counts[grep('GM', cell_type_all_rnaseq_counts)]
+all_rna_seq_data_type = c(rep("polyA",  length(grep("polyA", colnames(all_rnaseq_counts)))) , 
+                          rep("RZ" ,  length(grep("RiboZero", colnames(all_rnaseq_counts)))))
+cell_type_all_rnaseq_counts = cell_type_all_rnaseq_counts[1:length(all_rna_seq_data_type)]
+relevant_counts = all_rnaseq_counts$counts[,1:44]
+
+# REturns a vector of cell line averages for the polyA, and RZ
+polyA_RZ_Mean = function (x) { 
+  polyA = unlist(by(x[1:18] , cell_type_all_rnaseq_counts[1:18] , FUN= mean, simplify = F))
+  RZ = unlist(by(x[19:44] , cell_type_all_rnaseq_counts[19:44] , FUN= mean, simplify = F))
+  return ( c(polyA, RZ))
+}
+
+mean_per_cell_line = apply (relevant_counts, 1 , polyA_RZ_Mean)
+
+plot_correlations  = function (i, j, cell_line) { 
+  par(las=1)
+  dcols <- densCols(log10(mean_per_cell_line[i,]), log10(mean_per_cell_line[j,]), colramp= colorRampPalette(c("#660099", "#FFCCFF")), nbin = 128)
+  plot(log10(mean_per_cell_line[i,]), log10(mean_per_cell_line[j,]), cex=0.2, pch=19, col = dcols, 
+       ylab="log10 Mean number of reads (rRNA depletion)", 
+       xlab="log10 Mean number of reads (PolyA Selection)", 
+       main=cell_line, cex.lab = 0.75)
+  text(par("usr")[1]+3, par("usr")[4]-0.5, 
+       labels=paste ("rho", 
+        round(cor.test(mean_per_cell_line[j,] , mean_per_cell_line[i,], method = "spearman")$estimate,2) 
+        , sep="="))  
+}
+jpeg ("~/Desktop/TranslationVariationManuscript/RNASeq_Method_Comp.jpeg", width= 720, height=480  )
+par(mfrow= c(2,3))
+plot_correlations ( 1, 8, "GM12878")
+plot_correlations ( 2, 10, "GM12891")
+plot_correlations ( 3, 11, "GM12892")
+plot_correlations ( 4, 17, "GM19238")
+plot_correlations ( 5, 18, "GM19239")
+plot_correlations ( 6, 19, "GM19240")
+dev.off()
+par(mfrow= c(1,1))
+
+
+# In addition to comparing the means, include a cell type by cell type analysis
 polyA_mean <- apply(all_rnaseq_counts[,grep("polyA", colnames(all_rnaseq_counts))],1, mean)
 RZ_mean <- apply(all_rnaseq_counts[,grep("RiboZero", colnames(all_rnaseq_counts))],1, mean)
 # pdf ('~/Google_Drive/Manuscript Figures/RNA-Seq_Quality/PolyA_vs_RZ_RNASeq.pdf', width = 5, height=5)
@@ -1563,21 +1605,6 @@ number_alleles <- number_alleles[!multi]
 MAF <- floor(0.05 * 60)
 hist(number_alleles, 60, xlab="Number of Alleles", main="")
 
-# Comaparing the strength of the wild-type vs the variant Kozak strength
-# Let's not worry about high allele_frequency. 
-# Very few cases with alternative allele very high frequency
-p1 <- hist(kozak_merge$V2,20)
-#p2 <- hist(kozak_merge$V4[number_alleles <= 30], 50)
-p2 <- hist(kozak_merge$V4,20)
-plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6), xlab="Kozak Score", main="Distribution of Kozak Scores")
-plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
-boxplot(kozak_merge$V4, kozak_merge$V2, col=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)), notch=T, range=1, xlab=NULL)
-wilcox.test(kozak_merge$V4, kozak_merge$V2)
-#pdf(file="~/Google_Drive/Manuscript Figures/Kozak_Analysis/Difference_in_Kozak_Scores.pdf", width=3, height=4, bg= "transparent")
-boxplot(kozak_merge$V2 -kozak_merge$V4, notch=T)
-abline(h = 0)
-#dev.off()
-
 rna_only <- v3[,type=="RNA"]
 sample_labels_rna <- unlist(strsplit(colnames(rna_only), split= "_"))
 sample_labels_rna <- sample_labels_rna[grep("GM", sample_labels_rna)]
@@ -1591,13 +1618,7 @@ multi_ind = kozak_var_ind[multi,]
 multi_alleles <- apply(multi_ind, 1, function(x){length(grep('NA', x))})
 total_alleles <- by(multi_alleles, as.factor(multi_ind[,1]), sum)  
 
-# One idea is to treat everything as quantitative. 
-# Hence the Beta in lm is a modifier of the change in Kozak strength
-# This can be applied to all but 0 change ones; 
-# For the single variant ones this is identitical to 0,1,2 coding
-
 # "ENST00000263461.5" is significant ribo not significant rna WDR11-001 which is also implicated in cancer => FDR ~ .5
-# I should order WDR11-001 and from single ones:  65, 145 FDR .5;   316, 319 FDR < .1 
 multi_pval <- c()
 # total_number_of_alleles can be greater than max(number_alleles) as it is the sum in two positions
 for (i in names(total_alleles[total_alleles > 60*.1 ]) ) { 
@@ -1624,7 +1645,7 @@ for (i in names(total_alleles[total_alleles > 60*.1 ]) ) {
 #my_lme = summary(lme(exp ~ index, random =~1|labels,weights= ~I(1/w), data=data ))$tTable[2,5]
     my_pval = summary(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4] 
     multi_pval <- c(multi_pval, my_pval)
-    if (my_pval < 0.05 ) {
+    if (my_pval < 0.01 ) {
       boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Kozak Strength" , names=unique(sort(round(index_factor, digits=2))) )
       legend("topright", paste("p-val = ",  signif(summary.lm(lm(ribo_only$E[my_index,] ~ index_factor, weights=ribo_only$weights[my_index,]))$coefficients[2,4], digits=2 ), sep="" ), inset=0.05, bty= "n" )
       boxplot(rna_only$E[my_index,]~rna_index_factor, ylab="RNA Expression", xlab= "Kozak Strength", names=unique(sort(round(index_factor, digits=2))))
@@ -1633,17 +1654,11 @@ for (i in names(total_alleles[total_alleles > 60*.1 ]) ) {
   }
 }
 
-# Kozak Diff is WT - VARIANT
-# Positive score means WT kozak strength is better
-# Negative score means VARIANT kozak Strength is better
-# grep ("10847|19240", sample_labels) gives the index of the expr value
-# Go over the individuals, grep the samples and calculate difference in mean
-
-kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V4[!multi]
 single_var_ind <- kozak_var_ind[!multi,]
 ribo_diff <- c()
 list_of_pval <- c()
 lme_pval = c()
+rna_pvals = c()
 # Test robustness to lme
 for (i in 1:length(single_var_ind[,1])) { 
   all_ind <- grep("NA",single_var_ind[i,-1], value=T)
@@ -1658,7 +1673,8 @@ for (i in 1:length(single_var_ind[,1])) {
 
   rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
   rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
-  if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 1 & length(ind_unique) < 29 & sum(allele_num) > 60*0.1 ) {
+# Test individual > 2 and < 28 
+  if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 2 & length(ind_unique) < 28 ) {
     ribo_diff <- c(ribo_diff, weighted.mean(ribo_only$E[my_index,ribo_index],ribo_only$weights[my_index,ribo_index] ) - weighted.mean(ribo_only$E[my_index, -ribo_index], ribo_only$weights[my_index, -ribo_index] ))
     index_factor <- rep(0,times=length(sample_labels_ribo))
     index_factor[ribo_index] <- allele_num[match(ribo_index_values, ind_unique)]
@@ -1671,19 +1687,21 @@ for (i in 1:length(single_var_ind[,1])) {
     list_of_pval <- c(list_of_pval, my_pval)
 
     if ( my_pval < 0.01) {
-    #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/Ribo_", row.names(ribo_only)[my_index],".pdf", sep=""), width=5, height=5   )
-    boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Allele Number" , names=unique(sort(index_factor)), main=row.names(ribo_only)[my_index] )
-    legend("bottomright", paste("p-val = ",  signif(my_pval, digits=2 ), sep="" ), inset=0.05, bty= "n" )
-    #dev.off()
     rna_index_factor <- rep (0, times=length(sample_labels_rna))
     rna_index <-  grep(paste(ind_unique , collapse="|"), sample_labels_rna)
     rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
     rna_index_factor[rna_index] <-  allele_num[match(rna_index_values, ind_unique)] 
     rna_pval <- summary(lm(rna_only$E[my_index,]~ rna_index_factor, weights=rna_only$weights[my_index,]))$coefficients[2,4]
-    #pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/RNA_", row.names(rna_only)[my_index], ".pdf",  sep=""), width=5, height=5   )
+    rna_pvals = c(rna_pvals, rna_pval)
+#    pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/RIBO_FDR10_RNA_GT.01/Ribo_", row.names(ribo_only)[my_index],".pdf", sep=""), width=5, height=5   )
+    boxplot(ribo_only$E[my_index,]~ index_factor, ylab= "Ribosome Occupancy", xlab="Allele Number" , names=unique(sort(index_factor)), main=row.names(ribo_only)[my_index] )
+    legend("bottomright", paste("p-val = ",  signif(my_pval, digits=2 ), sep="" ), inset=0.05, bty= "n" )
+    legend("topright", paste("p-val = ",  signif(my_lme, digits=2 ), sep="" ), inset=0.05, bty= "n" )   
+#    dev.off()
+#    pdf(file=paste("~/Google_Drive/Manuscript Figures/Kozak_Analysis/RIBO_FDR10_RNA_GT.01/RNA_", row.names(rna_only)[my_index], ".pdf",  sep=""), width=5, height=5   )
     boxplot(rna_only$E[my_index,]~ rna_index_factor, ylab= "RNA Expression", xlab="Allele Number" , names=unique(sort(index_factor)), main= row.names(rna_only)[my_index] )
     legend("topright", paste("p-val = ",  signif(rna_pval, digits=2 ), sep="" ), inset=0.05, bty= "n" )  
-    #dev.off()
+#    dev.off()
     }
   }
   else { 
@@ -1693,41 +1711,18 @@ for (i in 1:length(single_var_ind[,1])) {
   }
 }
 
-length(which(lme_pval < .05))
-lme_sig = which(lme_pval < .05)
-length(which(list_of_pval < .05))
+sum(!is.na(list_of_pval))
+length(which(lme_pval < .01))
+lme_sig = which(p.adjust(lme_pval, method="fdr") < .4)
+length(which(list_of_pval < .01))
 length(which(p.adjust(list_of_pval, method="fdr") < .1))
+# A nominal p-value of 0.01 ~ 10% FDR 14 genes; 5% FDR 
 lm_sig = which(p.adjust(list_of_pval, method="fdr") < .1)
 both_sig = intersect(lm_sig, lme_sig)
 single_var_ind[both_sig,1]
 
-# Type of mutation and associated ribosome diff
-ribo_diff_mutation_type = data.frame(DIFF=ribo_diff, TYPE=all_kozak_score_variants[!multi,2])
-ribo_diff_mutation_type = ribo_diff_mutation_type[!is.na(ribo_diff_mutation_type[,1]),]
-i1 <- ribo_diff_mutation_type[,2] %in% names(table(ribo_diff_mutation_type[,2]))[table(ribo_diff_mutation_type[,2]) > 2]
-boxplot(ribo_diff_mutation_type[i1,1] ~ factor(ribo_diff_mutation_type[i1,2]))
-abline(h=0)
 
-# When we look at the pvalues, All the significant changes have Kozak strength changes in the upper half
-# The direction of the effect is inconsistent in some
-# MAF 10% 101 , c1 < 1 => 14; c1 < .5 => 10; c1 < .01 => 4; c1 < .25 =>6
-# FDR < .1
-sum(!is.na(list_of_pval))
-length(which(p.adjust(list_of_pval, method="fdr") < .05))
-significant_ribo_diff <- which(p.adjust(list_of_pval, method="fdr") < .05)
-color_by_pval <- rep(0, length(list_of_pval))
-pval_cutoff <- max(list_of_pval[significant_ribo_diff])
-color_by_pval[list_of_pval <= pval_cutoff] <- 1
-plot(ribo_diff, kozak_diff, cex=0.65, pch=19, xlim=c(-1.2, 1.2), tck = .02, col=c("Black", "Red")[as.factor(color_by_pval)])
-abline(v=c(0), h=c(0,log(2), -log(2)))
-
-# Some figure to show that the significantly different Ribo Diff Ones have significant effect on Kozak
-# We can just state this; when we take transcripts with ribo difference significant at 5% FDR
-# Wilcox.test p-value is 0.02
-boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
-wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
-
-#Experimental Results -- RATIOS
+#Kozak Experimental Results -- RATIOS
 t1 <- c(3.96542345327789,
         3.44234121174092,
         3.04438144930569,
@@ -2717,4 +2712,49 @@ for (key in listofkeys) {
 }
 barplot(barplotdata, beside=T, horiz = T, cex.names = .5, col = c("blue", "magenta"))
 
+### KOZAK UNUSED
 
+# Comaparing the strength of the wild-type vs the variant Kozak strength
+# Let's not worry about high allele_frequency. 
+# Very few cases with alternative allele very high frequency
+p1 <- hist(kozak_merge$V2,20)
+#p2 <- hist(kozak_merge$V4[number_alleles <= 30], 50)
+p2 <- hist(kozak_merge$V4,20)
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-16,-6), xlab="Kozak Score", main="Distribution of Kozak Scores")
+plot(p2, col=rgb(1,0,0,1/4), xlim=c(-16,-6), add=T)
+boxplot(kozak_merge$V4, kozak_merge$V2, col=c(rgb(1,0,0,1/4), rgb(0,0,1,1/4)), notch=T, range=1, xlab=NULL)
+wilcox.test(kozak_merge$V4, kozak_merge$V2)
+#pdf(file="~/Google_Drive/Manuscript Figures/Kozak_Analysis/Difference_in_Kozak_Scores.pdf", width=3, height=4, bg= "transparent")
+boxplot(kozak_merge$V2 -kozak_merge$V4, notch=T)
+abline(h = 0)
+#dev.off()
+
+
+# Kozak Diff is WT - VARIANT
+# Positive score means WT kozak strength is better
+# Negative score means VARIANT kozak Strength is better
+# grep ("10847|19240", sample_labels) gives the index of the expr value
+kozak_diff <- kozak_merge$V2[!multi] - kozak_merge$V4[!multi]
+# Type of mutation and associated ribosome diff
+ribo_diff_mutation_type = data.frame(DIFF=ribo_diff, TYPE=all_kozak_score_variants[!multi,2])
+ribo_diff_mutation_type = ribo_diff_mutation_type[!is.na(ribo_diff_mutation_type[,1]),]
+i1 <- ribo_diff_mutation_type[,2] %in% names(table(ribo_diff_mutation_type[,2]))[table(ribo_diff_mutation_type[,2]) > 2]
+boxplot(ribo_diff_mutation_type[i1,1] ~ factor(ribo_diff_mutation_type[i1,2]))
+abline(h=0)
+# When we look at the pvalues, All the significant changes have Kozak strength changes in the upper half
+# The direction of the effect is inconsistent in some
+# MAF 10% 101 , c1 < 1 => 14; c1 < .5 => 10; c1 < .01 => 4; c1 < .25 =>6
+# FDR < .1
+length(which(p.adjust(list_of_pval, method="fdr") < .05))
+significant_ribo_diff <- which(p.adjust(list_of_pval, method="fdr") < .05)
+color_by_pval <- rep(0, length(list_of_pval))
+pval_cutoff <- max(list_of_pval[significant_ribo_diff])
+color_by_pval[list_of_pval <= pval_cutoff] <- 1
+plot(ribo_diff, kozak_diff, cex=0.65, pch=19, xlim=c(-1.2, 1.2), tck = .02, col=c("Black", "Red")[as.factor(color_by_pval)])
+abline(v=c(0), h=c(0,log(2), -log(2)))
+
+# Some figure to show that the significantly different Ribo Diff Ones have significant effect on Kozak
+# We can just state this; when we take transcripts with ribo difference significant at 5% FDR
+# Wilcox.test p-value is 0.02
+boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
+wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
