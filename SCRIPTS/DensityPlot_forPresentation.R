@@ -68,16 +68,34 @@ dev.off()
 # plot_density (linfeng_protein_ribo_rna_rnaall_variance)
 # plot_density (linfeng_protein_ribo_rna_riboall_variance)
 
-i = 438
+i = 4
 ## From rnaonly
-plot(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(dataset[i,type_prot=="Prot"]))[rna_samples])
+plot(rna_replicate_mean_prot[[i]]$x[rna_in_prot]-4.2, as.numeric(as.matrix(dataset[i,type_prot=="Prot"]))[rna_samples])
+barplot (rna_replicate_mean_prot[[i]]$x[rna_in_prot] - 4.2 , col = "Green2" )
+barplot ( as.numeric(as.matrix(dataset[i,type_prot=="Prot"]))[rna_samples] , col = "Blue2" )
+row.names(dataset)[i]
+# AACS
+
 
 i = 456
 
 ## From rnaonly
-plot(rna_replicate_mean_prot[[i]]$x[rna_in_prot], as.numeric(as.matrix(dataset[i,type_prot=="Prot"]))[rna_samples])
+plot(rna_replicate_mean_prot[[i]]$x[rna_in_prot] - mean(rna_replicate_mean_prot[[i]]$x[rna_in_prot])
+     , as.numeric(as.matrix(dataset[i,type_prot=="Prot"]))[rna_samples])
+barplot (rna_replicate_mean_prot[[i]]$x[rna_in_prot] - mean(rna_replicate_mean_prot[[i]]$x[rna_in_prot]) , col = "Green2" )
+barplot ( as.numeric(as.matrix(dataset[i,type_prot=="Prot"]))[rna_samples] , col = "Blue2" )
 
-eif4e = v3$E[2497,]
 
+
+
+# Venn Diagram Colors 
+# fill = c("Yellow2", "Green2")
+#   18951 and 19240
+reps18951 = grep ("18951", colnames(v3$E) ) 
+reps19240 = grep ("19240", colnames(v3$E))
+barplot( v3$E[2495,reps18951] - min(v3$E[2495,reps18951]-1),
+         col= c("Green2", "Green2" ,"Yellow2" ,"Yellow2", "Yellow2" ) ) 
+barplot( v3$E[2495,reps19240] - min(v3$E[2495,reps19240] - 1), 
+         col= c("Green2", "Green2" , "Green2", "Green2" , "Green2", "Yellow2" ,"Yellow2", "Yellow2" ) ) 
 
 
