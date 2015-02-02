@@ -20,6 +20,7 @@ library("RLRsim")
 library ("VennDiagram")
 library("hash")
 library("robust")
+source('~/cancer_jungla/mapCode-colors.r')
 
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
@@ -369,6 +370,7 @@ random_effect_variance_rna = c()
 # # THIS WAS RUN ONCE AND RESULTS STORED
 
 # We can use VarCorr(mA_ribo)[[1]][1]) to get at the variance component associated with mA_ribo  
+
 for ( i in 1:nrow(joint_expression_common$E)) { 
   # Summary keeps sum of squares as $ Sum Sq : num  2.82 3.4
   mA_ribo = lmer(joint_expression_common$E[i,ribo_cols_to_select] ~ 1 + (1| as.factor(sample_id_all[ribo_cols_to_select])), 
@@ -415,6 +417,10 @@ sig_ribo_rna_random = union(rna_sig_random, ribo_sig_random)
 sig_rna_only_random = setdiff (rna_sig_random, ribo_sig_random)
 sig_ribo_only_random = setdiff(ribo_sig_random, rna_sig_random)
 sig_ribo_rna_random_strict = intersect(rna_sig_random, ribo_sig_random)
+
+# List of Genes with Ribo_Only Variation
+write.table(file = '~/Desktop/TranslationVariationManuscript/Cell/Revision/List_of_Ribo_Only.xls' , 
+            row.names(v3)[sig_ribo_only_random], row.names=F, col.names=F)
 
 length(ribo_sig_random)
 length(rna_sig_random)
@@ -476,7 +482,138 @@ grid.draw(venn.high.lrt)
 # Compare the LRT statistic for the subset of genes that are significant in both
 quantile(random_effect_stat_rna[joint_sig_random] / random_effect_stat_ribo[joint_sig_random], seq(0,1, .05))
 quantile(random_effect_variance_rna[joint_sig_random] / random_effect_variance_ribo[joint_sig_random], seq(0,1, .05))
+
 # Calculate CV for the subset of genes that joint significant
+# Maybe we can go to CVI / CVB
+# Cell Reviewer 1 wants more subdivision in these categories. 
+# We are going to calculate weighted coefficient of variation in the both sig
+# We will see if there is a correspendence to higher CV to better protein correlation
+# Add justification for why RNA expression is still valuable. 
+# One obvious place is to note that even when there is evidence of translation buffering
+# RNA level differences can correspond to protein levels. 
+weighted_mean_limma <- function(x)  { 
+  wt_mean = c()
+  for (i in 1:dim(x$E)[1]) { 
+    wt_mean = c(wt_mean, weighted.mean(x$E[i,] , x$weights[i,] ))
+  }
+  return (wt_mean)
+}
+
+weighted_weight_limma <- function(x)  { 
+  wt_weights =c()
+  for (i in 1:dim(x$E)[1]) { 
+    wt_weights = c(wt_weights, weighted.mean(x$weights[i,], x$weights[i,]))
+  }
+  return (wt_weights)
+}
+
+# # Improved method using weighted coefficient of variation
+
+# weighted_coef_var is a function to be applied to limma object with E and weights
+weighted_coef_var <- function(x)  { 
+  wt_cv_unbiased = c()
+  for (i in 1:dim(x$E)[1]) { 
+    wt_mean = weighted.mean(x$E[i,] , x$weights[i,] )
+    # Weighted sample variance --biased estimator
+    #    wt_var = sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) / sum(x$weights[i,])
+    # Weighted sample variance -- unbiased estimator
+    wt_var_unbiased = (sum(x$weights[i,]) * (sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) ) ) / 
+      (sum(x$weights[i,])^2 - sum(x$weights[i,]^2) ) 
+    wt_cv_unbiased = c(wt_cv_unbiased, sqrt(wt_var_unbiased) / wt_mean)    
+  }
+  return (wt_cv_unbiased)
+}
+
+#coef_var_median
+wt_cvs_ribo = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="Ribo"])),
+                                nrow = nrow(joint_expression_common[,type_common=="Ribo"]) ) )
+colnames(wt_cvs_ribo) <- unique(sample_labels_joint_common[type_common=="Ribo"])
+
+wt_means_ribo = wt_cvs_ribo
+wt_weights_ribo = wt_cvs_ribo
+
+for (j in unique(sample_labels_joint_common[type_common=="Ribo"]) ){ 
+  cols <- which(sample_labels_joint_common[type_common=="Ribo"] == j)
+  wt_cvs_ribo[[j]] = weighted_coef_var(joint_expression_common[,type_common=="Ribo"][,cols])
+  wt_means_ribo[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="Ribo"][,cols])
+  wt_weights_ribo[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="Ribo"][,cols])
+}
+
+wt_cvs_rna = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="RNA"])),
+                               nrow = nrow(joint_expression_common[,type_common=="RNA"]) ) )
+colnames(wt_cvs_rna) <- unique(sample_labels_joint_common[type_common=="RNA"])
+wt_means_rna = wt_cvs_rna
+wt_weights_rna = wt_cvs_rna
+
+for (j in unique(sample_labels_joint_common[type_common=="RNA"]) ){ 
+  cols <- which(sample_labels_joint_common[type_common=="RNA"] == j)
+  wt_cvs_rna[[j]] = weighted_coef_var(joint_expression_common[,type_common=="RNA"][,cols])
+  wt_means_rna[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="RNA"][,cols])
+  wt_weights_rna[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="RNA"][,cols])
+  
+}
+
+per_ind_ribo_cv = weighted_coef_var(list(E =  wt_means_ribo, weights = wt_weights_ribo))
+per_ind_rna_cv = weighted_coef_var(list(E = wt_means_rna, weights= wt_weights_rna))
+hist(per_ind_ribo_cv[per_ind_ribo_cv < 1], 50)
+hist(per_ind_rna_cv[per_ind_rna_cv>0 & per_ind_rna_cv < 1], 50)
+
+quantile(per_ind_rna_cv, seq(0,1,.01))
+quantile(per_ind_rna_cv[joint_sig_random], seq(0,1,.01))
+boxplot(per_ind_rna_cv[sig_rna_only_random], per_ind_rna_cv[sig_ribo_only_random],
+  per_ind_rna_cv[sig_ribo_rna_random_strict], per_ind_rna_cv[-sig_ribo_rna_random], 
+  varwidth= T, ylim = c(0, .5) )
+
+# In general the CVs are well behaved(~75%)
+boxplot(per_ind_rna_cv[sig_rna_only_random]/ per_ind_ribo_cv[sig_rna_only_random], 
+        per_ind_rna_cv[sig_ribo_only_random]/ per_ind_ribo_cv[sig_ribo_only_random],
+        per_ind_rna_cv[sig_ribo_rna_random_strict]/ per_ind_ribo_cv[sig_ribo_rna_random_strict], 
+        per_ind_rna_cv[-sig_ribo_rna_random]/ per_ind_ribo_cv[-sig_ribo_rna_random], 
+        varwidth= T, ylim = c(0, 2))
+abline(h  = 1)
+
+quantile (per_ind_rna_cv[sig_rna_only_random]/ per_ind_ribo_cv[sig_rna_only_random], seq(0,1,.01))
+
+# 64% of the common have higher cv in rna than in ribo
+# 1.5 fold higher 6% ribo; 12% rna
+# 1.25 fold higher 16% ribo; 30% rna
+# If we use .9 to 1.1 => 24% higher ribo, 47% higher RNA, 29% the same
+
+quantile (per_ind_rna_cv[sig_ribo_rna_random_strict]/ per_ind_ribo_cv[sig_ribo_rna_random_strict], 
+          seq(0,1,.01))
+#pdf('~/Desktop/TranslationVariationManuscript/Cell/Revision/CV_Sig_Both_Distribution.pdf', height = 5, width= 5)
+par(las =1)
+plot (density(per_ind_rna_cv[sig_ribo_rna_random_strict]/ per_ind_ribo_cv[sig_ribo_rna_random_strict]), 
+xlim= c(0,4), main = "Coefficient of Variation Ratio"      )
+polygon (density(per_ind_rna_cv[sig_ribo_rna_random_strict]/ per_ind_ribo_cv[sig_ribo_rna_random_strict]),
+col = "darkred", border = "blue2"         
+)
+abline (v = c(1/1.25, 1.25), lwd = 2)
+#dev.off()
+
+# SPLIT INTO THREE CLASSES 
+joint_sig_ribo_cv_high = which(per_ind_rna_cv[sig_ribo_rna_random_strict]/ per_ind_ribo_cv[sig_ribo_rna_random_strict]  < (1/1.25) ) 
+joint_sig_rna_cv_high = which(per_ind_rna_cv[sig_ribo_rna_random_strict]/ per_ind_ribo_cv[sig_ribo_rna_random_strict]  > 1.25 ) 
+joint_sig_equally_high = setdiff(1:length(per_ind_rna_cv[sig_ribo_rna_random_strict]), c(joint_sig_ribo_cv_high, joint_sig_rna_cv_high))
+
+
+
+# We can look at the protein correlation 
+
+#inter_ind_cv_to_technical_ribo = per_ind_ribo_cv / median_ribo_cv
+#inter_ind_cv_to_technical_rna = per_ind_rna_cv / median_rna_cv
+#hist(inter_ind_cv_to_technical_ribo[inter_ind_cv_to_technical_ribo < 10], 50)
+#hist(inter_ind_cv_to_technical_rna[inter_ind_cv_to_technical_rna > 0 &inter_ind_cv_to_technical_rna < 10], 50)
+
+#ratio_of_inter_ind_cv <- inter_ind_cv_to_technical_rna/inter_ind_cv_to_technical_ribo
+# which(ratio_of_inter_ind_cv < 0 )
+# [1] 3251 3297 3790 5269 8037
+# which(ratio_of_inter_ind_cv> 5)
+# [1]  932 1067 1442 1571 2752 3347 3523 4289 5005 5551 6233 7818 8616 9185
+# which(ratio_of_inter_ind_cv> 10)
+# [1]  932 1067 5551 8616
+# hist(ratio_of_inter_ind_cv[ratio_of_inter_ind_cv > 0 & ratio_of_inter_ind_cv < 5], 50 )
+
 
 ## VENN DIAGRAM REPRESENTATION
 ## ADD Color
@@ -649,6 +786,7 @@ as.numeric(apply(abs(te.diff.results), 2, sum))
 # Variation in either
 sig_ribo_rna_random = union(rna_sig_random, ribo_sig_random)
 sig_rna_only_random = setdiff (rna_sig_random, ribo_sig_random)
+sig_ribo_only_random = setdiff (ribo_sig_random, rna_sig_random)
 sig_ribo_rna_random_strict = intersect(rna_sig_random, ribo_sig_random)
 
 linfeng_common <- colnames(linfeng_protein) %in% unique(sample_labels_joint)
@@ -656,6 +794,7 @@ linfeng_protein_common <- linfeng_protein[,linfeng_common]
 linfeng_protein_common <- merge(linfeng_protein_common, ensg_hgnc, by.x="row.names", by.y="ENSG")
 # Subset linfeng protein to only no NAs. If we want we can also include samples with missing values sqrt(#individuals)?
 # For correlation we can use use="pairwise.complete.obs"
+# If we increase the NAs allowed same results were obtained Nas = 10 increases count by 55 for the strict
 number_NAs <- 1
 linfeng_protein_na <- linfeng_protein_common[apply(is.na(linfeng_protein_common), 1, sum) < number_NAs, ]
 linfeng_protein_ribo_rna <- merge (v3$E, linfeng_protein_na, by.x="row.names", by.y="HGNC")
@@ -667,6 +806,8 @@ linfeng_protein_ribo_rna_strict_variance <-
   merge (v3$E[sig_ribo_rna_random_strict,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
 linfeng_protein_ribo_rna_rnaonly_variance <- 
   merge (v3$E[sig_rna_only_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
+linfeng_protein_ribo_rna_riboonly_variance <- 
+  merge (v3$E[sig_ribo_only_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
 linfeng_protein_ribo_rna_rnaall_variance <- 
   merge (v3$E[rna_sig_random,], linfeng_protein_na, by.x="row.names", by.y="HGNC")
 linfeng_protein_ribo_rna_riboall_variance <- 
@@ -678,6 +819,7 @@ linfeng_protein_ribo_rna_riboall_variance <-
 ## INSTEAD OF EXTRACTING THE FUNCTION WE WILL SWITCH THE DATASET
 # linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_zero_variance
 # linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_rnaonly_variance
+# linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_riboonly_variance
 linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_strict_variance
 # linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_nonzero_variance
 # linfeng_protein_ribo_rna = linfeng_protein_ribo_rna_rnaall_variance
@@ -725,9 +867,9 @@ for (i in 1:length(ribo_replicate_mean_prot)) {
 
 length(across_ind_ribo_correlation)
 median(across_ind_ribo_correlation)
-# 0.38; Strict 0.65; non-sig .16; RNA-only 0.31
+# 0.38; Strict 0.65; non-sig .16; RNA-only 0.31; Ribo-Only 0.48
 median(across_ind_rna_correlation)
-# 0.42; Strict 0.67; non-sig .18; RNA-only 0.4
+# 0.42; Strict 0.67; non-sig .18; RNA-only 0.4; Ribo-Only 0.32
 ks.test (across_ind_ribo_correlation, across_ind_rna_correlation )
 # p= 0.03; Strict p= 0.61
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
@@ -736,6 +878,9 @@ pval_cutoff <- 0.0002
 color_by_pval[across_ind_ribo_correlation_pval < pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 1
 color_by_pval[across_ind_ribo_correlation_pval< pval_cutoff & across_ind_rna_correlation_pval >= pval_cutoff] <- 2
 color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_correlation_pval < pval_cutoff] <- 3
+
+# If we use rna_only significant ~53% have significant correlation to protein levels at .1 FDR
+# 40% at 5% FDR
 
 # The current pval cutoff is based on Holm's whne we do FDR many more are significant
 adj_ribo_cor = p.adjust (across_ind_ribo_correlation_pval, method = "fdr")
@@ -828,6 +973,38 @@ legend(.4,170,c("RNA Expression-\nProtein Expression", "Ribosome Occupancy-\nPro
 quantile(across_ind_rna_ribo)
 quantile(across_ind_ribo_correlation)
 quantile(across_ind_rna_correlation)
+
+# To get a larger number of genes in the three classes, we 
+number_NAs = 10
+# > length(joint_sig_equally_high)
+# [1] 333
+# > length(joint_sig_rna_cv_high)
+# [1] 188
+# > length(joint_sig_ribo_cv_high)
+# [1] 106
+names_ribo = row.names(v3)[sig_ribo_rna_random_strict][joint_sig_ribo_cv_high]
+names_rna= row.names(v3)[sig_ribo_rna_random_strict][joint_sig_rna_cv_high]
+names_equal = row.names(v3)[sig_ribo_rna_random_strict][joint_sig_equally_high]
+names_prot_strict = row.names(linfeng_protein_ribo_rna)
+
+names_prot_strict %in% names_ribo
+names_prot_strict %in% names_rna
+names_prot_strict %in% names_equal
+
+across_ind_rna_correlation[names_prot_strict %in% names_ribo]
+across_ind_rna_correlation[names_prot_strict %in% names_rna]
+across_ind_rna_correlation[names_prot_strict %in% names_equal]
+
+d1 <- density(across_ind_rna_correlation[names_prot_strict %in% names_ribo], bw = 0.17 )
+d2 <- density(across_ind_rna_correlation[names_prot_strict %in% names_rna], bw = 0.17 )
+d3 <- density(across_ind_rna_correlation[names_prot_strict %in% names_equal], bw = 0.17 )
+pdf ('~/Desktop/TranslationVariationManuscript/Cell/Revision/DataPresentation/Density_ofThreeClasses.pdf', height=12, width=4 )
+par ( mfrow = c(3,1), las = 1)
+plot(d1, xlim=c(-1,1), ylim = c(0,2))
+plot(d2, xlim=c(-1,1), ylim = c(0,2))
+plot(d3, xlim=c(-1,1), ylim = c(0,2))
+dev.off()
+
 
 # We can do these sorted so we can run ordered analysis
 # Another Idea is to merge all RNA significant and all Ribo Significant
@@ -966,8 +1143,31 @@ covRob (cbind(merge_ribo_rna_prot$grand_mean_ribo, merge_ribo_rna_prot$grand_mea
 covRob (cbind(merge_ribo_rna_prot$grand_mean_rna, log10(merge_ribo_rna_prot$ibaq.human)) , corr=T, estim = "donostah")
 covRob (cbind(merge_ribo_rna_prot$grand_mean_ribo, log10(merge_ribo_rna_prot$ibaq.human)) , corr=T, estim = "donostah")
 
+plot(merge_ribo_rna_prot$grand_mean_rna[merge_ribo_rna_prot$grand_mean_rna > 6.8 & merge_ribo_rna_prot$grand_mean_rna <7], 
+     merge_ribo_rna_prot$grand_mean_ribo[merge_ribo_rna_prot$grand_mean_rna > 6.8 & merge_ribo_rna_prot$grand_mean_rna <7 ],
+     pch = 19, cex =0.5, xlab = "RNA Expression (logscale)", ylab = "Ribosome Occupancy (logscale)")  
+     xlim = c(3.7, 8.5), ylim = c(3.7, 8.5))
 
+number_na_in_linfeng = apply(is.na(linfeng_protein_common), 1, sum)
+number_na_in_linfeng_df = data.frame (NA_Count =number_na_in_linfeng, ENSG = names(number_na_in_linfeng), stringsAsFactors=F )
+ribo_rna_grand_means =  merge(grand_mean_rna, grand_mean_ribo, by="HGNC")
+ribo_rna_grand_means = merge(ribo_rna_grand_means , ensg_hgnc, by= "HGNC")
+ribo_rna_grand_means$ENSG = as.character(ribo_rna_grand_means$ENSG)
+ribo_rna_grand_means_linfeng_nacount = merge(ribo_rna_grand_means,number_na_in_linfeng_df, by="ENSG", all.x=T )
+ribo_rna_grand_means_linfeng_nacount$NA_Count[
+  is.na(ribo_rna_grand_means_linfeng_nacount$NA_Count)] = 28
 
+# NoNA vs  all NA is very differeng but the trend in between is subtle
+# Best is to split measured vs missing
+boxplot(ribo_rna_grand_means_linfeng_nacount$grand_mean_ribo ~ ribo_rna_grand_means_linfeng_nacount$NA_Count)
+t1 = cut(ribo_rna_grand_means_linfeng_nacount$NA_Count, breaks = c(0,28,29), right=F)
+table(t1)
+boxplot(ribo_rna_grand_means_linfeng_nacount$grand_mean_ribo ~t1, varwidth = T ) 
+plot(ribo_rna_grand_means_linfeng_nacount$grand_mean_rna, ribo_rna_grand_means_linfeng_nacount$grand_mean_ribo, 
+     col = c("black" , rgb(55/255,255/255,255/255,1/2))[t1 ], 
+     pch = 20, cex=1, xlab = "RNA Expression", ylab = "Ribosome Occupancy")
+cor.test(ribo_rna_grand_means_linfeng_nacount$grand_mean_rna, ribo_rna_grand_means_linfeng_nacount$grand_mean_ribo)
+wilcox.test( ribo_rna_grand_means_linfeng_nacount$grand_mean_ribo ~ t1 )
 
 pdf ('~/Google_Drive/Manuscript Figures/Across_Gene_Comparison/GlobalCorrelation.pdf', width =6.7, height = 2)
 par(las=1)
@@ -1840,6 +2040,8 @@ lm_sig = which(p.adjust(list_of_pval, method="fdr") < .1)
 both_sig = intersect(lm_sig, lme_sig)
 single_var_ind[both_sig,1]
 
+rna_not_significant_lm_sig = lm_sig[rna_pvals > 0.01]
+
 all_tested_transcripts = c(single_ids_tested, names(total_alleles[total_alleles > 60*.1 ]))
 test_space_details = all_kozak_score_variants[all_kozak_score_variants$V1 %in% all_tested_transcripts,1:4 ]
 # Create a histogram of the variant positions
@@ -1850,15 +2052,34 @@ barplot(table(positions), xlab = "Position", ylab = "Number of Variants", main =
 barplot(table(positions[test_space_details$V1 %in% single_var_ind[lm_sig,1]] ) )
 
 change_in_pwm_score = merge(test_space_details, kozak_scores , by="V1")
+all_variants_pwm_score_change = merge(all_kozak_score_variants , kozak_scores, by="V1" ) 
+
 # V2.y is the reference score
 # If the difference is positive then the reference is better a PWM
 p1 <- hist(change_in_pwm_score$V2.y - change_in_pwm_score$V4 ,20)
+p1 <- hist(all_variants_pwm_score_change$V2.y - all_variants_pwm_score_change$V4, 50)
 #pdf(file='~/Google_Drive/Manuscript Figures/Kozak_Analysis/Tested_SNP_Change_inPWM.pdf', width=5, height=5   )
-plot(p1, col=rgb(0,0,1,1/4), xlim=c(-3,3), xlab="Change in Kozak PWM Score", main = "")
+par(las=1)
+plot(p1, col=rgb(0,0,1,1/4), xlim=c(-3,3),ylim=c(0,65), xlab="Change in Kozak PWM Score", main = "")
 #dev.off()
 wilcox.test(change_in_pwm_score$V4, change_in_pwm_score$V2.y)
+length(which( all_variants_pwm_score_change$V2.y - all_variants_pwm_score_change$V4 > 0)) / dim(all_variants_pwm_score_change)[1]
 
-  
+h9 = hist ( (change_in_pwm_score$V2.y - change_in_pwm_score$V4)[change_in_pwm_score$V1 %in% single_var_ind[rna_not_significant_lm_sig,1]] ,20)
+
+boxplot(abs(all_variants_pwm_score_change$V2.y - all_variants_pwm_score_change$V4),
+  abs(change_in_pwm_score$V2.y - change_in_pwm_score$V4)[change_in_pwm_score$V1 %in% single_var_ind[rna_not_significant_lm_sig,1]], 
+names = c("All Variants", "Ribo_Only_Sig")  
+)
+
+
+
+all_ind = c()
+for (i in 1:dim(all_variants_pwm_score_change)[1] ) {
+  all_ind <- c(all_ind, length(unique(grep("NA",all_variants_pwm_score_change[i,-1] , value=T)) ) )}
+
+quantile((all_variants_pwm_score_change$V2.y - all_variants_pwm_score_change$V4)[which(all_ind == 1)], seq(0,1,.01)) 
+
 #Kozak Experimental Results -- RATIOS
 t1 <- c(3.96542345327789,
         3.44234121174092,
@@ -1947,9 +2168,39 @@ barplot2(df.summary$MEAN[c(1,7)], space = 0, col=c("blue", "salmon"), ylim=c(0,5
 barplot2(df.summary$MEAN[c(6,4,10)], space = 0, col=c("blue", "salmon", "green"), ylim=c(0,20), ylab="Rluc/Fluc Ratio",
          plot.ci=T, ci.l= df.summary$MEAN[c(6,4,10)] - df.summary$SE[c(6,4,10)], ci.u = df.summary$MEAN[c(6,4,10)] + df.summary$SE[c(6,4,10)])
 
+## uORF Validation
+# ENST00000443597.2  LRRC23	0.435374124	0.112812677
+# Renilla/Firefly
+# G1 = 0.070924286  0.071372406	0.065552602	0.101526625
+# H2 = 0.115868936  0.101456606	0.129485455	0.102371297
+g1 = c(0.070924286, 0.071372406, 0.065552602, 0.101526625)
+h2 = c(0.115868936, 0.101456606, 0.129485455, 0.102371297)
+t.test(g1, h2)
+# ENST00000396679.1  CENPK	0.461614318	0.31764318
+# D1 = 0.095237959  0.102429909	0.088608277	0.10078915
+# E2 = 0.113102114  0.1162111	0.117819219	0.097940314
+d1 = c(0.095237959, 0.102429909, 0.088608277,0.10078915 )
+e2 = c(0.113102114, 0.1162111, 0.117819219, 0.097940314)
+t.test(d1, e2)
+df = matrix( c(g1, h2, d1, e2 ), ncol=4)
+df.summary  = data.frame(MEAN =apply(df, 2, mean), 
+                        SE = apply(df, 2, function(x){sd(x)/ sqrt(length(x))}), 
+                        PAIRING = factor (c(1, 1, 2, 2 ) )  ) 
 
-#ggplot(df.summary, aes( PAIRING, MEAN)) + 
-#  geom_bar( stat="identity")
+pdf('~/Desktop/TranslationVariationManuscript/Cell/Revision/DataPresentation/uORF_Validation.pdf', width = 5, height = 5)
+par (las =1 )
+par (mfrow = c(1,2))
+barplot2(df.summary$MEAN[c(1,2)], space = 0, col=c("blue", "salmon"), ylim=c(0,0.14), ylab="Rluc/Fluc Ratio",
+         plot.ci=T, ci.l= df.summary$MEAN[c(1,2)] - df.summary$SE[c(1,2)], ci.u = df.summary$MEAN[c(1,2)] + df.summary$SE[c(1,2)], 
+         main = "LRRC23", names = c("WT","MUT" ) ) 
+
+barplot2(df.summary$MEAN[c(3,4)], space = 0, col=c("blue", "salmon"), ylim=c(0,0.14), ylab="Rluc/Fluc Ratio",
+         plot.ci=T, ci.l= df.summary$MEAN[c(3,4)] - df.summary$SE[c(3,4)], ci.u = df.summary$MEAN[c(3,4)] + df.summary$SE[c(3,4)], 
+         main = "CENPK", names = c("WT","MUT" ))
+
+dev.off()
+
+
 
 # Take the translation efficiency table and for each position look for significant diff with Kruskal
 # Generate this table by merging kozak data with translation efficiency table (grand_mean_te)
@@ -2446,100 +2697,6 @@ norm_hc_rep <- hclust (norm_dd_rep)
 
 # Given limma object calculates weighted mean and weighted weights
 
-weighted_mean_limma <- function(x)  { 
-  wt_mean = c()
-  for (i in 1:dim(x$E)[1]) { 
-    wt_mean = c(wt_mean, weighted.mean(x$E[i,] , x$weights[i,] ))
-  }
-  return (wt_mean)
-}
-
-weighted_weight_limma <- function(x)  { 
-  wt_weights =c()
-  for (i in 1:dim(x$E)[1]) { 
-    wt_weights = c(wt_weights, weighted.mean(x$weights[i,], x$weights[i,]))
-  }
-  return (wt_weights)
-}
-
-# # Improved method using weighted coefficient of variation
-
-# weighted_coef_var is a function to be applied to limma object with E and weights
-weighted_coef_var <- function(x)  { 
-#  wt_cv = c()
-#  pb <- tkProgressBar(title="Progress Bar", min = 0, max = dim(x$E)[1], width=300)
-  wt_cv_unbiased = c()
-  for (i in 1:dim(x$E)[1]) { 
-    wt_mean = weighted.mean(x$E[i,] , x$weights[i,] )
-    # Weighted sample variance --biased estimator
-#    wt_var = sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) / sum(x$weights[i,])
-    # Weighted sample variance -- unbiased estimator
-    wt_var_unbiased = (sum(x$weights[i,]) * (sum(x$weights[i,] * (x$E[i,] - wt_mean)^2) ) ) / 
-      (sum(x$weights[i,])^2 - sum(x$weights[i,]^2) ) 
-#   wt_cv = c(wt_cv, sqrt(wt_var) / wt_mean)
-    wt_cv_unbiased = c(wt_cv_unbiased, sqrt(wt_var_unbiased) / wt_mean)    
-#  setTkProgressBar(pb, i, label=paste( round(i/dim(x$E)[1]*100, 0),"% done"))
-  }
-#  return (wt_cv)
-#  close (pb)
-  return (wt_cv_unbiased)
-}
-
-#coef_var_median
-wt_cvs_ribo = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="Ribo"])),
-                     nrow = nrow(joint_expression_common[,type_common=="Ribo"]) ) )
-colnames(wt_cvs_ribo) <- unique(sample_labels_joint_common[type_common=="Ribo"])
-
-wt_means_ribo = wt_cvs_ribo
-wt_weights_ribo = wt_cvs_ribo
-
-for (j in unique(sample_labels_joint_common[type_common=="Ribo"]) ){ 
-  cols <- which(sample_labels_joint_common[type_common=="Ribo"] == j)
-  wt_cvs_ribo[[j]] = weighted_coef_var(joint_expression_common[,type_common=="Ribo"][,cols])
-  wt_means_ribo[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="Ribo"][,cols])
-  wt_weights_ribo[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="Ribo"][,cols])
-}
-
-wt_cvs_rna = data.frame(matrix(0, ncol = length(unique(sample_labels_joint_common[type_common=="RNA"])),
-                                nrow = nrow(joint_expression_common[,type_common=="RNA"]) ) )
-colnames(wt_cvs_rna) <- unique(sample_labels_joint_common[type_common=="RNA"])
-wt_means_rna = wt_cvs_rna
-wt_weights_rna = wt_cvs_rna
-
-for (j in unique(sample_labels_joint_common[type_common=="RNA"]) ){ 
-  cols <- which(sample_labels_joint_common[type_common=="RNA"] == j)
-  wt_cvs_rna[[j]] = weighted_coef_var(joint_expression_common[,type_common=="RNA"][,cols])
-  wt_means_rna[[j]] = weighted_mean_limma(joint_expression_common[,type_common=="RNA"][,cols])
-  wt_weights_rna[[j]] = weighted_weight_limma(joint_expression_common[,type_common=="RNA"][,cols])
-  
-}
-
-median_ribo_cv <- apply(wt_cvs_ribo, 1, median)
-median_rna_cv <- apply(wt_cvs_rna, 1, median)
-hist(median_ribo_cv, 50)
-hist(median_rna_cv, 50)
-
-# NEED TO MAKE SURE THAT THESE REMAINING SECTIONS WORK: 
-per_ind_ribo_cv = weighted_coef_var(list(E =  wt_means_ribo, weights = wt_weights_ribo))
-per_ind_rna_cv = weighted_coef_var(list(E = wt_means_rna, weights= wt_weights_rna))
-hist(per_ind_ribo_cv[per_ind_ribo_cv < 1], 50)
-hist(per_ind_rna_cv[per_ind_rna_cv>0 & per_ind_rna_cv < 1], 50)
-
-inter_ind_cv_to_technical_ribo = per_ind_ribo_cv / median_ribo_cv
-inter_ind_cv_to_technical_rna = per_ind_rna_cv / median_rna_cv
-hist(inter_ind_cv_to_technical_ribo[inter_ind_cv_to_technical_ribo < 10], 50)
-hist(inter_ind_cv_to_technical_rna[inter_ind_cv_to_technical_rna > 0 &inter_ind_cv_to_technical_rna < 10], 50)
-
-ratio_of_inter_ind_cv <- inter_ind_cv_to_technical_rna/inter_ind_cv_to_technical_ribo
-# which(ratio_of_inter_ind_cv < 0 )
-# [1] 3251 3297 3790 5269 8037
-# which(ratio_of_inter_ind_cv> 5)
-# [1]  932 1067 1442 1571 2752 3347 3523 4289 5005 5551 6233 7818 8616 9185
-# which(ratio_of_inter_ind_cv> 10)
-# [1]  932 1067 5551 8616
-
-hist(ratio_of_inter_ind_cv[ratio_of_inter_ind_cv > 0 & ratio_of_inter_ind_cv < 5], 50 )
-
 # Median_[ribo/rna]_cv is our estimated technical noise
 # For interindividual cv: Take weighed mean of expression and weights for each individual
 # Then use these to calculated weighted cv
@@ -2896,3 +3053,77 @@ abline(v=c(0), h=c(0,log(2), -log(2)))
 # Wilcox.test p-value is 0.02
 boxplot(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
 wilcox.test(abs(kozak_diff[significant_ribo_diff]), abs(kozak_diff[!is.na(p.adjust(list_of_pval, method="hommel"))]))
+
+
+## CODON-BASED ANALYSIS
+#codons_total_counts = read.table('codon_ribosome_occupancy.txt', stringsAsFactors=F)
+codons_total_counts = read.table('codon_ribosome_occupancy_normalized.txt', stringsAsFactors=F)
+
+dna_codon_table = data.frame ( CODON = c("TTT", "TTC", "TTA", "TTG", "CTT", "CTC", "CTA","CTG","ATG","ATA","ATC","ATT",
+ "GTA","GTC","GTG","GTT","TCA","TCC","TCG","TCT","CCA","CCC","CCG","CCT","ACA","ACC","ACG","ACT","GCA","GCC","GCG","GCT",
+ "TAT","TAC","CAT","CAC","CAA","CAG","AAT","AAC","AAA","AAG","GAT","GAC","GAA","GAG","TGT","TGC","TGG","CGA","CGC","CGG","CGT","AGA","AGG",
+ "AGT","AGC","GGA","GGC","GGG", "GGT"), 
+                               AA = c("F", "F", "L","L","L","L","L","L","M","I","I","I","V","V","V","V","S","S","S","S",
+ "P","P","P","P","T","T","T","T","A","A","A","A","Y","Y","H","H","Q","Q","N","N","K","K","D","D","E","E","C","C","W","R","R","R","R","R","R",
+ "S", "S","G","G","G","G"))
+codons_total_counts_aas = merge(codons_total_counts, dna_codon_table, by.x="V1", by.y = "CODON")
+human_tAI = read.table('Human_tAI.txt', stringsAsFactors=F)
+codons_total_counts_aas_tai = merge(codons_total_counts_aas,human_tAI, by= "V1" )
+
+proline_mean = mean (codons_total_counts_aas_tai$V2.x[codons_total_counts_aas_tai$AA =="P"])
+positive_mean = mean (codons_total_counts_aas_tai$V2.x[codons_total_counts_aas_tai$AA %in% c("R", "K")])
+global_mean = mean (codons_total_counts_aas_tai$V2.x)
+wilcox.test(codons_total_counts_aas_tai$V2.x[!codons_total_counts_aas_tai$AA %in% c("R", "K", "P")] , codons_total_counts_aas_tai$V2.x[codons_total_counts_aas_tai$AA %in% c("R", "K")])
+wilcox.test(codons_total_counts_aas_tai$V2.x[!codons_total_counts_aas_tai$AA %in% c("R", "K", "P")] , codons_total_counts_aas_tai$V2.x[codons_total_counts_aas_tai$AA %in% c("P")])
+
+log10_median = log10(median(codons_total_counts_aas_tai$V2.x))
+codons_total_counts_aas_tai$V2.x = log10(codons_total_counts_aas_tai$V2.x) - log10_median
+codons_total_counts_aas_tai$row.count = seq(1, 61)
+
+col_by_aa = rep("red", length(codons_total_counts_aas_tai$V2.x))
+col_by_aa[codons_total_counts_aas_tai$AA %in% c("R", "K")] = "blue"
+col_by_aa[codons_total_counts_aas_tai$AA %in% c("P")] = "green"
+g1 = ggplot(codons_total_counts_aas_tai, aes(row.count, V2.x) ) + 
+       ylab("Relative Ribosome Occupancy per Amino Acid")  + xlab("") + 
+  geom_text(aes(label = V1, colour = col_by_aa) )  + theme_bw()
+ggsave("~/Desktop/TranslationVariationManuscript/Cell/Revision/DataPresentation/Protein_Motifs.pdf", g1)
+
+plot(log10(codons_total_counts_aas_tai$V2.x) -log10_median, 
+     ylab = "Relative Ribosome Occupancy per Amino Acid", col =col_by_aa, )
+
+boxplot(log10(codons_total_counts_aas_tai$V2.x[!codons_total_counts_aas_tai$AA %in% c("R", "K", "P")] )- log10_median, 
+        log10(codons_total_counts_aas_tai$V2.x[codons_total_counts_aas_tai$AA %in% c("R", "K")]) - log10_median, 
+        log10(codons_total_counts_aas_tai$V2.x[codons_total_counts_aas_tai$AA %in% c("P")]) - log10_median, 
+        names = c("Other", "Positively\nCharged", "Proline"), varwidth=T, ylab = "Relative Ribosome Occupancy per Amino Acid")
+
+for ( aa in levels(codons_total_counts_aas_tai$AA))  { 
+  print (wilcox.test(codons_total_counts_aas_tai$V2.x , 
+    codons_total_counts_aas_tai$V2.x[codons_total_counts_aas_tai$AA == aa])$p.value * 20)
+}
+        
+cor.test(codons_total_counts_aas_tai$V2.x, codons_total_counts_aas_tai$V2.y)
+
+g2 = ggplot(codons_total_counts_aas_tai, aes( V2.x, V2.y) ) + 
+  ylab("Relative Ribosome Occupancy per Codon")  + xlab("tRNA Adaptation Index") + 
+  geom_point() + theme_bw() + geom_abline(intercept = 0.3493533, slope = 0.7666620, colour="red" )
+
+ggsave("~/Desktop/TranslationVariationManuscript/Cell/Revision/DataPresentation/Codon_tAI.pdf",
+       g2)
+
+plot(codons_total_counts_aas_tai$V2.x, codons_total_counts_aas_tai$V2.y)
+
+# Following Stadler and Fire RNA 2012
+# We will only consider identitcal first two base
+#  U over C in the third 
+# GG  GA AG AA TG TA TT CA -- black 
+# GT GC AT AC TC CG CT CC
+Us_black = c(4, 12, 20, 36, 44, 50, 57, 61)
+Cs_black = c(2, 10, 18, 34, 42, 49, 55, 59)
+boxplot(codons_total_counts_aas_tai$V2.x[Us_black]- codons_total_counts_aas_tai$V2.x[Cs_black])
+t.test(log10(codons_total_counts_aas_tai$V2.x[Us_black]), log10(codons_total_counts_aas_tai$V2.x[Cs_black]), paired=T)
+abline(h = 0)
+# Number greater in C to U
+binom.test(6, 8)
+
+
+
