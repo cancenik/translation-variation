@@ -16,6 +16,8 @@ library("gplots")
 source('~/project/kohonen2/R/plot.kohonen.R')
 library("nlme")
 library("lme4")
+# RLRsim is updated to version 3.0 which seems to lack
+# extract.lmerModDesign
 library("RLRsim")
 library ("VennDiagram")
 library("hash")
@@ -94,6 +96,21 @@ CDS_Counts <- CDS[,grep("Counts", colnames(CDS))]
 CDS_Coverage <- CDS[, grep("CoveredBases", colnames(CDS))]
 CDS_Len <- CDS[,grep("Len", colnames(CDS))]
 CDS_IDs <- CDS[,1]
+
+# Compare to Battle Counts
+# UTR5_Counts = UTR5[,grep("Counts", colnames(UTR5))]
+# UTR3_Counts = UTR3[,grep("Counts", colnames(UTR3))]
+# colSums(CDS_Counts)  / (colSums(CDS_Counts) + colSums(UTR5_Counts) + colSums(UTR3_Counts) )
+# dat1 = read.table('~/Downloads/GSE61742_YRI_RPF_count_by_gene.table.txt', header= T)
+# cds_counts <- DGEList(counts=dat1[,-1])
+# isexpr <- rowSums(cpm(cds_counts) > 1) >= 52
+# cds_counts <- cds_counts[isexpr,]
+# dim(cds_counts)
+# cds_counts <- calcNormFactors (cds_counts, method= "TMM")
+# v8 = voom(cds_counts, plot=T)
+# quantile(apply(cor(v8$E), 1, median), seq(0,.3,.01) )
+# quantile(apply(cor(v3$E[,84:133]) , 1, median), seq(0,.3,.01) )
+
 
 #covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 ######## DATA ANALYSIS ##################################
@@ -3125,5 +3142,158 @@ abline(h = 0)
 # Number greater in C to U
 binom.test(6, 8)
 
+## MVD1 correlations
+mvd1_ribo = as.numeric(wt_means_ribo[4978,])
+# REPEAT with NSDHL and
+nsdhl_ribo = as.numeric (wt_means_ribo[5355,])
+hsd17b7_ribo = as.numeric (wt_means_ribo[3643,])
 
+# mvd1_rna = as.numeric(wt_means_rna[4978,])
+ribo_ps = ribo_ps_p = cor_ribo_estimate = cor_ribo_estimate_p = c()
+for ( i in 1:dim(wt_means_ribo)[1] ) {
+  cor_rib = cor.test(as.numeric(wt_means_ribo[i,]), mvd1_ribo, method = "spearman")
+  cor_rib_pearson = cor.test(as.numeric(wt_means_ribo[i,]), mvd1_ribo)
+  ribo_ps =  c(ribo_ps, cor_rib$p.value)
+  ribo_ps_p =  c(ribo_ps_p, cor_rib_pearson$p.value)
+  cor_ribo_estimate = c(cor_ribo_estimate, cor_rib$estimate )
+  cor_ribo_estimate_p = c(cor_ribo_estimate_p, cor_rib_pearson$estimate)
+}
+q1 = which (p.adjust(ribo_ps, method = "fdr" ) < .1)
+mvd_correlations_ribo = data.frame (IDS = row.names(v3)[q1], 
+    SPEARMAN = cor_ribo_estimate[q1], PEARSON = cor_ribo_estimate_p[q1], 
+    SPEARMAN_FDR = p.adjust(ribo_ps, method = "fdr" )[q1], PEARSON_FDR = p.adjust(ribo_ps_p, method = "fdr" )[q1]            
+)
+write.csv(mvd_correlations_ribo, '~/Desktop/RibosomeProfiling_MVD_Correlations_betweenIndividuals.csv', row.names = F) 
 
+orthologs_erg = c("HMGCS1", "HSD17B7","SC5D", "FDFT1", "SQLE", "LBR", "SIGMAR1", "ACAT1", 
+                  "LSS", "FDPS", "HMGCR", "IDI1", "NSDHL", "CYP51A1", "MVK")
+matching_ids = c()
+for ( i in orthologs_erg) {
+  matching_ids = c(matching_ids , grep (i, row.names(v3) ) )
+}
+matching_ids = matching_ids[-16]
+row.names(v3)[matching_ids]
+cor_ribo_estimate[matching_ids]
+ribo_ps[matching_ids]
+
+# > row.names(v3)[matching_ids]
+# [1] "HMGCS1-003"  "HSD17B7-001" "SC5DL-002"   "FDFT1-001"   "SQLE-001"    "LBR-001"    
+# [7] "SIGMAR1-001" "ACAT1-001"   "LSS-002"     "FDPS-002"    "HMGCR-002"   "IDI1-004"   
+# [13] "NSDHL-001"   "CYP51A1-001" "MVK-001"    
+# > cor_ribo_estimate[matching_ids]                                                                
+# 0.85934066  0.05934066  0.38021978  0.49450549  0.46373626 -0.15604396 -0.11208791  0.28791209                       
+# 0.72307692  0.94725275  0.63956044  0.73186813  0.74505495  0.58241758  0.90769231 
+
+# cor_ribo_estimate[q1]
+# row.names(v3)[q1]
+# negative_correlations = which(cor_ribo_estimate < -.7)
+# positive_correlations = which(cor_ribo_estimate > .7)
+# row.names(v3)[negative_correlations]
+# row.names(v3)[positive_correlations]
+
+# NOTES -- COR vs MVD
+# TXNIP, SCD, PPID, MVK, HSDL1, HMGCS1, GYG1, GLYCTK, GLTP, FDPS, FADS2, DHCR7, COQ10A
+# MAYBE Interesting
+# S1PR1, RFXAP
+
+# MVD expression is positively correlated with expression of orthologs. 
+# 39875 ERG6
+# 1609 ERG13 | HMGCS1
+# 40728 ERG27 | HSD17B7
+# 20212 ERG5
+# 5044 ERG3 | SC5D
+# 3281 ERG9 | FDFT1
+# 2355 ERG1 | SQLE
+# 2455 ERG24 | LBR
+# 39965 ERG2 | SIGMAR1
+# 6 ERG10 | ACAT1
+# 6666 ERG8
+# 5946 ERG4
+# 37408 ERG7 | LSS
+# 1519 ERG20 | FDPS
+# 90891 ERG25
+# 30994 HMG1 HMG2 | HMGCR
+# 3315 IDI1 | IDI1
+# 5951 ERG26 | NSDHL
+# 55488 ERG11 | CYP51A1
+# 372 ERG12 | MVK
+# 1843 MVD1 | MVD
+
+# wt_means_ribo is only 14 individuals
+library(WGCNA)
+wt_means_ribo_all = c()
+for (j in sample_labels_joint[type=="Ribo"] ){ 
+  cols <- which(sample_labels_joint[type=="Ribo"] == j)
+  wt_means_ribo_all[[j]] = weighted_mean_limma(v3[,type=="Ribo"][,cols])
+}
+wt_means_ribo_all = as.data.frame(wt_means_ribo_all)
+powers = c(c(1:10), seq(from = 12, to=20, by=2))
+sft = pickSoftThreshold(t(wt_means_ribo_all), powerVector = powers, verbose = 5)
+cex1 = .9
+plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+main = paste("Scale independence"));
+text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+labels=powers,cex=cex1,col="red");
+abline(h=0.80,col="red")
+plot(sft$fitIndices[,1], sft$fitIndices[,5],
+xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
+main = paste("Mean connectivity"))
+text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+net = blockwiseModules(t(wt_means_ribo_all), power = 6,  corType ="bicor",
+TOMType = "unsigned", minModuleSize = 30,
+reassignThreshold = 0, mergeCutHeight = 0.25,
+numericLabels = TRUE, pamRespectsDendro = FALSE,
+verbose = 3)
+table(net$colors)
+mergedColors = labels2colors(net$colors)
+plotDendroAndColors(net$dendrograms[[1]], mergedColors[net$blockGenes[[1]]],
+"Module colors",
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05)
+
+a1 =  which(mergedColors == mergedColors[4978])
+# ROBUST TO POWER of NETWORK
+# ACAT2-001 , C16orf54-001, DHCR7-003, FADS2-003, HMGCS1-003, LSS-002
+# MVD-001, MVK-001, NSDHL-001, SCD-001, TRIT1-001, ZSCAN21-001
+
+# ADDITIONAL ROBUST TO BICOR
+# FDPS-002, GATAD2B-001, NDUFA12-001, RAB11FIP4-001, TMCO7-001
+mergedColors[4978]
+write.table (row.names(v3)[a1], file = "~/Desktop/WGCNA_MVD.txt", row.names = F )
+write.table (row.names(v3), file = "~/Desktop/WGCNA_All.txt", row.names = F )
+
+# KEVIN tRNA Codon Occupancy Variation
+trna_copy = read.table('~/project/CORE_DATAFILES/tRNAcov_and_VNTR_estimates_all_genomes.txt', header = T)
+# 18591 is not in my dataset
+trna_copy = trna_copy[-20,]
+individual_codon_occupancy = read.csv('~/project/CORE_DATAFILES/All_Codon_RelativeOccupancy_Individuals.csv')
+# codons_in_VNTR = c("GTC", "CTC", "GCC", "TCC", "CAG")
+codons_in_VNTR = c("GAC", "GAG", "GGC", "GGA", "CTG")
+# Codons in VNTR are not among the most variable among individuals then others
+codons_in_VNTR %in% individual_codon_occupancy[apply(
+  individual_codon_occupancy[,-1], 1, var) > 2.654486e-07 , 
+                           1]
+# Take mean occupancy for replicates
+genome_labels = sapply(strsplit(colnames(individual_codon_occupancy), split = "_"), "[[", 1)[-1]
+codon_averages = apply (individual_codon_occupancy[,-1], 1, function(x) {
+  aggregate(x, by= list(as.factor(genome_labels)), mean)  
+} )
+names(codon_averages) = individual_codon_occupancy[,1]
+# sapply ( codon_averages, var)[4,]
+trna_copy$genome = gsub("NA", "GM", trna_copy$genome)
+colnames(trna_copy)[3:7] = codons_in_VNTR
+pdf("VNTR_Estimates_RibosomeOccupancy.pdf", height = 15, width=3)
+par (mfrow = c(5,1))
+for (codon in colnames(trna_copy)[3:7]) { 
+  matching_codon = grep(codon, names(codon_averages))
+  c1 = cor.test(codon_averages[[matching_codon]]$x[-c(24, 25)], 
+           trna_copy[-c(1,2), codon], method = "spearman" )
+  print(c1$p.value)
+  plot(codon_averages[[matching_codon]]$x[-c(24, 25)], 
+       trna_copy[-c(1,2), codon], 
+       main= paste(codon, round(c1$estimate,2) , sep=" ") , 
+       xlab = "Ribosome Occupancy", ylab = "tRNA Copy Number"
+       )
+}
+dev.off()
