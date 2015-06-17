@@ -110,7 +110,9 @@ CDS_IDs <- CDS[,1]
 # v8 = voom(cds_counts, plot=T)
 # quantile(apply(cor(v8$E), 1, median), seq(0,.3,.01) )
 # quantile(apply(cor(v3$E[,84:133]) , 1, median), seq(0,.3,.01) )
-
+# par(las=1)
+# hist(apply(cor(v8$E), 1, median), 20, xlim = c(0.7, .95),
+#      main= "Median Rank Correlation", xlab = "")
 
 #covariates <-  read.table ("~/project/CORE_DATAFILES/Sequenced_Ribosome_Profiling_Sample_Information_Batch_Effects.tsv", header=T)
 ######## DATA ANALYSIS ##################################
@@ -902,7 +904,7 @@ color_by_pval[across_ind_ribo_correlation_pval>=pval_cutoff & across_ind_rna_cor
 # The current pval cutoff is based on Holm's whne we do FDR many more are significant
 adj_ribo_cor = p.adjust (across_ind_ribo_correlation_pval, method = "fdr")
 adj_rna_cor  = p.adjust (across_ind_rna_correlation_pval, method = "fdr")
-fdr_cutoff <- 0.1
+fdr_cutoff <- 0.05
 color_by_pval <- rep(0, length(ribo_replicate_mean_prot))
 color_by_pval[adj_ribo_cor < fdr_cutoff & adj_rna_cor < fdr_cutoff] <- 1
 color_by_pval[adj_ribo_cor < fdr_cutoff & adj_rna_cor >= fdr_cutoff] <- 2
