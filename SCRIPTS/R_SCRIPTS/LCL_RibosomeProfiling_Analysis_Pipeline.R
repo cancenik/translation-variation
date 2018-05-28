@@ -24,6 +24,11 @@ library("hash")
 library("robust")
 source('~/cancer_jungla/mapCode-colors.r')
 
+# Vogel et al. 2010 has a few features that we should check for partial correlation
+# Partial Correlation to protein sig when controling for RNA
+# Take only the most significant motifs; 
+# Coding Sequence Length; PEST Region Freq; Serine Amino Acid Frequency
+
 # Data Directory
 data_dir <- '~/project/CORE_DATAFILES/'
 
@@ -108,8 +113,8 @@ CDS_IDs <- CDS[,1]
 # dim(cds_counts)
 # cds_counts <- calcNormFactors (cds_counts, method= "TMM")
 # v8 = voom(cds_counts, plot=T)
-# quantile(apply(cor(v8$E), 1, median), seq(0,.3,.01) )
-# quantile(apply(cor(v3$E[,84:133]) , 1, median), seq(0,.3,.01) )
+# quantile(apply(cor(v8$E, method="spearman"), 1, median), seq(0,.3,.01) )
+# quantile(apply(cor(v3$E[,84:133], method="spearman") , 1, median), seq(0,.3,.01) )
 # par(las=1)
 # hist(apply(cor(v8$E), 1, median), 20, xlim = c(0.7, .95),
 #      main= "Median Rank Correlation", xlab = "")
@@ -176,7 +181,11 @@ plot_correlations  = function (i, j, cell_line) {
   text(par("usr")[1]+3, par("usr")[4]-0.5, 
        labels=paste ("rho", 
         round(cor.test(mean_per_cell_line[j,] , mean_per_cell_line[i,], method = "spearman")$estimate,2) 
-        , sep="="))  
+        , sep="="))
+# Added to address the reviewer comment in GR. 
+  robust_corr_estimate = round( covRob (cbind(mean_per_cell_line[j,], mean_per_cell_line[i,]), corr=T, estim="donostah"  )$cov[1,2], 2)
+  text(par("usr")[1]+1, par("usr")[4]-0.5, 
+     labels=paste ("corR",  robust_corr_estimate, sep="="))
 }
 jpeg ("~/Desktop/TranslationVariationManuscript/RNASeq_Method_Comp.jpeg", width= 720, height=480  )
 par(mfrow= c(2,3))
@@ -1917,6 +1926,21 @@ all_kozak_score_variants[is.na(all_kozak_score_variants)] <- ""
 
 # Silly solution to extract all YRI is to use the same strategy as 18508
 # We can remove all individual identifiers for non-YRI
+# non_yri_cell_lines_plus18508 = c("NA12878", "NA10847", "NA12890", "NA12891", "NA12892",
+#                        "NA18526", "NA18951", "NA18508")
+# for ( i in 1:dim(all_kozak_score_variants)[2]) { 
+#   for (j in 1:dim(all_kozak_score_variants)[1]) { 
+#     if (all_kozak_score_variants[j,i] %in% non_yri_cell_lines_plus18508 ) { 
+#       all_kozak_score_variants[j,i] = ""
+#     }
+#   }
+# }
+# non_yri_variants = which (apply(
+#   all_kozak_score_variants, 1, function(x) { length(which(x==""))} ) ==62)
+# all_kozak_score_variants <- all_kozak_score_variants[-non_yri_variants, ]
+# YRI-Only results: 
+# WDR11; COQ3, C14orf93, ALPK2, SNX6, NTPCR, BNIP3L, TOP3B (RNA 0.02), ODC1, METTL21A(RNA 0.01)
+
 # Alternatively, we can verify that the variant is not specific to one pop
 for ( i in 1:dim(all_kozak_score_variants)[2]) { 
   for (j in 1:dim(all_kozak_score_variants)[1]) { 
@@ -1939,6 +1963,8 @@ multi <- duplicated(kozak_merge[,1]) | duplicated(kozak_merge[,1], fromLast=T)
 number_alleles <- apply (kozak_var_ind, 1, function(x){length(grep('NA', x))})
 number_alleles <- number_alleles[!multi]
 MAF <- floor(0.05 * 60)
+# YRI MAF
+# MAF <- floor(0.05 * 46)
 hist(number_alleles, 60, xlab="Number of Alleles", main="")
 
 rna_only <- v3[,type=="RNA"]
@@ -1958,6 +1984,8 @@ total_alleles <- by(multi_alleles, as.factor(multi_ind[,1]), sum)
 multi_pval <- c()
 # total_number_of_alleles can be greater than max(number_alleles) as it is the sum in two positions
 for (i in names(total_alleles[total_alleles > 60*.1 ]) ) { 
+#YRI
+#for (i in names(total_alleles[total_alleles > 46*.1 ]) ) {    
    my_index = which ( row.names(ribo_only) == enst_hgnc[grep (i, enst_hgnc), 2])
    if ( length(my_index) ) { 
     index_factor <- rep(0, times=length(sample_labels_ribo))
@@ -2012,6 +2040,8 @@ for (i in 1:length(single_var_ind[,1])) {
   rna_index_values <- grep(paste(ind_unique , collapse="|"), sample_labels_rna, value=T)
 # Test individual > 2 and < 28 
   if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 2 & length(ind_unique) < 28 ) {
+# YRI INDIVIDUAL >2 < 21
+#  if (length(my_index) & length(ribo_index) %% 50 != 0 & length(ind_unique) > 2 & length(ind_unique) < 21 ) {      
     single_ids_tested= c(single_ids_tested, single_var_ind[i,1])
     ribo_diff <- c(ribo_diff, weighted.mean(ribo_only$E[my_index,ribo_index],ribo_only$weights[my_index,ribo_index] ) - weighted.mean(ribo_only$E[my_index, -ribo_index], ribo_only$weights[my_index, -ribo_index] ))
     index_factor <- rep(0,times=length(sample_labels_ribo))
@@ -2058,8 +2088,34 @@ length(which(p.adjust(list_of_pval, method="fdr") < .1))
 lm_sig = which(p.adjust(list_of_pval, method="fdr") < .1)
 both_sig = intersect(lm_sig, lme_sig)
 single_var_ind[both_sig,1]
+single_var_ind[lm_sig,1]
+# YRI_Only Results
+# > single_var_ind[lm_sig,1]
+# [1] "ENST00000254759.3" "ENST00000330133.4" "ENST00000362031.4" "ENST00000366628.4"
+# [5] "ENST00000375299.3" "ENST00000380629.2"
 
-rna_not_significant_lm_sig = lm_sig[rna_pvals > 0.01]
+# All Sample Results: 
+# > single_var_ind[lm_sig,1]
+# [1] "ENST00000245539.6" "ENST00000254759.3" "ENST00000263578.5" "ENST00000277632.3"
+# [5] "ENST00000299088.6" "ENST00000330133.4" "ENST00000362031.4" "ENST00000366628.4"
+# [9] "ENST00000375299.3" "ENST00000380629.2" "ENST00000395364.1" "ENST00000405333.1"
+# [13] "ENST00000416007.2" "ENST00000426075.1"
+
+
+
+rna_not_significant_lm_sig = which ( list_of_pval < .01)[rna_pvals > 0.01]
+single_var_ind[rna_not_significant_lm_sig,1]
+# YRI_Only Result:
+# > single_var_ind[rna_not_significant_lm_sig, 1] ->RNA p-val > 0.05
+# [1] "ENST00000254759.3" "ENST00000299088.6" "ENST00000362031.4" "ENST00000366628.4"
+# [5] "ENST00000380629.2" "ENST00000405333.1" 
+
+# YRI_ONLY LM_SIG => RNA NOT SIGNIFICANT 
+#  "ENST00000254759.3"  "ENST00000362031.4" "ENST00000366628.4" "ENST00000380629.2"
+
+# All samples LM_SIG => RNA p > 0.05
+# [1] "ENST00000254759.3" "ENST00000263578.5" "ENST00000277632.3" "ENST00000299088.6"
+# [5] "ENST00000362031.4" "ENST00000380629.2" "ENST00000405333.1"
 
 all_tested_transcripts = c(single_ids_tested, names(total_alleles[total_alleles > 60*.1 ]))
 test_space_details = all_kozak_score_variants[all_kozak_score_variants$V1 %in% all_tested_transcripts,1:4 ]

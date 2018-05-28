@@ -15,6 +15,9 @@
 ### Modified Aug 16, 2013 by Alan Boyle
 ### Added hexagonal plotting
 
+### Modified Jan 2015 by Can Cenik
+### Minor updates to plotting functions
+
 "plot.kohonen" <- function (x,
                             type = c("codes", "changes", "counts",
                               "dist.neighbours", "mapping", "property",

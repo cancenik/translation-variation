@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .DS_Store
+shiny_bookmarks
+shiny_saves
